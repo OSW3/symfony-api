@@ -8,10 +8,10 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 
 class OSW3SymfonyApi extends Bundle 
 {
-    public function getPath(): string
-    {
-        return \dirname(__DIR__."/src");
-    }
+    // public function getPath(): string
+    // {
+    //     return \dirname(__DIR__."/src");
+    // }
 
 	public function getRoot(): string
 	{
