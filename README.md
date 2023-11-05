@@ -2,8 +2,22 @@
 
 ## Install
 
+> composer.json
+
+```json
+"repositories": [
+    { "type": "vcs", "url": "https://github.com/OSW3/symfony-api" }
+],
+```
+
 ```shell
 composer require osw3/symfony-api
+```
+
+> composer.json
+
+```json
+"osw3/symfony-api": "*",
 ```
 
 ## Add to Kernel
@@ -114,7 +128,7 @@ osw3_symfony_api:
         ## --
         ##
         collections:
-        
+
             ## Name of the collection
             ## --
             ##
