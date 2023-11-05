@@ -216,6 +216,23 @@ class ApiListener implements EventSubscriberInterface
             $this->setError(Response::HTTP_METHOD_NOT_ALLOWED);
             return;
         }
+
+
+
+
+
+
+
+
+        $routes = $this->router->getRouteCollection();
+
+        dd($routes);
+
+
+
+
+
+        
         
 
         // Execute
