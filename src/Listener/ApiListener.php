@@ -19,6 +19,9 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class ApiListener implements EventSubscriberInterface
 {
+    private int $start = 0;
+    private int $end = 0;
+
     /**
      * Bundle Configuration
      *
@@ -147,7 +150,7 @@ class ApiListener implements EventSubscriberInterface
         private SerializerInterface $serializer,
         private UrlGeneratorInterface $urlGenerator,
     ){
-        $this->setMetaAttribute('start', $this->mt());
+        $this->start = $this->mt();
         $this->request = $requestStack->getCurrentRequest();
         $this->config  = $this->container->getParameter(Configuration::NAME);
     }
@@ -252,8 +255,8 @@ class ApiListener implements EventSubscriberInterface
         $this->setMetaAttribute('version', $this->version);
         $this->setMetaAttribute('provider', $this->providerName);
         $this->setMetaAttribute('state', $this->state);
-        $this->setMetaAttribute('end', $this->mt());
-        $this->setMetaAttribute('execution', $this->meta['end'] - $this->meta['start']);
+        $this->end = $this->mt();
+        $this->setMetaAttribute('execution', $this->end - $this->start);
 
         // Result serialization
         // --
@@ -262,6 +265,7 @@ class ApiListener implements EventSubscriberInterface
         // $this->data is an array 
         if (gettype($this->data) === 'array')
         {
+            $this->setMetaAttribute('items', count($this->data));
             array_walk($this->data, function(&$data){
                 $data = $this->serialize($data);
             });
@@ -269,10 +273,12 @@ class ApiListener implements EventSubscriberInterface
         // $this->data is an object 
         else 
         {
+            $this->setMetaAttribute('items', count($this->data));
             $this->data = $this->serialize($this->data);
         }
 
 
+        ksort($this->meta);
         $response['meta'] = $this->meta;
 
         // Response without error
@@ -812,7 +818,7 @@ class ApiListener implements EventSubscriberInterface
 
     private function mt(): int
     {
-        return microtime(true) * 10000;
+        return intval(microtime(true) * 10000);
     }
 
     private function singularize(string $word): string
@@ -840,14 +846,10 @@ class ApiListener implements EventSubscriberInterface
 
     private function serialize($entity)
     {
-        
-
         // Retrieve groups for the search
         if (gettype($entity) === 'object')
         {
             // $this->schema[] = get_class($entity);
-
-
             $groups = [];
             foreach ($this->providerData['collections'] as $collection)
             {
