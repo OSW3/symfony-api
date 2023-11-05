@@ -1,6 +1,7 @@
 <?php 
 namespace OSW3\SymfonyApi\Listener;
 
+use Symfony\Component\Routing\Route;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
@@ -226,7 +227,20 @@ class ApiListener implements EventSubscriberInterface
 
         $routes = $this->router->getRouteCollection();
 
+
+        $route = new Route(
+            path: $this->request->getPathInfo(),
+            defaults: [],
+            requirements: [],
+            options: [],
+            host: '',
+            schemes: [],
+            methods: $this->methods,
+            condition: '',
+        );
+        
         dump($this->request->getPathInfo());
+        dump($route);
         dd($routes);
 
 
