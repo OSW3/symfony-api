@@ -422,6 +422,7 @@ class ApiListener implements EventSubscriberInterface
         $limit  = $this->hasPagination() ? ($this->providerData['pagination']['item_per_page']) : (null);
         $offset = $this->hasPagination() ? (($page * $limit) - $limit) : (null);
         $pages  = $this->hasPagination() ? (intval(ceil($total / $limit))) : (1);
+        $pages  = $pages < 1 ? 1 : $pages;
         $prev   = $this->hasPagination() ? ($page - 1 < 1 ? 1 : $page - 1) : (1);
         $next   = $this->hasPagination() ? ($page + 1 > $pages ? $pages : $page + 1) : (1);
         $last   = $this->hasPagination() ? ($pages) : (1);
@@ -478,6 +479,7 @@ class ApiListener implements EventSubscriberInterface
         $limit      = $this->hasPagination() ? ($this->providerData['pagination']['item_per_page']) : (null);
         $offset     = $this->hasPagination() ? (($page * $limit) - $limit) : (null);
         $pages      = $this->hasPagination() ? (intval(ceil($total / $limit))) : (1);
+        $pages      = $pages < 1 ? 1 : $pages;
         $prev       = $this->hasPagination() ? ($page - 1 < 1 ? 1 : $page - 1) : (1);
         $next       = $this->hasPagination() ? ($page + 1 > $pages ? $pages : $page + 1) : (1);
         $last       = $this->hasPagination() ? ($pages) : (1);
