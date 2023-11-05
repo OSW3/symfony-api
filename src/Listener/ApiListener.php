@@ -274,7 +274,7 @@ class ApiListener implements EventSubscriberInterface
         // $this->data is an object 
         else 
         {
-            $this->setMetaAttribute('items', count($this->data));
+            $this->setMetaAttribute('items', 1);
             $this->data = $this->serialize($this->data);
         }
 
