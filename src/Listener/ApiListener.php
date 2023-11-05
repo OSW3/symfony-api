@@ -7,9 +7,11 @@ use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\KernelEvents;
+use Symfony\Component\Routing\RouteCollection;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\Routing\Loader\ClosureLoader;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\Serializer\SerializerInterface;
@@ -227,6 +229,7 @@ class ApiListener implements EventSubscriberInterface
 
         $routes = $this->router->getRouteCollection();
 
+        $routeCollection = new RouteCollection();
 
         $route = new Route(
             path: $this->request->getPathInfo(),
@@ -238,7 +241,16 @@ class ApiListener implements EventSubscriberInterface
             methods: $this->methods,
             condition: '',
         );
+
+        $routeCollection->add("_api_collection", $route);
+
+        $loader = new ClosureLoader();
+        $loader->load(function () use ($routeCollection) {
+            return $routeCollection;
+        });
         
+        $this->router->getRouteCollection()->addCollection($routeCollection);
+
         dump($this->request->getPathInfo());
         dump($route);
         dd($routes);
