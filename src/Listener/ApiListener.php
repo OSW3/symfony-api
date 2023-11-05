@@ -255,7 +255,7 @@ class ApiListener implements EventSubscriberInterface
         $this->setMetaAttribute('version', $this->version);
         $this->setMetaAttribute('provider', $this->providerName);
         $this->setMetaAttribute('state', $this->state);
-        $this->setMetaAttribute('datetime', new \DateTime);
+        $this->setMetaAttribute('datetime', date('Y-m-d H:i:s'));
         $this->end = $this->mt();
         $this->setMetaAttribute('execution', $this->end - $this->start);
 
