@@ -6,6 +6,7 @@ use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\KernelEvents;
+use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
@@ -146,6 +147,7 @@ class ApiListener implements EventSubscriberInterface
         #[Autowire(service: 'service_container')] private ContainerInterface $container,
         private EntityManagerInterface $entityManager,
         private RequestStack $requestStack,
+        private RouterInterface $router,
         private Security $security,
         private SerializerInterface $serializer,
         private UrlGeneratorInterface $urlGenerator,
