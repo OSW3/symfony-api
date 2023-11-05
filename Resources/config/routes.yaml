@@ -1,0 +1,16 @@
+api_search:
+    path: /api/v{version}/search
+    defaults:
+        version: 1
+    requirements:
+        version: \d+
+
+api:
+    path: /api/v{version}/{path}/{id}
+    defaults:
+        version: 1
+        path: null
+        id: null
+    requirements:
+        version: \d+
+        id: \d+|[\w-]+
