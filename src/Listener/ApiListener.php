@@ -251,9 +251,9 @@ class ApiListener implements EventSubscriberInterface
         
         $this->router->getRouteCollection()->addCollection($routeCollection);
 
-        dump($this->request->getPathInfo());
-        dump($route);
-        dd($routes);
+        // dump($this->request->getPathInfo());
+        // dump($route);
+        // dd($routes);
 
 
 
