@@ -167,7 +167,7 @@ class ApiListener implements EventSubscriberInterface
     public static function getSubscribedEvents(): array
     {
         return [
-            KernelEvents::REQUEST => ['onRequest', 100],
+            KernelEvents::REQUEST => 'onRequest',
             KernelEvents::RESPONSE => 'onResponse',
         ];
     }
@@ -221,41 +221,31 @@ class ApiListener implements EventSubscriberInterface
         }
 
 
+        // CREATE THE ROUTE 
+        // --
 
+        // $routeCollection = new RouteCollection();
 
+        // $route = new Route(
+        //     path: $this->request->getPathInfo(),
+        //     defaults: [],
+        //     requirements: [],
+        //     options: [],
+        //     host: '',
+        //     schemes: [],
+        //     methods: $this->methods,
+        //     condition: '',
+        // );
+        // $routeCollection->add("_api_collection", $route);
 
-
-
-
-        $routes = $this->router->getRouteCollection();
-
-        $routeCollection = new RouteCollection();
-
-        $route = new Route(
-            path: $this->request->getPathInfo(),
-            defaults: [],
-            requirements: [],
-            options: [],
-            host: '',
-            schemes: [],
-            methods: $this->methods,
-            condition: '',
-        );
-
-        $routeCollection->add("_api_collection", $route);
-
-        $loader = new ClosureLoader();
-        $loader->load(function () use ($routeCollection) {
-            return $routeCollection;
-        });
+        // $loader = new ClosureLoader();
+        // $loader->load(function () use ($routeCollection) {
+        //     return $routeCollection;
+        // });
         
-        $this->router->getRouteCollection()->addCollection($routeCollection);
+        // $this->router->getRouteCollection()->addCollection($routeCollection);
 
 
-
-
-
-        
 
         // Execute
         // --
