@@ -167,7 +167,7 @@ class ApiListener implements EventSubscriberInterface
     public static function getSubscribedEvents(): array
     {
         return [
-            KernelEvents::REQUEST => 'onRequest',
+            KernelEvents::REQUEST => ['onRequest', 100],
             KernelEvents::RESPONSE => 'onResponse',
         ];
     }
@@ -250,11 +250,6 @@ class ApiListener implements EventSubscriberInterface
         });
         
         $this->router->getRouteCollection()->addCollection($routeCollection);
-
-        // dump($this->request->getPathInfo());
-        // dump($route);
-        // dd($routes);
-
 
 
 
