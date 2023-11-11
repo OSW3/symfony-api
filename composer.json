@@ -21,6 +21,7 @@
         "doctrine/doctrine-bundle": "*",
         "doctrine/doctrine-migrations-bundle": "*",
         "doctrine/orm": "*",
+        "nelmio/cors-bundle": "*",
         "phpdocumentor/reflection-docblock": "*",
         "phpstan/phpdoc-parser": "*",
         "symfony/property-access": "*",
