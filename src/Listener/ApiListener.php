@@ -16,6 +16,8 @@ use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\Serializer\SerializerInterface;
 use OSW3\SymfonyApi\DependencyInjection\Configuration;
+use OSW3\SymfonyApi\Services\PaginationService;
+use OSW3\SymfonyApi\Services\TseService;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
@@ -23,123 +25,22 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class ApiListener implements EventSubscriberInterface
 {
-    private int $start = 0;
-    private int $end = 0;
-
-    /**
-     * Bundle Configuration
-     *
-     * @var array
-     */
     private array $config;
-
-    /**
-     * Item ID
-     *
-     * @var null|string|integer
-     */
     private null|string|int $id;
-
-    /**
-     * Path of the URL
-     *
-     * @var string
-     */
     private ?string $path;
-
-    /**
-     * Current request
-     *
-     * @var Request
-     */
     private Request $request;
-
-    /**
-     * API Version
-     *
-     * @var integer
-     */
     private int $version;
-
-    /**
-     * The name of the API Provider
-     *
-     * @var string
-     */
     private ?string $providerName = null;
-
-    /**
-     * The data of the API Provider
-     *
-     * @var array
-     */
     private array $providerData;
-
-    /**
-     * The data of the Collection / Entity targeted
-     *
-     * @var array
-     */
     private array $collectionData = [];
-
-    /**
-     * The state of the response
-     * success | failed
-     *
-     * @var string
-     */
     private string $state = 'success';
-
     private $user;
     private array $methods;
-
-    /**
-     * Response code
-     *
-     * @var integer
-     */
     private int $code = Response::HTTP_OK;
-
-    /**
-     * Request results
-     *
-     * @var array
-     */
-    private array $results;
-
-    /**
-     * Response meta
-     *
-     * @var array
-     */
     private array $meta = [];
-    
-    /**
-     * Response error
-     *
-     * @var array
-     */
     private array $error = [];
-    
-    /**
-     * Response data schema
-     *
-     * @var array
-     */
     private array $schema = [];
-    
-    /**
-     * Response data
-     *
-     * @var array
-     */
     private array|object $data = [];
-    
-    /**
-     * Response pagination
-     *
-     * @var array
-     */
     private array $pagination = [];
 
 
@@ -154,10 +55,14 @@ class ApiListener implements EventSubscriberInterface
         private Security $security,
         private SerializerInterface $serializer,
         private UrlGeneratorInterface $urlGenerator,
+
+        private PaginationService $paginationService,
+        private TseService $tseService,
     ){
-        $this->start = $this->mt();
         $this->request = $requestStack->getCurrentRequest();
         $this->config  = $this->container->getParameter(Configuration::NAME);
+
+        $this->paginationService->setRoute('api');
     }
 
 
@@ -281,14 +186,13 @@ class ApiListener implements EventSubscriberInterface
         // Init some response data
         // --
 
-        $this->setMetaAttribute('time', time());
         $this->setMetaAttribute('uri', $this->request->getPathInfo());
-        $this->setMetaAttribute('version', $this->version);
+        $this->setMetaAttribute('api_version', 'v'.$this->version);
         $this->setMetaAttribute('provider', $this->providerName);
-        $this->setMetaAttribute('state', $this->state);
-        $this->setMetaAttribute('datetime', date('Y-m-d H:i:s'));
-        $this->end = $this->mt();
-        $this->setMetaAttribute('execution', $this->end - $this->start);
+        $this->setMetaAttribute('status_code', $this->code);
+        $this->setMetaAttribute('status_message', $this->state);
+        // $this->setMetaAttribute('datetime', date('Y-m-d H:i:s'));
+        $this->setMetaAttribute('execution', $this->tseService->duration());
 
         // Result serialization
         // --
@@ -311,28 +215,48 @@ class ApiListener implements EventSubscriberInterface
 
 
         ksort($this->meta);
-        $response['meta'] = $this->meta;
+        $data['meta'] = $this->meta;
 
         // Response without error
         if (empty($this->error))
         {
-            if ($this->hasPagination() && !empty($this->pagination)) 
+            $pagination = $this->paginationService->response();
+            if ($this->hasPagination() && !empty($pagination)) 
             {
-                $response['pagination'] = $this->pagination;
+                // $data['pagination'] = $this->pagination;
+                $data['pagination'] = $pagination;
             }
             
             // $response['schema'] = $this->schema;
-            $response['data'] = $this->data;
+            $data['data'] = $this->data;
         }
         // Response with error
         else 
         {
-            $response['error'] = $this->error;
+            $data['error'] = $this->error;
         }
 
         // dump($response);
         // dd('API RESPONSE');
-        $event->setResponse(new JsonResponse($response, $this->code));
+
+        $remove = ['X-Powered-By'];
+        array_walk($remove, fn($property) => header_remove($property));
+
+        $contentLength = strlen(json_encode($data));
+        $AccessControlAllowMethods = implode(", ", $this->methods);
+
+        $headers = [
+            // 'Access-Control-Allow-Origin' => 'http://localhost:4200',
+            'Access-Control-Allow-Origin' => '*',
+            'Access-Control-Allow-Credentials' => 'true',
+            'Access-Control-Allow-Methods' => $AccessControlAllowMethods,
+            'Access-Control-Allow-Headers' => 'DNT, X-User-Token, Keep-Alive, User-Agent, X-Requested-With, If-Modified-Since, Cache-Control, Content-Type',
+            'Access-Control-Max-Age' => 1728000,
+            'Content-Length' => $contentLength,
+        ];
+
+        $response = new JsonResponse($data, $this->code, $headers);
+        $event->setResponse($response);
     }
 
 
@@ -448,18 +372,22 @@ class ApiListener implements EventSubscriberInterface
         // PAGINATION
         // --
 
-        $total  = count($data);
-        $page   = $this->getCurrentPage();
-        $limit  = $this->hasPagination() ? ($this->providerData['pagination']['item_per_page']) : (null);
-        $offset = $this->hasPagination() ? (($page * $limit) - $limit) : (null);
-        $pages  = $this->hasPagination() ? (intval(ceil($total / $limit))) : (1);
-        $pages  = $pages < 1 ? 1 : $pages;
-        $prev   = $this->hasPagination() ? ($page - 1 < 1 ? 1 : $page - 1) : (1);
-        $next   = $this->hasPagination() ? ($page + 1 > $pages ? $pages : $page + 1) : (1);
-        $last   = $this->hasPagination() ? ($pages) : (1);
+        $items = count($data);
+        $this->paginationService->setItems($items);
 
+        $perPage = $this->providerData['pagination']['item_per_page'];
+        $this->paginationService->setPerPage($perPage);
 
-        if ($page > $pages)
+        $this->paginationService->execute();
+
+        $this->paginationService->setParams([
+            'version'   => $this->version,
+            'path'      => $this->path,
+            'page'      => $this->paginationService->getPage(),
+        ]);
+        $this->paginationService->setIsAbsolute(!$this->providerData['links']['absolute']);
+
+        if ($this->paginationService->getPage() > $this->paginationService->getPages())
         {
             $this->setError(Response::HTTP_NOT_FOUND);
             return;
@@ -469,28 +397,11 @@ class ApiListener implements EventSubscriberInterface
         // RESULTS
         // --
 
-        $this->data = array_slice($data, $offset, $offset+$limit);
-        $this->pagination = [
-            'links' => [
-                'first' => $this->paginationLink('search', 1, [$search_param => $expression]),
-                'prev'  => $this->paginationLink('search', $prev, [$search_param => $expression]),
-                'self'  => $this->paginationLink('search', $page, [$search_param => $expression]),
-                'next'  => $this->paginationLink('search', $next, [$search_param => $expression]),
-                'last'  => $this->paginationLink('search', $last, [$search_param => $expression]),
-            ],
-            'stats' => [
-                'total_records' => $total,
-                'current_page'  => $page,
-                'total_pages'   => $pages,
-                'limit'         => $limit,
-                'offset'        => $offset,
-                // 'sorter'        => $sorter,
-                'prev_page'     => $prev,
-                'next_page'     => $next,
-                'first_page'    => 1,
-                'last_page'     => $last,
-            ],
-        ];
+        $this->data = array_slice(
+            $data, 
+            $this->paginationService->getOffset(), 
+            $this->paginationService->getOffset()+$perPage
+        );
     }
 
     private function findAll(): void 
@@ -505,17 +416,22 @@ class ApiListener implements EventSubscriberInterface
         // PAGINATION
         // --
 
-        $total      = $repository->count($criteria);
-        $page       = $this->getCurrentPage();
-        $limit      = $this->hasPagination() ? ($this->providerData['pagination']['item_per_page']) : (null);
-        $offset     = $this->hasPagination() ? (($page * $limit) - $limit) : (null);
-        $pages      = $this->hasPagination() ? (intval(ceil($total / $limit))) : (1);
-        $pages      = $pages < 1 ? 1 : $pages;
-        $prev       = $this->hasPagination() ? ($page - 1 < 1 ? 1 : $page - 1) : (1);
-        $next       = $this->hasPagination() ? ($page + 1 > $pages ? $pages : $page + 1) : (1);
-        $last       = $this->hasPagination() ? ($pages) : (1);
+        $items = $repository->count($criteria);
+        $this->paginationService->setItems($items);
 
-        if ($page > $pages)
+        $perPage = $this->providerData['pagination']['item_per_page'];
+        $this->paginationService->setPerPage($perPage);
+        
+        $this->paginationService->execute();
+
+        $this->paginationService->setParams([
+            'version'   => $this->version,
+            'path'      => $this->path,
+            'page'      => $this->paginationService->getPage(),
+        ]);
+        $this->paginationService->setIsAbsolute(!$this->providerData['links']['absolute']);
+
+        if ($this->paginationService->getPage() > $this->paginationService->getPages())
         {
             $this->setError(Response::HTTP_NOT_FOUND);
             return;
@@ -525,28 +441,12 @@ class ApiListener implements EventSubscriberInterface
         // RESULTS
         // --
 
-        $this->data = $repository->$method( $criteria, $sorter, $limit, $offset );
-        $this->pagination = [
-            'links' => [
-                'first' => $this->paginationLink($this->path, 1),
-                'prev'  => $this->paginationLink($this->path, $prev),
-                'self'  => $this->paginationLink($this->path, $page),
-                'next'  => $this->paginationLink($this->path, $next),
-                'last'  => $this->paginationLink($this->path, $last),
-            ],
-            'stats' => [
-                'total_records' => $total,
-                'current_page'  => $page,
-                'total_pages'   => $pages,
-                'limit'         => $limit,
-                'offset'        => $offset,
-                // 'sorter'        => $sorter,
-                'prev_page'     => $prev,
-                'next_page'     => $next,
-                'first_page'    => 1,
-                'last_page'     => $last,
-            ],
-        ];
+        $this->data = $repository->$method(
+            $criteria,
+            $sorter, 
+            $perPage, 
+            $this->paginationService->getOffset()
+        );
     }
 
     private function findOne(): void 
@@ -827,33 +727,10 @@ class ApiListener implements EventSubscriberInterface
         return $this->entityManager->getRepository($entity)->find($id);
     }
 
-    private function paginationLink($path, $page, array $params=[]): string
-    {
-        return $this->urlGenerator->generate('api', array_merge($params, [
-            'version'   => $this->version,
-            'path'      => $path,
-            'page'      => $page,
-        ]), !$this->providerData['links']['absolute']);
-    }
-
-
-    // PAGINATION
-    // --
-
-    private function getCurrentPage(): int 
-    {
-        return $this->request->get('page') ?? 1;
-    }
-
 
 
     // UTILITIES
     // --
-
-    private function mt(): int
-    {
-        return intval(microtime(true) * 10000);
-    }
 
     private function singularize(string $word): string
     {
