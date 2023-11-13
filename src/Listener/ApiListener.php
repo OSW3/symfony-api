@@ -236,15 +236,25 @@ class ApiListener implements EventSubscriberInterface
             $data['error'] = $this->error;
         }
 
-        // dump($response);
+
+
+        // Response Data
+        // --
+        // dump($data);
         // dd('API RESPONSE');
 
-        $remove = ['X-Powered-By'];
-        array_walk($remove, fn($property) => header_remove($property));
+        $response = new JsonResponse($data, $this->code);
 
-        $contentLength = strlen(json_encode($data));
+
+        // Response Header : Add properties
+        // --
+
+        // Content Length
+        $contentLength = mb_strlen($response->getContent(), '8bit');
+        $response->headers->set('Content-Length', $contentLength);
+
+        // CORS
         $AccessControlAllowMethods = implode(", ", $this->methods);
-
         $headers = [
             // 'Access-Control-Allow-Origin' => 'http://localhost:4200',
             'Access-Control-Allow-Origin' => '*',
@@ -252,10 +262,23 @@ class ApiListener implements EventSubscriberInterface
             'Access-Control-Allow-Methods' => $AccessControlAllowMethods,
             'Access-Control-Allow-Headers' => 'DNT, X-User-Token, Keep-Alive, User-Agent, X-Requested-With, If-Modified-Since, Cache-Control, Content-Type',
             'Access-Control-Max-Age' => 1728000,
-            'Content-Length' => $contentLength,
         ];
+        foreach ($headers as $property => $value)
+        {
+            $response->headers->set($property, $value);
+        }
 
-        $response = new JsonResponse($data, $this->code, $headers);
+        
+        // Response Header : Remove properties
+        // --
+
+        $remove = ['X-Powered-By'];
+        array_walk($remove, fn($property) => header_remove($property));
+
+
+        // Set Response
+        // --
+
         $event->setResponse($response);
     }
 
