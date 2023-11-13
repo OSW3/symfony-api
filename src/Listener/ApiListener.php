@@ -1,17 +1,14 @@
 <?php 
 namespace OSW3\SymfonyApi\Listener;
 
-use Symfony\Component\Routing\Route;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\KernelEvents;
-use Symfony\Component\Routing\RouteCollection;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
-use Symfony\Component\Routing\Loader\ClosureLoader;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\Serializer\SerializerInterface;
@@ -41,7 +38,6 @@ class ApiListener implements EventSubscriberInterface
     private array $error = [];
     private array $schema = [];
     private array|object $data = [];
-    private array $pagination = [];
 
 
     // CONSTRUCTOR
@@ -213,21 +209,22 @@ class ApiListener implements EventSubscriberInterface
             $this->data = $this->serialize($this->data);
         }
 
-
         ksort($this->meta);
         $data['meta'] = $this->meta;
+
 
         // Response without error
         if (empty($this->error))
         {
-            $pagination = $this->paginationService->response();
-            if ($this->hasPagination() && !empty($pagination)) 
+            if ($this->paginationService->isReady())
             {
-                // $data['pagination'] = $this->pagination;
-                $data['pagination'] = $pagination;
+                $pagination = $this->paginationService->response();
+                if ($this->hasPagination() && !empty($pagination)) 
+                {
+                    $data['pagination'] = $pagination;
+                }
             }
             
-            // $response['schema'] = $this->schema;
             $data['data'] = $this->data;
         }
         // Response with error
@@ -235,7 +232,6 @@ class ApiListener implements EventSubscriberInterface
         {
             $data['error'] = $this->error;
         }
-
 
 
         // Response Data
@@ -268,7 +264,7 @@ class ApiListener implements EventSubscriberInterface
             $response->headers->set($property, $value);
         }
 
-        
+
         // Response Header : Remove properties
         // --
 
@@ -813,6 +809,8 @@ class ApiListener implements EventSubscriberInterface
 
     private function entityLinks(&$data, $entity)
     {
+        if (!is_iterable($data)) return;
+
         $collection_classes = [];
         foreach ($this->providerData['collections'] as $collection)
         {
@@ -825,7 +823,8 @@ class ApiListener implements EventSubscriberInterface
             }
         }
 
-        foreach ($data as $dataKey => $dataValue) {
+        foreach ($data as $dataKey => $dataValue) 
+        {
             $entityGetter = 'get' . ucfirst($dataKey);
     
             if (gettype($entity) === "object" && method_exists($entity::class, $entityGetter)) {
@@ -858,7 +857,6 @@ class ApiListener implements EventSubscriberInterface
                 $data['link'] = $this->link($entity);
             }
         }
-
     }
 
     private function link($entity): string 

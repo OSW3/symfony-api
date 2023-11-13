@@ -18,6 +18,7 @@ class PaginationService
     private string $route;
     private array $params;
     private bool $isAbsolute = false;
+    private bool $isReady = false;
 
     public function __construct(
         private RequestStack $requestStack,
@@ -44,7 +45,14 @@ class PaginationService
         $next = $this->page + 1 > $this->pages ? $this->pages : $this->page + 1;
         $this->next = $next;
 
+        $this->isReady = true;
+
         return $this;
+    }
+
+    public function isReady(): bool
+    {
+        return $this->isReady;
     }
 
     public function response(): array 
