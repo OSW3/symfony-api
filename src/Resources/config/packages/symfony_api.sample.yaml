@@ -141,14 +141,15 @@ osw3_symfony_api:
                     ## 
                     # plural: books
 
-                ## Serializer Groups
+                ## Serialization Scope
                 ## --
-                ## Groups ID for serialization
+                ## Use the scope array to define "Group" of the serialization or 
+                ## use a serializer class
                 ##
                 ## @var string[]
                 ## @default []
                 ## 
-                # serializer_groups: ['book']
+                # scope: ['book']
 
                 ## Response default sorter
                 ## --

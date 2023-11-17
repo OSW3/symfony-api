@@ -192,13 +192,13 @@ class Configuration implements ConfigurationInterface
 				->end()->end()
 
 				/**
-				 * Serializer Groups
+				 * Serialization Scope
 				 * --
 				 * 
 				 * @var string[]
 				 * @default []
 				 */
-				->arrayNode('serializer_groups')->scalarPrototype()->end()->end()
+				->arrayNode('scope')->scalarPrototype()->end()->end()
 
 				/**
 				 * Response default sorter
