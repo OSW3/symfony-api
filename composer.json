@@ -1,6 +1,6 @@
 {
     "name": "osw3/symfony-api",
-    "description": "OSW3 API Bundle",
+    "description": "OSW3 API Bundle for Symfony",
 	"type": "symfony-bundle",
 	"authors": [
 		{

@@ -785,13 +785,13 @@ class ApiListener implements EventSubscriberInterface
             {
                 if ($collection['class'] === get_class($entity))
                 {
-                    $groups = $collection['serializer_groups'];
+                    $groups = $collection['scope'];
                 }
             }
         }
         else 
         {
-            $groups = $this->collectionData['serializer_groups'];
+            $groups = $this->collectionData['scope'];
         }
 
         $encoder    = 'json';
