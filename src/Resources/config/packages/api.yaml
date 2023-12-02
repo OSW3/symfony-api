@@ -1,0 +1,10 @@
+api:
+    my_api_v1:
+        version: 1
+        collections:
+            all_books:
+                class: App\Entity\Book
+                privileges:
+                    public:
+                        granted: null #'PUBLIC_ACCESS'
+                        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']

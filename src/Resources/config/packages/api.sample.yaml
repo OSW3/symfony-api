@@ -1,21 +1,21 @@
 api:
 
-    ## Name of the API config
+    ## A custom name for the API provider
     ## --
     ## 
     my_api_v1:
 
         ## API Version
         ## --
-        ## Define the value of the API version in the URI
-        ## > e.g.: site.com/api/v1/...
+        ## Set the value of the API version, used to generate the URI
+        ## > e.g.: site.com/api/v1/books
         ##
         ## @var int
         ## @required
         ##
         version: 1
 
-        ## Response Links settings
+        ## Defines how links in the response will be generated
         ## --
         ##
         links:
@@ -59,7 +59,7 @@ api:
             ## @var integer
             ## @default 10
             ## 
-            items_per_page: 5
+            items_per_page: 10
 
         ## Search by API settings
         ## --
@@ -98,7 +98,7 @@ api:
             ## Name of the collection
             ## --
             ##
-            all_books:
+            all_items:
 
                 ## Entity Class 
                 ## --
@@ -116,7 +116,7 @@ api:
                 ## @var array
                 ## 
                 repository_methods:
-                    # findAll: findBy
+                    findAll: findBy
                     # findOne: find
 
                 ## URL Paths for plural or singular item
@@ -141,10 +141,9 @@ api:
                     ## 
                     # plural: books
 
-                ## Serialization Scope
+                ## Serializer Groups
                 ## --
-                ## Use the scope array to define "Group" of the serialization or 
-                ## use a serializer class
+                ## Groups ID for serialization
                 ##
                 ## @var string[]
                 ## @default []
@@ -232,3 +231,46 @@ api:
     
     # my_api_v2:
     #     version: 2
+
+
+
+
+    my_api_v2:
+        version: 2
+        links:
+            state: true
+            absolute: true
+        pagination:
+            state: true
+            items_per_page: 3
+        search:
+            allowed: true
+            param: q
+        collections:
+            all_books:
+                class: App\Entity\Item
+                repository_methods:
+                    # findAll: findBy
+                    # findOne: find
+                paths:
+                    # singular: book  //site.com/api/v2/book
+                    # plural: books   //site.com/api/v2/livres
+                # serializer_groups: ['book']
+                sorter:
+                    name: 
+                        order: ASC
+                privileges:
+                    public:
+                        granted: 'PUBLIC_ACCESS'
+                        ## @default ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
+                        methods: ['GET']
+                    # private:
+                    #     granted: 'ROLE_USER'
+                    #     methods: ['GET','POST','PUT','PATCH']
+                search:
+                    excluded: false
+                    criteria:
+                        name:
+                            match: like
+                        # description:
+                        #     match: like
