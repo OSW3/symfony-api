@@ -1,5 +1,5 @@
 <?php 
-namespace OSW3\SymfonyApi\Listener;
+namespace OSW3\Api\Listener;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -12,9 +12,9 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\Serializer\SerializerInterface;
-use OSW3\SymfonyApi\DependencyInjection\Configuration;
-use OSW3\SymfonyApi\Services\PaginationService;
-use OSW3\SymfonyApi\Services\TseService;
+use OSW3\Api\DependencyInjection\Configuration;
+use OSW3\Api\Services\PaginationService;
+use OSW3\Api\Services\TseService;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;

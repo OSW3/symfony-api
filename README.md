@@ -33,7 +33,7 @@ Add the bundle in the `config/bundle.php` file.
 
 ```php
 return [
-    OSW3\SymfonyApi\OSW3SymfonyApiBundle::class => ['all' => true],
+    OSW3\Api\ApiBundle::class => ['all' => true],
 ];
 ```
 
@@ -44,14 +44,14 @@ return [
 Add the bundle route to the `config/routes.yaml` file.
 
 ```yaml
-_symfony_api:
-    resource: '@OSW3SymfonyApiBundle/Resources/config/routes.yaml'
+_api:
+    resource: '@ApiBundle/Resources/config/routes.yaml'
 ```
 
 ### Configure the bundle
 
 ```yaml
-osw3_symfony_api:
+api:
 
     my_api_v1:
         version: 1

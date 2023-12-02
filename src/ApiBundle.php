@@ -1,12 +1,12 @@
 <?php 
-namespace OSW3\SymfonyApi;
+namespace OSW3\Api;
 
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
-use OSW3\SymfonyApi\DependencyInjection\Configuration;
+use OSW3\Api\DependencyInjection\Configuration;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
-class OSW3SymfonyApiBundle extends Bundle 
+class ApiBundle extends Bundle 
 {
     // public function getPath(): string
     // {

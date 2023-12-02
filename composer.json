@@ -13,7 +13,7 @@
 	"prefer-stable": true,
     "autoload": {
         "psr-4": {
-            "OSW3\\SymfonyApi\\": "src/"
+            "OSW3\\Api\\": "src/"
         }
     },
     "require": {

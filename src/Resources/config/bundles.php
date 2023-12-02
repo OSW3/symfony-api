@@ -1,5 +1,5 @@
 <?php
 
 return [
-    OSW3\SymfonyApi\OSW3SymfonyApiBundle::class => ['all' => true],
+    OSW3\Api\ApiBundle::class => ['all' => true],
 ];

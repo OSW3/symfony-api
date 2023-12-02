@@ -3,7 +3,7 @@ services:
         autowire: true
         autoconfigure: true
         
-    OSW3\SymfonyApi\:
+    OSW3\Api\:
         resource: '../../'
         exclude:
             - '../../DependencyInjection/'

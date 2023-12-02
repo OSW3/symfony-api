@@ -1,5 +1,5 @@
 <?php 
-namespace OSW3\SymfonyApi\Services;
+namespace OSW3\Api\Services;
 
 class TseService
 {

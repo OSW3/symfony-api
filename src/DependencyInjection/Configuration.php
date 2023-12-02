@@ -1,5 +1,5 @@
 <?php 
-namespace OSW3\SymfonyApi\DependencyInjection;
+namespace OSW3\Api\DependencyInjection;
 
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
@@ -8,18 +8,18 @@ class Configuration implements ConfigurationInterface
 {
 	/**
 	 * define the name of the configuration tree.
-	 * > /config/packages/symfony_api.yaml
+	 * > /config/packages/api.yaml
 	 *
 	 * @var string
 	 */
-	public const NAME = "symfony_api";
+	public const NAME = "api";
 
 	/**
 	 * Define the translation domain
 	 *
 	 * @var string
 	 */
-	public const DOMAIN = 'symfony_api';
+	public const DOMAIN = 'api';
 	
 	/**
 	 * Update and return the Configuration Builder

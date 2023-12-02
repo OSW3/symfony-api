@@ -1,5 +1,5 @@
 <?php 
-namespace OSW3\SymfonyApi\Services;
+namespace OSW3\Api\Services;
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
