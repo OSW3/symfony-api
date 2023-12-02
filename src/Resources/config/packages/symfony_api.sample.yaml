@@ -59,7 +59,7 @@ osw3_symfony_api:
             ## @var integer
             ## @default 10
             ## 
-            item_per_page: 5
+            items_per_page: 5
 
         ## Search by API settings
         ## --

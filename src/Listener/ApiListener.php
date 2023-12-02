@@ -394,7 +394,7 @@ class ApiListener implements EventSubscriberInterface
         $items = count($data);
         $this->paginationService->setItems($items);
 
-        $perPage = $this->providerData['pagination']['item_per_page'];
+        $perPage = $this->providerData['pagination']['items_per_page'];
         $this->paginationService->setPerPage($perPage);
 
         $this->paginationService->execute();
@@ -438,7 +438,7 @@ class ApiListener implements EventSubscriberInterface
         $items = $repository->count($criteria);
         $this->paginationService->setItems($items);
 
-        $perPage = $this->providerData['pagination']['item_per_page'];
+        $perPage = $this->providerData['pagination']['items_per_page'];
         $this->paginationService->setPerPage($perPage);
         
         $this->paginationService->execute();

@@ -92,7 +92,7 @@ class Configuration implements ConfigurationInterface
 				 * @var integer
 				 * @default 10
 				 */
-				->integerNode('item_per_page')->defaultValue(10)->end()
+				->integerNode('items_per_page')->defaultValue(10)->end()
 				
 			->end()->end()
 
@@ -294,7 +294,6 @@ class Configuration implements ConfigurationInterface
 			->end()->end()->end()
 
 		->end()->end();
-
 
 		$rootNode->validate()->always(function($config){
 			$this->checkUniqVersion($config);
