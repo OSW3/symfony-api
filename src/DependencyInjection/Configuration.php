@@ -3,234 +3,164 @@ namespace OSW3\Api\DependencyInjection;
 
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
+use Symfony\Component\Security\Core\Role\RoleHierarchyInterface;
 
 class Configuration implements ConfigurationInterface
 {
-	/**
-	 * define the name of the configuration tree.
-	 * > /config/packages/api.yaml
-	 *
-	 * @var string
-	 */
-	public const NAME = "api";
+	public const NAME      = "api";
+	public const DOMAIN    = 'api';
+	public const BASE_PATH = '/api';
+	private const SORTER   = ['ASC', 'DESC'];
+	private const FILTERS  = [
+		"equal", 			// = expression
+		"not",				// != expression
+		"not-equal",		// != expression
+		"like", 			// LIKE '%expression%'
+		"left-like", 		// LIKE '%expression'
+		"right-like", 		// LIKE 'expression%'
+		"not-like", 		//  NOT LIKE '%expression%'
+		"not-left-like", 	//  NOT LIKE '%expression'
+		"not-right-like",	//  NOT LIKE 'expression%'
+		"greater",			//  > 'expression'
+		"greater-or-equal",	//  >= 'expression'
+		"lesser",			//  < 'expression'
+		"lesser-or-equal",	//  <= 'expression'
+	];
 
-	/**
-	 * Define the translation domain
-	 *
-	 * @var string
-	 */
-	public const DOMAIN = 'api';
-	
-	/**
-	 * Update and return the Configuration Builder
-	 *
-	 * @return TreeBuilder
-	 */
 	public function getConfigTreeBuilder(): TreeBuilder
 	{
 		$builder = new TreeBuilder( self::NAME );
 		$rootNode = $builder->getRootNode();
 
-		$rootNode->useAttributeAsKey('name')->arrayPrototype()->children()
+		/**
+		 * API Providers
+		 * --
+		 * 
+		 * @var array
+		 */
+		$rootNode->useAttributeAsKey('provider')->arrayPrototype()->children()
 
 			/**
-			 * API Version
+			 * Router settings
 			 * --
 			 * 
-			 * @var integer
-			 * @required
+			 * @var array
 			 */
-			->integerNode('version')->isRequired()->end()
+			->arrayNode('router')->addDefaultsIfNotSet()->children()
+
+				/**
+				 * Route name syntax
+				 * --
+				 * @var string
+				 */
+				->scalarNode('name')->defaultValue('api:{provider}:{collection}:{action}')->end()
+
+				/**
+				 * Path prefix
+				 * --
+				 * 
+				 * @var string
+				 * @required
+				 * @default '/api'
+				 */
+				// ->scalarNode('prefix')->defaultValue('/api')->cannotBeEmpty()->end()
+				->scalarNode('prefix')->defaultNull()->end()
+				
+			->end()->end()
+
 
 			/**
-			 * Response Links settings
+			 * Search settings
+			 * --
+			 * 
+			 * @var array
 			 */
-			->arrayNode('links')->addDefaultsIfNotSet()->children()
-				
-				/**
-				 * Links state
-				 * --
-				 * If true, add the entity link to the response
-				 * 
-				 * @var bool
-				 * @default true
-				 */
-				->booleanNode('state')->defaultTrue()->end()
+			->arrayNode('search')->addDefaultsIfNotSet()->children()
 
-				/**
-				 * Links absolute
-				 * --
-				 * If true, generate an absolute link
-				 * 
-				 * @var bool
-				 * @default true
-				 */
+				->booleanNode('enabled')->defaultTrue()->end()
+				->scalarNode('param')->defaultValue('q')->end()
+
+			->end()->end()
+
+
+			/**
+			 * Pagination settings
+			 * --
+			 * 
+			 * @var array
+			 */
+			->arrayNode('pagination')->addDefaultsIfNotSet()->children()
+
+				->booleanNode('enabled')->defaultTrue()->end()
+				->integerNode('per_page')->defaultValue(10)->min(1)->end()
+
+			->end()->end()
+
+
+			->arrayNode('url_generator')->addDefaultsIfNotSet()->children()
+
+				->booleanNode('support')->defaultTrue()->end()
 				->booleanNode('absolute')->defaultTrue()->end()
 
 			->end()->end()
 
-			/**
-			 * Response pagination settings
-			 */
-			->arrayNode('pagination')->addDefaultsIfNotSet()->children()
-				
-				/**
-				 * Pagination state
-				 * --
-				 * If true, the response will paginate
-				 * 
-				 * @var bool
-				 * @default true
-				 */
-				->booleanNode('state')->defaultTrue()->end()
-
-				/**
-				 * Items per page
-				 * --
-				 * Number of items per page
-				 * 
-				 * @var integer
-				 * @default 10
-				 */
-				->integerNode('items_per_page')->defaultValue(10)->end()
-				
-			->end()->end()
 
 			/**
-			 * Search by API settings
+			 * Collection settings
+			 * --
+			 * 
+			 * @var array
 			 */
-			->arrayNode('search')->addDefaultsIfNotSet()->children()
-				
+			->arrayNode('collections')->arrayPrototype()->children()
+
 				/**
-				 * Is the search by the API is allowed
+				 * Collection paths
 				 * --
-				 * If true, the search is allowed
 				 * 
-				 * @var bool
-				 * @default true
-				 */
-				->booleanNode('allowed')->defaultTrue()->end()
-
-				/**
-				 * The search parameter of the URL
-				 * --
-				 * e.g.: site.com/api/v1/?q=xxx
-				 * 
-				 * @var string
-				 * @default q
-				 */
-				->scalarNode('param')->defaultValue('q')->end()
-				
-			->end()->end()
-
-			/**
-			 * Index entities
-			 */
-			->arrayNode('collections')->useAttributeAsKey('collection')->arrayPrototype()->children()
-
-				/**
-				 * Entity Class 
-				 * --
-				 * The name of the entity of the collection
-				 * 
-				 * @var string
-				 * @required
-				 */
-				->scalarNode('class')->isRequired()->end()
-				
-				/**
-				 * Repository methods apply to retrieve the list or one of entities
-				 */
-				->arrayNode('repository_methods')->addDefaultsIfNotSet()->children()
-
-					/**
-					 * FindBy method
-					 * --
-					 * Define the name of the method used to find the list of entities
-					 * 
-					 * @var string 
-					 * @default findBy
-					 */
-					->scalarNode('findAll')->defaultValue('findBy')->end()
-
-					/**
-					 * Find One
-					 * --
-					 * Define the name of the method used to find one of entity
-					 * 
-					 * @var string 
-					 * @default findOneBy
-					 */
-					->scalarNode('findOne')->defaultValue('find')->end()
-
-				->end()->end()
-
-
-				/**
-				 * URL Paths for plural or singular item
+				 * @var array
 				 */
 				->arrayNode('paths')->addDefaultsIfNotSet()->children()
 
 					/**
-					 * Singular path
+					 * Path plural
 					 * --
 					 * 
-					 * @var string 
-					 * @default singular of App\Entity\Book\Book\Book
-					 */
-					->scalarNode('singular')->defaultNull()->end()
-
-					/**
-					 * Plural path
-					 * --
-					 * 
-					 * @var string 
-					 * @default plural of App\Entity\Book\Book\Book
+					 * @var string
 					 */
 					->scalarNode('plural')->defaultNull()->end()
+
+					/**
+					 * Path singular
+					 * --
+					 * 
+					 * @var string
+					 */
+					->scalarNode('singular')->defaultNull()->end()
 
 				->end()->end()
 
 				/**
-				 * Serialization Scope
+				 * Privileges access
 				 * --
-				 * 
-				 * @var string[]
-				 * @default []
-				 */
-				->arrayNode('scope')->scalarPrototype()->end()->end()
-
-				/**
-				 * Response default sorter
 				 * 
 				 * @var array
 				 */
-				->arrayNode('sorter')->arrayPrototype()->children()
-					->enumNode('order')->values(['ASC', 'DESC'])->defaultValue('ASC')->end()
-				->end()->end()->end()
+				->arrayNode('privileges')->arrayPrototype()->children()
 
-				/**
-				 * Privileges access
-				 */
-				->arrayNode('privileges')->useAttributeAsKey('privilege')->arrayPrototype()->children()
-				
 					/**
-					 * Granted / Role
+					 * Granted access
 					 * --
-					 * Allowed role to access to this entity
-					 * TODO: replace NULL by ANONYMOUS constant
 					 * 
-					 * @var string|null
-					 * @default null
+					 * @var string
+					 * @default PUBLIC_ACCESS
 					 */
-					->scalarNode('granted')->defaultNull()->end()
+					->scalarNode('granted')->defaultValue('PUBLIC_ACCESS')->end()
 
 					/**
-					 * Allowed methods
+					 * Allowed HTTP methods
 					 * --
 					 * 
-					 * @var enum[]
-					 * @default ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
+					 * @var array
 					 */
 					->arrayNode('methods')
 						->scalarPrototype()
@@ -245,49 +175,116 @@ class Configuration implements ConfigurationInterface
 				->end()->end()->end()
 
 				/**
-				 * Search settings for this entity
+				 * Entity settings 
+				 * --
+				 * 
+				 * @var array
 				 */
-				->arrayNode('search')->addDefaultsIfNotSet()->children()
-				
-					/**
-					 * Exclude the entity from the search request
-					 * --
-					 * 
-					 * @var bool 
-					 * @default false
-					 */
-					->booleanNode('excluded')->defaultFalse()->end()
+				->arrayNode('entity_manager')->addDefaultsIfNotSet()->children()
 
 					/**
-					 * Criteria 
-					 * Used to generate a WHERE clause of the query
+					 * The entity class
+					 * --
+					 * 
+					 * @var string
+					 * @required
+					 */
+					->scalarNode('class')->isRequired()->end()
+
+					/**
+					 * Repository Methods
+					 * --
 					 * 
 					 * @var array
 					 */
-					->arrayNode('criteria')->arrayPrototype()->children()
+					->arrayNode('methods')->addDefaultsIfNotSet()->children()
 
 						/**
-						 * Matching method
+						 * Method to Find an entity by ID
+						 * --
 						 * 
 						 * @var string
-						 * @enum 
-						 * @default like
 						 */
-						->enumNode('match')
-							->values([
-								"equal", 
-								"not", 
-								"like", 
-								"left-like", 
-								"right-like", 
-								"not-like", 
-								"not-left-like", 
-								"not-right-like",
-							])
-							->defaultValue("like")
+						->scalarNode('find')->defaultValue('find')->end()
+
+						/**
+						 * Method to find all entity
+						 * --
+						 * 
+						 * @var string
+						 */
+						->scalarNode('findAll')->defaultValue('findBy')->end()
+
+						// ->scalarNode('findBy')->defaultValue('findBy')->end()
+						// ->scalarNode('findOneBy')->defaultValue('findOneBy')->end()
+						// ->scalarNode('count')->defaultValue('count')->end()
+
+					->end()->end()
+
+
+					/**
+					 * Serializer groups
+					 * --
+					 * 
+					 * @var array
+					 */
+					->arrayNode('groups')->scalarPrototype()->end()->end()
+
+				->end()->end()
+
+				->arrayNode('results')->addDefaultsIfNotSet()->children()
+
+					/**
+					 * results default sorter
+					 * --
+					 * 
+					 * @var array
+					 */
+					->arrayNode('sorter')->variablePrototype()->end()->end()
+
+					/**
+					 * Links settings for each entity
+					 * --
+					 * 
+					 * @vr array
+					 */
+					->enumNode('links')
+
+						->beforeNormalization()
+							->ifTrue(fn ($value) => $value === null)->then(fn () => 'relative')
+							->ifTrue(fn ($value) => $value === false)->then(fn () => 'none')
 						->end()
 
-					->end()->end()->end()
+						->values(['none','relative','absolute'])
+						->defaultValue('relative')
+					->end()
+
+				->end()->end()
+
+				/**
+				 * Search settings
+				 * --
+				 * 
+				 * @var array
+				 */
+				->arrayNode('search')->addDefaultsIfNotSet()->children()
+
+					/**
+					 * Exclude from the search
+					 * --
+					 * 
+					 * @var boolean
+					 * @default false
+					 */
+					->booleanNode('exclude')->defaultFalse()->end()
+
+					/**
+					 * Search criteria
+					 * --
+					 * 
+					 * @var array
+					 */
+					->arrayNode('criteria')->variablePrototype()->end()->end()
 
 				->end()->end()
 
@@ -295,76 +292,169 @@ class Configuration implements ConfigurationInterface
 
 		->end()->end();
 
+
 		$rootNode->validate()->always(function($config){
-			$this->checkUniqVersion($config);
-			$this->setDefaultPaths($config);
+			foreach ($config as $provider => $x)
+			{
+				// api.<provider>.router.prefix
+				// --
+
+				// Prefix value must be url friendly
+				if ($config[$provider]['router']['prefix'] != null && !preg_match('/^\/([a-zA-Z0-9\-._~%]+\/?)*$/', $config[$provider]['router']['prefix']) )
+				{
+					throw new \InvalidArgumentException(sprintf("A valid URL path expected, %s given.", $config[$provider]['router']['prefix']));
+				}
+
+				foreach ($config[$provider]['collections'] as $collection => $y)
+				{
+
+					// api.<provider>.collections.<collection>.paths
+					// --
+	
+					// Set default "plural" and "singular" paths
+					$singular = self::singularize($collection);
+					$plural = self::pluralize($singular);
+		
+					if (empty($config[$provider]['collections'][$collection]['paths']['singular']))
+					{
+						$config[$provider]['collections'][$collection]['paths']['singular'] = $singular;
+					}
+		
+					if (empty($config[$provider]['collections'][$collection]['paths']['plural']))
+					{
+						$config[$provider]['collections'][$collection]['paths']['plural'] = $plural;
+					}
+		
+					$config[$provider]['collections'][$collection]['paths']['singular'] = $this->slugify($config[$provider]['collections'][$collection]['paths']['singular']);
+					$config[$provider]['collections'][$collection]['paths']['plural'] = $this->slugify($config[$provider]['collections'][$collection]['paths']['plural']);
+					
+					
+					
+					// api.<provider>.collections.<collection>.privileges
+					// --
+
+					// Set default granted value
+					foreach ($config[$provider]['collections'][$collection]['privileges'] as $privilege => $z)
+					{
+						if ($config[$provider]['collections'][$collection]['privileges'][$privilege]['granted'] === null)
+						{
+							$config[$provider]['collections'][$collection]['privileges'][$privilege]['granted'] = 'PUBLIC_ACCESS';
+						}
+					}
+
+
+					// api.<provider>.collections.<collection>.results.sorter
+					// --
+
+					foreach ($config[$provider]['collections'][$collection]['results']['sorter'] as $property => $z)
+					{
+						if ($config[$provider]['collections'][$collection]['results']['sorter'][$property] === null)
+						{
+							$config[$provider]['collections'][$collection]['results']['sorter'][$property] = 'ASC';
+						}
+
+						if (!in_array(strtoupper($config[$provider]['collections'][$collection]['results']['sorter'][$property]), self::SORTER, true))
+						{
+							throw new \InvalidArgumentException(sprintf("Wrong value for the sorter \"%s\", %s expected.", $property, join(", ", self::SORTER)));
+						}
+
+						$config[$provider]['collections'][$collection]['results']['sorter'][$property] = strtoupper($config[$provider]['collections'][$collection]['results']['sorter'][$property]);
+					}
+
+
+					// api.<provider>.collections.<collection>.search.criteria
+					// --
+
+					foreach ($config[$provider]['collections'][$collection]['search']['criteria'] as $property => $z)
+					{
+						if ($config[$provider]['collections'][$collection]['search']['criteria'][$property] === null)
+						{
+							$config[$provider]['collections'][$collection]['search']['criteria'][$property] = 'like';
+						}
+
+						if (!in_array(strtolower($config[$provider]['collections'][$collection]['search']['criteria'][$property]), self::FILTERS, true))
+						{
+							throw new \InvalidArgumentException(sprintf("Wrong value for the sorter \"%s\", %s expected.", $property, join(", ", self::FILTERS)));
+						}
+
+						$config[$provider]['collections'][$collection]['search']['criteria'][$property] = strtolower($config[$provider]['collections'][$collection]['search']['criteria'][$property]);
+					}
+				}
+			}
+
 			return $config;
 		})->end();
-		
+
 		return $builder;
 	}
 
 
 
 
-	// VALIDATORS
-	// --
-
-	private function checkUniqVersion($config): void
-	{
-		$versions = [];
-		foreach ($config as $apiName => $apiData) 
-		{
-			$version = $apiData['version'];
-
-			if (in_array($version, $versions)) 
-			{
-				// Todo: translate this message
-				throw new \InvalidArgumentException(sprintf('La valeur de "version" dans %s doit être unique.', $apiName));
-			}
-
-			$versions[] = $version;
-		}
-	}
-
-	private function setDefaultPaths(&$config): void 
-	{
-		foreach ($config as $apiName => $apiData) 
-		{
-			$collections = $apiData['collections'];
-			foreach ($collections as $collectionName => $collectionData)
-			{
-				$name = explode("\\", $collectionData['class']);
-				$name = end($name);
-				$name = strtolower($name);
-	
-				if ($collectionData['paths']['singular'] === null)
-				{
-					$config[$apiName]['collections'][$collectionName]['paths']['singular'] = $this->singularize($name);
-				}
-				if ($collectionData['paths']['plural'] === null)
-				{
-					$config[$apiName]['collections'][$collectionName]['paths']['plural'] = $this->pluralize($name);
-				}
-			}
-		}
-	}
-
-
-
-
-
-
-
-
-
-
-
 	// UTILS
 	// --
+	
+	const IRREGULARS = array(
+		'child' => 'children',
+		'person' => 'people',
+		'man' => 'men',
+		'woman' => 'women',
+		'tooth' => 'teeth',
+		'foot' => 'feet',
+		'mouse' => 'mice',
+		'ox' => 'oxen',
+		'goose' => 'geese',
+		'deer' => 'deer',
+		'fish' => 'fish',
+		'sheep' => 'sheep',
+		'cactus' => 'cacti',
+		'focus' => 'foci',
+		'fungus' => 'fungi',
+		'nucleus' => 'nuclei',
+		'syllabus' => 'syllabi',
+		'radius' => 'radii',
+		'datum' => 'data',
+		'medium' => 'media',
+		'analysis' => 'analyses',
+		'crisis' => 'crises',
+		'thesis' => 'theses',
+		'phenomenon' => 'phenomena',
+		'index' => 'indices',
+		'matrix' => 'matrices',
+		'axis' => 'axes',
+		'appendix' => 'appendices',
+		'bacterium' => 'bacteria',
+		'curriculum' => 'curricula',
+		'formula' => 'formulas',
+		'larva' => 'larvae',
+		'stimulus' => 'stimuli',
+		'virus' => 'viruses',
+		'alumnus' => 'alumni',
+		'focus' => 'foci',
+		'criterion' => 'criteria',
+		'datum' => 'data',
+		'medium' => 'media',
+		'radius' => 'radii',
+		'criterion' => 'criteria',
+		'crisis' => 'crises',
+		'diagnosis' => 'diagnoses',
+		'hypothesis' => 'hypotheses',
+		'parenthesis' => 'parentheses',
+		'appendix' => 'appendices',
+		'matrix' => 'matrices',
+		'thesis' => 'theses',
+		'phenomenon' => 'phenomena',
+	);
 
-    private function singularize(string $word): string
+    public static function singularize(string $word): string
     {
+		$irregulars = array_flip(self::IRREGULARS);
+
+		if (array_key_exists($word, $irregulars)) {
+			return $irregulars[$word];
+		}
+
+
         if (preg_match('/(.*[^aeiou])ies$/', $word, $matches)) {
             return $matches[1] . 'y';
         } elseif (preg_match('/(.*)(ses|xes|zes|ches|shes)$/', $word, $matches)) {
@@ -375,14 +465,35 @@ class Configuration implements ConfigurationInterface
             return $word;
         }
     }
-    private function pluralize(string $word): string
+    public static function pluralize(string $word): string
     {
-        if (preg_match('/(.*[^aeiou])y$/', $word, $matches)) {
-            return $matches[1] . 'ies';
-        } elseif (preg_match('/(.*)(s|x|z|ch|sh)$/', $word, $matches)) {
-            return $matches[0] . 'es';
-        } else {
-            return $word . 's'; 
-        }
+		$irregulars = self::IRREGULARS;
+
+		if (array_key_exists($word, $irregulars)) {
+			return $irregulars[$word];
+		}
+
+		$rules = array(
+			'/(s|x|z)$/i' => "$1es",
+			'/([^aeiouy])y$/i' => "$1ies",
+			'/$/' => "s"
+		);
+
+		foreach ($rules as $pattern => $replacement) {
+			if (preg_match($pattern, $word)) {
+				return preg_replace($pattern, $replacement, $word);
+			}
+		}
+
+		return $word;
     }
+	private function slugify($str) 
+	{
+		$str = preg_replace('/[^a-zA-Z0-9-]+/', '-', $str);
+		$str = strtolower($str);
+		$str = trim($str, '-');
+		$str = preg_replace('/-+/', '-', $str);
+	
+		return $str;
+	}
 }

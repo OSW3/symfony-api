@@ -1,16 +1,74 @@
-api_search:
-    path: /api/v{version}/search
+api:search:
+    path: /api/{prefix}/search
     defaults:
         version: 1
     requirements:
         version: \d+
 
+# api:routes:
+#     path: /
+#     defaults:
+#         version: 1
+#         path: null
+#         id: null
+#     requirements:
+#         version: \d+
+#         id: \d+|[\w-]+
 api:
-    path: /api/v{version}/{path}/{id}
+    path: /api/{prefix}/{path}/{id}
     defaults:
-        version: 1
+        prefix: null
         path: null
         id: null
     requirements:
-        version: \d+
         id: \d+|[\w-]+
+
+
+# api:index:
+#     path: /api/{prefix}/{path}
+#     methods: ['GET']
+#     defaults:
+#         prefix: null
+#         path: null
+#         id: null
+#     requirements:
+
+# api:create:
+#     path: /api/{prefix}/{path}
+#     methods: ['POST']
+#     defaults:
+#         prefix: null
+#         path: null
+#         id: null
+#     requirements:
+#         id: \d+|[\w-]+
+
+# api:read:
+#     path: /api/{prefix}/{path}/{id}
+#     methods: ['GET']
+#     defaults:
+#         prefix: null
+#         path: null
+#         id: null
+#     requirements:
+#         id: \d+|[\w-]+
+
+# api:read:
+#     path: /api/{prefix}/{path}/{id}
+#     methods: ['GET']
+#     defaults:
+#         prefix: null
+#         path: null
+#         id: null
+#     requirements:
+#         id: \d+|[\w-]+
+
+# api:read:
+#     path: /api/{prefix}/{path}/{id}
+#     methods: ['GET']
+#     defaults:
+#         prefix: null
+#         path: null
+#         id: null
+#     requirements:
+#         id: \d+|[\w-]+
