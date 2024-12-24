@@ -1,0 +1,22 @@
+{
+    "name": "osw3/symfony-api",
+    "description": "API support for Symfony.",
+    "homepage": "https://osw3.net",
+    "type": "symfony-bundle",
+    "license": "MIT",
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "authors": [
+		{
+			"name": "Project Contributors",
+			"homepage": "https://github.com/osw3/symfony-api/graphs/contributors"
+		}
+    ],
+    "autoload": {
+        "psr-4": {
+            "OSW3\\Api\\": "src/"
+        }
+    },
+    "require": {
+    }
+}
