@@ -2,29 +2,73 @@
 namespace OSW3\Api\Service;
 
 use OSW3\Api\Service\ConfigurationService;
-use Symfony\Component\Routing\RouteCollection;
+use Symfony\Component\Routing\RouterInterface;
 
-class RouteService 
+final class RouteService 
 {
     public function __construct(
         private ConfigurationService $configuration,
+        private RouterInterface $routerInterface,
     ){}
 
-    public function addToCollection(): static 
+    public function getExposedRoutes(): array
     {
-        $collection = new RouteCollection;
         $providers = $this->configuration->getProviders();
+        $routes = [];
 
+
+        // Read APIs definitions
+        // my_custom_api_v1, my_custom_api_v2, ...
         foreach ($providers as $provider) 
+        foreach ($provider['collections'] ?? [] as $entityOptions) 
+        foreach ($entityOptions['endpoints'] ?? [] as $endpointName => $endpointOption) 
         {
-        // dump($provider);
+            // Route Name
+            $name = $endpointOption['name'];
 
+            // Route path
+            $prefix = $entityOptions['route']['prefix'];
+            $collection   = $entityOptions['name'];
+            $path   = "{$prefix}/{$collection}";
+            foreach ($endpointOption['options'] ?? [] as $opt) $path .= "/{{$opt}}";
+
+            // Route defaults
+            $defaults = [];
+            $defaults['_controller'] = $endpointOption['controller'] ?? null;
+
+            // Route requirements
+            $requirements = $endpointOption['requirements'] ?? [];
+
+            // Route options
+            $options = $endpointOption['options'] ?? [];
+
+            // Route host
+            $host = $endpointOption['host'] ?? [];
+
+            // Route schemes
+            $schemes = $endpointOption['schemes'] ?? [];
+
+            // Route methods
+            $methods = $endpointOption['methods'] ?? [];
+
+            // Route conditions
+            $conditions = $endpointOption['conditions'] ?? [];
+
+            if (!isset($routes[$name]))
+            {
+                $routes[$name] = [
+                    'path'         => $path,
+                    'defaults'     => $defaults,
+                    'requirements' => $requirements,
+                    'options'      => $options,
+                    'host'         => $host,
+                    'schemes'      => $schemes,
+                    'methods'      => $methods,
+                    'conditions'   => $conditions,
+                ];
+            }
         }
 
-        // dump($providers);
-        // dump($collection);
-        // dump('Add routes to collection');
-        
-        return $this;
+        return $routes;
     }
 }

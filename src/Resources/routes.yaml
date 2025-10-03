@@ -1,0 +1,4 @@
+_routes:
+    resource: .
+    type: api_routes
+

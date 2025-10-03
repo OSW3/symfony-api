@@ -147,10 +147,15 @@ return static function($definition)
                         // REST endpoints
                         ->arrayNode('endpoints')
                         ->info('Configure the endpoints available for this collection. Default: index, create, read, update, delete.')
-                        ->useAttributeAsKey('action')  
+                        ->useAttributeAsKey('endpoint')  
                             ->arrayPrototype()
                             ->ignoreExtraKeys(false)
                                 ->children()
+
+                                    ->scalarNode('name')
+                                        ->info('route name. Defaults to null.')
+                                        ->defaultNull()
+                                    ->end()
 
                                     ->arrayNode('granted')
                                         ->info('Access control for this action (security roles, PUBLIC_ACCESS, etc.).')
@@ -174,43 +179,38 @@ return static function($definition)
                     ->end() // of collections  arrayPrototype children
                 ->end() // of collections arrayPrototype
 
-                // Check if entity is valid
+                // Validation: entity existence
                 ->validate()
                     ->ifTrue(fn($v) => EntityValidator::validateClassesExist($v))
                     ->thenInvalid('One or more entities defined in "api" do not exist. Check namespaces and spelling.')
-                // ->end() // Entity validator
-                // ->validate()
+                ->end()
+
+                // Automatic collection name generation
+                ->validate()
                     ->always(fn($collections) => CollectionNameGenerator::generate($collections))
-                    // ->always(function($collections) {
-                    //     foreach ($collections as $entity => &$collection)
-                    //     {  
-                    //         if (empty($collection['route']['name'])) {
-                    //             $collection['route']['name'] = "PLOP";
-                    //         }
-                    //     }
-                    // })
                 ->end()
 
             ->end() // of collections
 
-
-
         ->end() // of version_provider
-    ->end() // of root config
+    ->end() // of rootNode
 
 
-    // Version generator
+    // ──────────────────────────────
+    // Final post-processing
+    // ──────────────────────────────
     ->validate()
-        // ->always(fn($providers) => ApiVersionGenerator::generate($providers))
         ->always(function($providers) {
+            
+            // 1. Generate missing versions
             $providers = ApiVersionGenerator::generate($providers);
 
             foreach ($providers as $n => &$provider) 
             {
-                foreach ($provider['collections'] as &$collection)
+                foreach ($provider['collections'] as $entityName => &$collection)
                 {
 
-                    // Set default collection route
+                    // 2. Fallback: route name & prefix
                     if ($collection['route']['name'] == null) 
                     {
                         $collection['route']['name'] = $provider['routes']['name'];
@@ -220,53 +220,117 @@ return static function($definition)
                         $collection['route']['prefix'] = $provider['routes']['prefix'];
                     }
 
-                    // Set default collection search
+                    $collection['route']['prefix'] = preg_replace("/{version}/", $provider['version'], $collection['route']['prefix']);
+                    // $collection['route']['name'] = preg_replace("/{collection}/", $collection['name'], $collection['route']['name']);
+
+                    // 3. Fallback: search & pagination
                     if (!is_bool($collection['search'])) 
                     {
                         $collection['search'] = $provider['search'];
                     }
-
-                    // Set default collection pagination
                     if ($collection['pagination'] == null) 
                     {
                         $collection['pagination'] = $provider['pagination']['per_page'];
                     }
 
-                    // Set default collection action
+
+                    // 4. Inject default REST actions if missing
                     $collection['endpoints'] = array_merge([
                         'index' => [
                             'granted' => ['PUBLIC_ACCESS'],
-                            'methods' => ['HEAD', 'GET'],
+                            'methods' => ['GET'],
                         ],
-                        'create' => [
-                            'granted' => ['PUBLIC_ACCESS'],
-                            'methods' => ['HEAD', 'GET', 'POST'],
-                        ],
-                        'read' => [
-                            'granted' => ['PUBLIC_ACCESS'],
-                            'methods' => ['HEAD', 'GET'],
-                        ],
-                        'update' => [
-                            'granted' => ['PUBLIC_ACCESS'],
-                            'methods' => ['HEAD', 'GET', 'PUT'],
-                        ],
-                        'delete' => [
-                            'granted' => ['PUBLIC_ACCESS'],
-                            'methods' => ['HEAD', 'GET', 'DELETE'],
-                        ],
+                        // 'create' => [
+                        //     'granted' => ['PUBLIC_ACCESS'],
+                        //     'methods' => ['HEAD', 'POST'],
+                        // ],
+                        // 'read' => [
+                        //     'granted' => ['PUBLIC_ACCESS'],
+                        //     'methods' => ['GET'],
+                        //     'options' => ['id'],
+                        //     'requirements' => [
+                        //         'id' => "\d+|[\w-]+"
+                        //     ],
+                        // ],
+                        // 'update' => [
+                        //     'granted' => ['PUBLIC_ACCESS'],
+                        //     'methods' => ['HEAD', 'PUT'],
+                        // ],
+                        // 'delete' => [
+                        //     'granted' => ['PUBLIC_ACCESS'],
+                        //     'methods' => ['HEAD', 'DELETE'],
+                        // ],
                     ], $collection['endpoints']);
 
 
-                    foreach ($collection['endpoints'] as &$action) 
+
+
+                    // 5. Normalize missing action fields
+                    foreach ($collection['endpoints'] as $endpointName => &$endpoint) 
                     {
-                        if (empty($action['granted'])) 
+                        // Endpoint route name
+                        if (!isset($endpoint['name'])) 
                         {
-                            $action['granted'] = ['PUBLIC_ACCESS'];
+                            $endpoint['name'] = $collection['route']['name'];
                         }
-                        if (!isset($action['controller'])) 
+                        
+                        // Endpoint route name
+                        if (!isset($endpoint['methods'])) 
                         {
-                            $action['controller'] = null;
+                            $endpoint['methods'] = [];
                         }
+                        
+                        // Endpoint route requirements
+                        if (!isset($endpoint['requirements'])) 
+                        {
+                            $endpoint['requirements'] = [];
+                        }
+                        
+                        // Endpoint route defaults params values
+                        // if (!isset($endpoint['defaults'])) 
+                        // {
+                        //     $endpoint['defaults'] = [];
+                        // }
+                        
+                        // Endpoint route options
+                        if (!isset($endpoint['options'])) 
+                        {
+                            $endpoint['options'] = [];
+                        }
+                        
+                        // Endpoint route conditions
+                        if (!isset($endpoint['conditions'])) 
+                        {
+                            $endpoint['conditions'] = '';
+                        }
+                        
+                        // Endpoint route host
+                        if (!isset($endpoint['host'])) 
+                        {
+                            $endpoint['host'] = '';
+                        }
+                        
+                        // Endpoint route schemes
+                        if (!isset($endpoint['schemes'])) 
+                        {
+                            $endpoint['schemes'] = [];
+                        }
+
+                        if (empty($endpoint['granted'])) 
+                        {
+                            $endpoint['granted'] = ['PUBLIC_ACCESS'];
+                        }
+                        if (!isset($endpoint['controller'])) 
+                        {
+                            $endpoint['controller'] = null;
+                        }
+
+
+                        $className = (new \ReflectionClass($entityName))->getShortName();
+                        $className = strtolower($className);
+                        $endpoint['name'] = preg_replace("/{version}/", $provider['version'], $endpoint['name']);
+                        $endpoint['name'] = preg_replace("/{action}/", $endpointName, $endpoint['name']);
+                        $endpoint['name'] = preg_replace("/{collection}/", $className, $endpoint['name']);
                     }
 
                 }
