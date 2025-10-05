@@ -8,6 +8,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -17,42 +18,43 @@ class ApiSubscriber implements EventSubscriberInterface
     public function __construct(
         // Pour le dev
         private ConfigurationService $configuration,
-        
+
+        // private RequestStack $requestStack,
         private RequestService $requestService,
-        // private RepositoryService $repository,
+        private RepositoryService $repository,
     ){}
 
     public static function getSubscribedEvents(): array
     {
         return [
-            KernelEvents::REQUEST => ['onRequest', 0],
-            KernelEvents::RESPONSE => ['onResponse', 10],
+            KernelEvents::REQUEST => ['onRequest'],
+            // KernelEvents::RESPONSE => ['onResponse'],
         ];
     }
-
+    
     public function onRequest(RequestEvent $event): void 
     {
-
-
-        // dd($event);
-
-
+        // dump( $this->requestStack->getCurrentRequest()->attributes);
+        
         // Check if the current route is defined in the API config
         if (!$this->requestService->support()) {
             return;
         }
 
-        // // Check if the current route has a defined in the API config
-        // if ($event->getRequest()->attributes->get('_controller') != null) 
-        // {
-        //     return;
-        // }
-        
-        // $params = $event->getRequest()->attributes->get('_route_params') ?? [];
-        // $method = $event->getRequest()->getMethod();
-        // $id     = $params['id'] ?? null;
+        // Exit if the current route has a valid controller
+        if ($event->getRequest()->attributes->get('_controller') != null) {
+            return;
+        }
 
-        // match ($method) {
+        $this->repository->execute();
+        dd('---');
+        
+
+
+        $requestParams = $event->getRequest()->attributes->get('_route_params') ?? [];
+        $requestMethod = $event->getRequest()->getMethod();
+        $id     = $requestParams['id'] ?? null;
+        // match ($requestMethod) {
         //     Request::METHOD_GET    => $id ? $this->findOne($id) : $this->findAll(),
         //     Request::METHOD_PUT    => $this->update($id),
         //     Request::METHOD_POST   => $this->create(),
@@ -61,7 +63,47 @@ class ApiSubscriber implements EventSubscriberInterface
         // };
 
 
-        dd($event);
+        $provider = $this->configuration->guessProvider();
+        $collection = $this->configuration->guessCollection();
+        $endpoint = $this->configuration->guessEndpoint();
+
+        $repository = $this->configuration->getRepository($provider, $collection, $endpoint);
+        $repositoryMethod = $this->configuration->getMethod($provider, $collection, $endpoint);
+
+        // dump( $provider );
+        // dump( $collection );
+        // dump( $endpoint );
+
+        // dump( $requestMethod );
+        // dump( $repository );
+        // dump( $repositoryMethod );
+        // dump( $repository->$repositoryMethod() );
+
+
+
+        $data = match ($requestMethod) {
+            Request::METHOD_GET    => $id ? $repository->$repositoryMethod($id) : $repository->$repositoryMethod(),
+            Request::METHOD_PUT    => $repository->$repositoryMethod($id),
+            Request::METHOD_POST   => $repository->$repositoryMethod(),
+            Request::METHOD_PATCH  => $repository->$repositoryMethod($id),
+            Request::METHOD_DELETE => $repository->$repositoryMethod($id),
+        };
+
+        dump( $data );
+
+
+        // dump( $requestParams );
+        // dump( $requestMethod );
+        // dump( $id );
+        dd( __METHOD__);
+
+
+
+
+
+
+
+
 
 
 
@@ -77,24 +119,37 @@ class ApiSubscriber implements EventSubscriberInterface
 
         // $event->setResponse($response);
     }
-    
+
+
     public function onResponse(ResponseEvent $event): void
     {
-        // Check if the current route is defined in the API config
-        if (!$this->requestService->support()) 
-        {
-            return;
-        }
+        // dump( $this->requestStack->getCurrentRequest()->attributes);
+        // dd( __METHOD__);
 
-        // // Check if the current route has a defined in the API config
+        // // Check if the current route is defined in the API config
+        // if (!$this->requestService->support()) 
+        // {
+        //     return;
+        // }
+
+        // // Exit if the current route has a valid controller
+        // // The custom controller will be executed
         // if ($event->getRequest()->attributes->get('_controller') != null) 
         // {
         //     return;
         // }
 
+            
+
+        // dump( $this->requestService->support() );
+        // dd( __METHOD__);
+
+        
+
+        // dump($event->getRequest()->attributes->get('_controller'));
+        // dd($event);
 
 
-        dd($event);
 
         $content = [
             'response' => "Test 222"
@@ -108,6 +163,9 @@ class ApiSubscriber implements EventSubscriberInterface
 
         $event->setResponse($response);
     }
+
+
+
 
 
     private function findAll(): void
@@ -243,8 +301,8 @@ class ApiSubscriber implements EventSubscriberInterface
         // dump($endpointRouteRequirements);
         
 
-        $repositoryClass = $this->configuration->getRepositoryClass('my_custom_api_v1', 'App\Entity\Book', 'index');
-        // dump($repositoryClass);
+        $repositoryInstance = $this->configuration->getRepository('my_custom_api_v1', 'App\Entity\Book', 'index');
+        // dump($repositoryInstance);
         $method = $this->configuration->getMethod('my_custom_api_v1', 'App\Entity\Book', 'index');
         // dump($method);
         $criteria = $this->configuration->getCriteria('my_custom_api_v1', 'App\Entity\Book', 'index');

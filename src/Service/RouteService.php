@@ -31,29 +31,32 @@ final class RouteService
                     $prefix     = $entityOptions['route']['prefix'];
                     $collection = $entityOptions['name'];
                     $path       = "{$prefix}/{$collection}";
-                    foreach ($endpointOption['options'] ?? [] as $opt) $path .= "/{{$opt}}";
+                    foreach ($endpointOption['route']['options'] ?? [] as $opt) $path .= "/{{$opt}}";
         
                     // Route defaults
                     $defaults = [];
-                    $defaults['_controller'] = $endpointOption['controller'] ?? PlaceholderController::class . '::handle';
+                    $defaults['_controller'] = $endpointOption['route']['controller'] ?? null;
+                    // $defaults['_controller'] = $endpointOption['controller'] ?? 'OSW3\Api\Controller\PlaceholderController::handle';
+                    // $defaults['_controller'] = $endpointOption['controller'] ??  [\OSW3\Api\Controller\PlaceholderController::class, 'handle'];
+
         
                     // Route requirements
-                    $requirements = $endpointOption['requirements'] ?? [];
+                    $requirements = $endpointOption['route']['requirements'] ?? [];
         
                     // Route options
-                    $options = $endpointOption['options'] ?? [];
+                    $options = $endpointOption['route']['options'] ?? [];
         
                     // Route host
-                    $host = $endpointOption['host'] ?? null;
+                    $host = $endpointOption['route']['host'] ?? null;
         
                     // Route schemes
-                    $schemes = $endpointOption['schemes'] ?? [];
+                    $schemes = $endpointOption['route']['schemes'] ?? [];
         
                     // Route methods
-                    $methods = $endpointOption['methods'] ?? [];
+                    $methods = $endpointOption['route']['methods'] ?? [];
         
                     // Route conditions
-                    $conditions = $endpointOption['conditions'] ?? null;
+                    $condition = $endpointOption['route']['condition'] ?? '';
         
                     if (!isset($routes[$name]))
                     {
@@ -65,7 +68,7 @@ final class RouteService
                             'host'         => $host,
                             'schemes'      => $schemes,
                             'methods'      => $methods,
-                            'conditions'   => $conditions,
+                            'condition'    => $condition,
                         ];
                     }
                 }

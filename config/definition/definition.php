@@ -231,6 +231,9 @@ return static function($definition)
                                                 ->defaultNull()
                                             ->end()
 
+                                            // TODO: Scheme
+                                            // TODO: Host
+
                                         ->end()
                                     ->end()
 
@@ -239,7 +242,8 @@ return static function($definition)
                                     // ──────────────────────────────
                                     ->arrayNode('repository')
                                     ->info('Specifies how data is retrieved: repository method to call, query criteria, ordering, limits, and loading strategy.')
-                                        ->isRequired()
+                                        // ->isRequired()
+                                        ->addDefaultsIfNotSet()
                                         ->children()
 
                                             ->scalarNode('service')
@@ -254,8 +258,9 @@ return static function($definition)
                                                     - A custom public method defined in your repository class.
                                                     The method will be called when the controller is null.
                                                     INFO)
-                                                ->isRequired()
-                                                ->cannotBeEmpty()
+                                                // ->isRequired()
+                                                // ->cannotBeEmpty()
+                                                ->defaultNull()
                                             ->end()
 
                                             ->arrayNode('criteria')
@@ -584,7 +589,7 @@ return static function($definition)
 
 
 
-                    
+
                     // 4. Normalize missing action fields
                     foreach ($collection['endpoints'] as $endpointName => &$endpoint) 
                     {
@@ -610,6 +615,12 @@ return static function($definition)
                         // ──────────────────────────────
                         // Repository config
                         // ──────────────────────────────
+
+                        // Route name
+                        // if (empty(trim($endpoint['repository']['service'])))
+                        // {
+                        //     $endpoint['repository']['service'] = null;
+                        // }
 
                         // ──────────────────────────────
                         // Metadata config

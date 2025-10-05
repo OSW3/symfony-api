@@ -9,42 +9,59 @@ final class RequestService
 {
     public function __construct(
         private ConfigurationService $configuration,
-        // private RequestStack $requestStack,
+        private RequestStack $requestStack,
         // private RouterInterface $routerInterface,
     ){}
 
     public function support(): bool 
     {
-        // $providers = $this->configuration->getAllProviders();
-        // $current = $this->requestStack->getCurrentRequest()->get('_route');
+        $providers      = $this->configuration->getAllProviders();
+        $currentRequest = $this->requestStack->getCurrentRequest();
+        $currentRoute    = $currentRequest->get('_route');
+        $currentPath    = $currentRequest->getPathInfo();
+        $currentMethod  = $currentRequest->getMethod();
 
-        // if (!$current) {
-        //     return false;
-        // }
+        foreach ($providers as $provider) {
+            foreach ($provider['collections'] ?? [] as $collection) {
+                foreach ($collection['endpoints'] ?? [] as $endpoint) {
 
-        // dd($providers);
-        // foreach ($providers as $provider) {
-        //     foreach ($provider['collections'] ?? [] as $collection) {
-        //         foreach ($collection['endpoints'] ?? [] as $endpoint) {
-        //             if (($endpoint['route']['name'] ?? null) === $current) {
-        //                 return true; // ← Stop immédiatement dès qu'on trouve une correspondance
-        //             }
-        //         }
-        //     }
-        // }
+                    if ($endpoint['route']['name'] === $currentRoute) {
+                        return true;
+                    }
+                    // dump($endpoint['route']['name']);
+                    // dump($currentRoute);
+
+                    // $pathPrefix     = $collection['route']['prefix'];
+                    // $pathCollection = $collection['name'];
+                    // $path           = "{$pathPrefix}/{$pathCollection}";
+                    // $methods        = $endpoint['route']['methods'];
+                    
+                    // $requirements     = $endpoint['route']['requirements'];
+                    // $options     = $endpoint['route']['options'];
+
+
+
+                    // $pathPattern = $currentRequest;
+                    // foreach ($options ?? [] as $param) {
+                    //     $regex = $requirements[$param] ?? '[^/]+';
+                    //     $pathPattern = str_replace("{{$param}}", "($regex)", $pathPattern);
+                    // }
+
+
+                    // dump($currentPath);
+                    // dump($path);
+                    // dump($currentMethod);
+                    // dump($methods);
+                    // dump( $currentPath === $path );
+                    // dump( in_array($currentMethod, $methods) );
+                    // dd( $currentPath === $path && in_array($currentMethod, $methods) );
+
+                    // return $currentPath === $path && in_array($currentMethod, $methods);
+                }
+            }
+        }
 
         return false;
-
-        // $routes = [];
-
-        // foreach ($providers as $provider) 
-        // foreach ($provider['collections'] ?? [] as $collections) 
-        // foreach ($collections['endpoints'] ?? [] as $endpointName => $endpointOption) 
-        // {
-        //     array_push($routes, $endpointOption['route']['name']);
-        // }
-        
-        // return in_array($current, $routes);
     }
 
     public function getEntityClassname(): string|null

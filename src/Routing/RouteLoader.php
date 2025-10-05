@@ -21,6 +21,8 @@ class RouteLoader extends Loader
         $exposedRoutes = $this->routeService->getExposedRoutes();
         $routes = new RouteCollection();
 
+        // dd($exposedRoutes);
+
         foreach ($exposedRoutes as $exposedRouteName => $exposedRouteOption)
         {
             $route = new Route(
@@ -31,7 +33,7 @@ class RouteLoader extends Loader
                 $exposedRouteOption['host'], 
                 $exposedRouteOption['schemes'], 
                 $exposedRouteOption['methods'], 
-                $exposedRouteOption['conditions']
+                $exposedRouteOption['condition']
             );
 
             $routes->add($exposedRouteName, $route);

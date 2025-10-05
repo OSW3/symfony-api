@@ -1,18 +1,25 @@
 <?php 
 namespace OSW3\Api\Service;
 
+use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Component\HttpFoundation\Request;
 use OSW3\Api\DependencyInjection\Configuration;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class ConfigurationService
 {
     private readonly array $configuration;
+    private readonly Request $currentRequest;
 
     public function __construct(
-        #[Autowire(service: 'service_container')] private ContainerInterface $container,
+        #[Autowire(service: 'service_container')] private readonly ContainerInterface $container,
+        private readonly ManagerRegistry $doctrine,
+        private readonly RequestStack $requestStack,
     ){
         $this->configuration = $container->getParameter(Configuration::NAME);
+        $this->currentRequest = $this->requestStack->getCurrentRequest();
     }
 
 
@@ -45,6 +52,14 @@ class ConfigurationService
     public function getAllProviders(): array
     {
         return $this->configuration;
+    }
+
+    /**
+     * Guess the provider name by the current route name
+     */
+    public function guessProvider(): ?string
+    {
+        return $this->findRouteMapping()['provider'] ?? null;
     }
 
 
@@ -273,6 +288,14 @@ class ConfigurationService
         return $this->configuration[$providerName]['collections'][$entityClass] ?? null;
     }
 
+    /**
+     * Guess the collection name by the current route name
+     */
+    public function guessCollection(): ?string
+    {
+        return $this->findRouteMapping()['collection'] ?? null;
+    }
+
     // ──────────────────────────────
     // Endpoints
     // ──────────────────────────────
@@ -286,6 +309,15 @@ class ConfigurationService
     {
         return $this->getCollection($providerName, $entityClass)['endpoints'][$endpointName] ?? null;
     }
+
+    /**
+     * Guess the endpoint name by the current route name
+     */
+    public function guessEndpoint(): ?string
+    {
+        return $this->findRouteMapping()['endpoint'] ?? null;
+    }
+
 
     
     // ──────────────────────────────
@@ -332,14 +364,68 @@ class ConfigurationService
     // Endpoints Repository
     // ──────────────────────────────
 
-    public function getRepositoryClass(string $providerName, string $entityClass, string $endpointName): ?array
+    public function getRepository(string $providerName, string $entityClass, string $endpointName)
     {
-        return $this->getEndpoint($providerName, $entityClass, $endpointName)['repository']['service'] ?? null;
+        $repositoryClass = $this->getEndpoint($providerName, $entityClass, $endpointName)['repository']['service'] ?? '';
+
+        if (!empty($repositoryClass)) {
+            foreach ($this->doctrine->getManager()->getMetadataFactory()->getAllMetadata() as $meta) {
+                if ($meta->customRepositoryClassName === $repositoryClass) {
+                    return $this->doctrine->getRepository($meta->getName());
+                }
+            }
+        }
+
+        return $this->getEntityRepository($entityClass);
     }
 
-    public function getMethod(string $providerName, string $entityClass, string $endpointName): string
+    public function getMethod(string $providerName, string $entityClass, string $endpointName): ?string
     {
-        return $this->getEndpoint($providerName, $entityClass, $endpointName)['repository']['method'] ?? '';
+        $repositoryMethod = $this->getEndpoint($providerName, $entityClass, $endpointName)['repository']['method'] ?? null;
+
+        if (!empty($repositoryMethod)) {
+            return $repositoryMethod;
+        }
+
+        $requestMethod = $this->currentRequest->getMethod();
+        $id            = $this->currentRequest->get('id');
+        // $criteria      = $this->getCriteria($providerName, $entityClass, $endpointName);
+        // $orderBy       = $this->getOrderBy($providerName, $entityClass, $endpointName);
+        // $limit         = $this->getLimit($providerName, $entityClass, $endpointName);
+
+        return match ($requestMethod) {
+            // Request::METHOD_GET    => $id ? "find" : "findAll",
+            Request::METHOD_GET    => $id ? "find" : "findBy",
+            Request::METHOD_PUT    => "update",
+            Request::METHOD_POST   => "create",
+            Request::METHOD_PATCH  => "update",
+            Request::METHOD_DELETE => "delete",
+            default => null
+        };
+
+        // // Choix intelligent de la méthode par défaut
+        // if (!$repositoryMethod) {
+        //     $repositoryMethod = match ($request->getMethod()) {
+        //         Request::METHOD_GET    => $id ? 'find' : 'findBy',
+        //         Request::METHOD_PUT    => 'update',
+        //         Request::METHOD_POST   => 'create',
+        //         Request::METHOD_PATCH  => 'update',
+        //         Request::METHOD_DELETE => 'delete',
+        //         default => null
+        //     };
+        // }
+
+        // // Construction automatique des arguments selon la méthode
+        // $args = match ($repositoryMethod) {
+        //     'find'   => [$id],
+        //     'findBy' => [$criteria, $orderBy ?: null, $limit ?: null, $offset ?: null],
+        //     default  => $id ? [$id] : []
+        // };
+
+        // return [
+        //     'method' => $repositoryMethod,
+        //     'args'   => array_filter($args, fn($v) => $v !== null) // nettoie les null inutiles
+        // ];
     }
 
     public function getCriteria(string $providerName, string $entityClass, string $endpointName): array
@@ -352,9 +438,9 @@ class ConfigurationService
         return $this->getEndpoint($providerName, $entityClass, $endpointName)['repository']['order_by'] ?? [];
     }
 
-    public function getLimit(string $providerName, string $entityClass, string $endpointName): string
+    public function getLimit(string $providerName, string $entityClass, string $endpointName): ?int
     {
-        return $this->getEndpoint($providerName, $entityClass, $endpointName)['repository']['limit'] ?? '';
+        return $this->getEndpoint($providerName, $entityClass, $endpointName)['repository']['limit'] ?? null;
     }
 
     public function getFetchMode(string $providerName, string $entityClass, string $endpointName): string
@@ -441,4 +527,43 @@ class ConfigurationService
     {
         return $this->getEndpoint($providerName, $entityClass, $endpointName)['rate_limit']['by_user'] ?? [];
     }
+
+
+    // ──────────────────────────────
+    // Utils
+    // ──────────────────────────────
+
+    /**
+     * Get provider, collection and endpoint by current route name
+     */
+    private function findRouteMapping(): array|null
+    {
+        $route = $this->currentRequest->get('_route');
+        if (!$route) {
+            return null;
+        }
+
+        foreach ($this->getAllProviders() as $providerName => $provider) {
+            foreach ($provider['collections'] ?? [] as $collectionName => $entityOptions) {
+                foreach ($entityOptions['endpoints'] ?? [] as $endpointName => $endpointOption) {
+                    if (($endpointOption['route']['name'] ?? null) === $route) {
+                        return [
+                            'provider'   => $providerName,
+                            'collection' => $collectionName,
+                            'endpoint'   => $endpointName,
+                        ];
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+
+    public function getEntityRepository(string $entity)
+    {
+        return $this->doctrine->getRepository($entity);
+    }
+
 }
