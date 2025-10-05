@@ -20,7 +20,6 @@ return static function($definition)
         ->info('Each key is an API provider. Typically used to group routes, versions and settings.')
         ->children()
 
-
             // ──────────────────────────────
             // Versioning
             // ──────────────────────────────
@@ -28,7 +27,6 @@ return static function($definition)
                 ->info('Specify the version of the API. If null, it will be automatically generated (v1, v2, …).')
                 ->defaultNull()
             ->end()
-
 
             // ──────────────────────────────
             // Global route settings
@@ -49,15 +47,13 @@ return static function($definition)
                 
             ->end()->end()
 
-
             // ──────────────────────────────
             // Search configuration
             // ──────────────────────────────
             ->booleanNode('search')
                 ->info('Enable or disable search globally for all collections.')
-                ->defaultTrue()
+                ->defaultFalse()
             ->end()
-            
 
             // ──────────────────────────────
             // Pagination defaults
@@ -85,7 +81,6 @@ return static function($definition)
 
 			->end()->end()
 
-
             // ──────────────────────────────
             // URL response settings
             // ──────────────────────────────
@@ -104,7 +99,6 @@ return static function($definition)
                 ->end()
 
 			->end()->end()
-
 
             // ──────────────────────────────
             // Collections (Doctrine Entities)
@@ -154,7 +148,7 @@ return static function($definition)
 
                                 ->booleanNode('enabled')
                                     ->info('Enable or disable search for this collection.')
-                                    ->defaultTrue()
+                                    ->defaultFalse()
                                 ->end()
 
                                 ->arrayNode('fields')
@@ -481,7 +475,6 @@ return static function($definition)
                                         ->end()
                                     ->end()
 
-
                                     // ──────────────────────────────
                                     // Rate limiting advanced (per role/user)
                                     // ──────────────────────────────
@@ -549,30 +542,49 @@ return static function($definition)
                 foreach ($provider['collections'] as $entityName => &$collection)
                 {
 
-                    // 2. Fallback: route name & prefix
-                    // if ($collection['route']['name'] == null) 
-                    // {
-                    //     $collection['route']['name'] = $provider['routes']['name'];
-                    // }
-                    // if ($collection['route']['prefix'] == null) 
-                    // {
-                    //     $collection['route']['prefix'] = $provider['routes']['prefix'];
-                    // }
+                    // COLLECTION ROUTE
+                    // -- 
 
+                    // Provide the default collection route name pattern
+                    if (empty(trim($collection['route']['name']))) 
+                    {
+                        $collection['route']['name'] = $provider['routes']['name'];
+                    }
+
+                    // Provide the default collection route prefix
+                    if (empty(trim($collection['route']['prefix'])))
+                    {
+                        $collection['route']['prefix'] = $provider['routes']['prefix'];
+                    }
+
+                    // Replace pattern in the route prefix
                     $collection['route']['prefix'] = preg_replace("/{version}/", $provider['version'], $collection['route']['prefix']);
-                    // $collection['route']['name'] = preg_replace("/{collection}/", $collection['name'], $collection['route']['name']);
 
-                    // 3. Fallback: search & pagination
-                    // if (!is_bool($collection['search'])) 
-                    // {
-                    //     $collection['search'] = $provider['search'];
-                    // }
-                    if ($collection['pagination'] == null) 
+
+                    // COLLECTION SEARCH
+                    // --
+
+                    // Provide collection search enabled
+                    if (!isset($collection['search']['enabled']) || !is_bool($collection['search']['enabled'])) 
+                    {
+                        $collection['search']['enabled'] = $provider['search'];
+                    }
+
+
+                    // COLLECTION SEARCH
+                    // --
+
+                    if (!isset($collection['pagination']) || $collection['pagination'] === null) 
                     {
                         $collection['pagination'] = $provider['pagination']['per_page'];
                     }
 
 
+
+
+
+
+                    
                     // 4. Normalize missing action fields
                     foreach ($collection['endpoints'] as $endpointName => &$endpoint) 
                     {
@@ -581,16 +593,17 @@ return static function($definition)
                         // ──────────────────────────────
 
                         // Route name
-                        // if (empty(trim($endpoint['route']['name'])))
-                        // {
-                        //     $endpoint['route']['name'] = $collection['route']['name'];
-                        // }
+                        if (empty(trim($endpoint['route']['name'])))
+                        {
+                            $endpoint['route']['name'] = $collection['route']['name'];
+                        }
 
-                        // $className = (new \ReflectionClass($entityName))->getShortName();
-                        // $className = strtolower($className);
-                        // $endpoint['route']['name'] = preg_replace("/{version}/", $provider['version'], $endpoint['route']['name']);
-                        // $endpoint['route']['name'] = preg_replace("/{action}/", $endpointName, $endpoint['route']['name']);
-                        // $endpoint['route']['name'] = preg_replace("/{collection}/", $className, $endpoint['route']['name']);
+                        // Generate Endpoint Route Name
+                        $className = (new \ReflectionClass($entityName))->getShortName();
+                        $className = strtolower($className);
+                        $endpoint['route']['name'] = preg_replace("/{version}/", $provider['version'], $endpoint['route']['name']);
+                        $endpoint['route']['name'] = preg_replace("/{action}/", $endpointName, $endpoint['route']['name']);
+                        $endpoint['route']['name'] = preg_replace("/{collection}/", $className, $endpoint['route']['name']);
 
 
 

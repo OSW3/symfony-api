@@ -49,19 +49,19 @@ final class RequestService
 
     public function getEntityClassname(): string|null
     {
-        $providers = $this->configuration->getAllProviders();
-        $current = $this->requestStack->getCurrentRequest()->get('_route');
+        // $providers = $this->configuration->getAllProviders();
+        // $current = $this->requestStack->getCurrentRequest()->get('_route');
 
-        foreach ($providers as $provider) 
-        foreach ($provider['collections'] ?? [] as $entityName => $collections) 
-        foreach ($collections['endpoints'] ?? [] as $endpointName => $endpointOption) 
-        {
-            $routeName = $endpointOption['name'];
+        // foreach ($providers as $provider) 
+        // foreach ($provider['collections'] ?? [] as $entityName => $collections) 
+        // foreach ($collections['endpoints'] ?? [] as $endpointName => $endpointOption) 
+        // {
+        //     $routeName = $endpointOption['name'];
 
-            if ($current == $routeName) {
-                return $entityName;
-            }
-        }
+        //     if ($current == $routeName) {
+        //         return $entityName;
+        //     }
+        // }
         
         return null;
     }
@@ -73,38 +73,38 @@ final class RequestService
      */
     public function getRepositoryMethod(): string|null 
     {
-        $providers = $this->configuration->getAllProviders();
-        $current = $this->requestStack->getCurrentRequest()->get('_route');
+        // $providers = $this->configuration->getAllProviders();
+        // $current = $this->requestStack->getCurrentRequest()->get('_route');
 
-        foreach ($providers as $provider) 
-        foreach ($provider['collections'] ?? [] as $entityName => $collections) 
-        foreach ($collections['endpoints'] ?? [] as $endpointName => $endpointOption) 
-        {
-            $routeName = $endpointOption['name'];
+        // foreach ($providers as $provider) 
+        // foreach ($provider['collections'] ?? [] as $entityName => $collections) 
+        // foreach ($collections['endpoints'] ?? [] as $endpointName => $endpointOption) 
+        // {
+        //     $routeName = $endpointOption['name'];
 
-            if ($current == $routeName) {
-                return $endpointOption['repository']['method'];
-            }
-        }
+        //     if ($current == $routeName) {
+        //         return $endpointOption['repository']['method'];
+        //     }
+        // }
 
         return null;
     }
        
     public function getRepositoryCriteria(): array
     {
-        $providers = $this->configuration->getAllProviders();
-        $current = $this->requestStack->getCurrentRequest()->get('_route');
+        // $providers = $this->configuration->getAllProviders();
+        // $current = $this->requestStack->getCurrentRequest()->get('_route');
 
-        foreach ($providers as $provider) 
-        foreach ($provider['collections'] ?? [] as $entityName => $collections) 
-        foreach ($collections['endpoints'] ?? [] as $endpointName => $endpointOption) 
-        {
-            $routeName = $endpointOption['name'];
+        // foreach ($providers as $provider) 
+        // foreach ($provider['collections'] ?? [] as $entityName => $collections) 
+        // foreach ($collections['endpoints'] ?? [] as $endpointName => $endpointOption) 
+        // {
+        //     $routeName = $endpointOption['name'];
 
-            if ($current == $routeName) {
-                return $endpointOption['repository']['criteria'];
-            }
-        }
+        //     if ($current == $routeName) {
+        //         return $endpointOption['repository']['criteria'];
+        //     }
+        // }
 
         return [];
     }

@@ -17,7 +17,7 @@ class RouteLoader extends Loader
         if ($type !== 'api_routes') {
             return null;
         }
-
+        
         $exposedRoutes = $this->routeService->getExposedRoutes();
         $routes = new RouteCollection();
 
