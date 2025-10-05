@@ -1,13 +1,16 @@
 <?php
 
-use OSW3\Api\Generator\ApiVersionGenerator;
-use OSW3\Api\Generator\CollectionNameGenerator;
+use OSW3\Api\Validator\HooksValidator;
 use OSW3\Api\Validator\EntityValidator;
+use OSW3\Api\Generator\ApiVersionGenerator;
+use OSW3\Api\Validator\ControllerValidator;
+use OSW3\Api\Validator\TransformerValidator;
+use OSW3\Api\Generator\CollectionNameGenerator;
 
 return static function($definition)
 {
     $definition->rootNode()
-        ->info('Configure all API providers and their behaviour.')
+        ->info('Configure all API providers and their behavior.')
 
         // ──────────────────────────────
         // Version Providers (v1, v2…)
@@ -74,6 +77,12 @@ return static function($definition)
                     ->min(1)
                 ->end()
 
+				->integerNode('max_per_page')
+                    ->info('Max number of items per page.')
+                    ->defaultValue(100)
+                    ->min(1)
+                ->end()
+
 			->end()->end()
 
 
@@ -107,13 +116,17 @@ return static function($definition)
                 ->ignoreExtraKeys(false)
                     ->children()
 
+                        // ──────────────────────────────
                         // Collection name
+                        // ──────────────────────────────
                         ->scalarNode('name')
                             ->info('Collection name in URLs and route names. Auto-generated from entity if null (e.g. App\\Entity\\Book → books).')
                             ->defaultNull()
                         ->end()
 
+                        // ──────────────────────────────
                         // Per-collection route overrides
+                        // ──────────────────────────────
                         ->arrayNode('route')
                             ->info('Override default route name or URL prefix for this specific collection.')
                             ->addDefaultsIfNotSet()->children()
@@ -131,45 +144,371 @@ return static function($definition)
                             ->end()
                         ->end()
 
+                        // ──────────────────────────────
                         // Per-collection search override
-                        ->booleanNode('search')
-                            ->info('Override global search setting for this specific collection.')
-                            ->defaultNull()
+                        // ──────────────────────────────
+                        ->arrayNode('search')
+                            ->info('Search configuration for this collection. Allows enabling search and specifying searchable fields.')
+                            ->addDefaultsIfNotSet()
+                            ->children()
+
+                                ->booleanNode('enabled')
+                                    ->info('Enable or disable search for this collection.')
+                                    ->defaultTrue()
+                                ->end()
+
+                                ->arrayNode('fields')
+                                    ->info('List of entity fields that are searchable. Only used if search is enabled.')
+                                    ->scalarPrototype()->end()
+                                    ->defaultValue([])
+                                ->end()
+
+                            ->end()
                         ->end()
 
+                        // ──────────────────────────────
                         // Per-collection pagination override
+                        // ──────────────────────────────
                         ->integerNode('pagination')
                             ->info('Override pagination items per page for this collection.')
                             ->defaultNull()
                             ->min(1)
                         ->end()
 
+                        // ──────────────────────────────
                         // REST endpoints
+                        // ──────────────────────────────
                         ->arrayNode('endpoints')
                         ->info('Configure the endpoints available for this collection. Default: index, create, read, update, delete.')
                         ->useAttributeAsKey('endpoint')  
+                            ->requiresAtLeastOneElement()
                             ->arrayPrototype()
                             ->ignoreExtraKeys(false)
                                 ->children()
 
-                                    ->scalarNode('name')
-                                        ->info('route name. Defaults to null.')
-                                        ->defaultNull()
+                                    // ──────────────────────────────
+                                    // Route config
+                                    // ──────────────────────────────
+                                    ->arrayNode('route')
+                                    ->info('Defines the HTTP configuration for the endpoint: route name, path, HTTP methods, controller, constraints, and routing options.')
+                                        ->isRequired()
+                                        ->children()
+
+                                            ->scalarNode('name')
+                                                ->info('Route name. If not defined, it will be generated automatically based on the collection and endpoint name.')
+                                                ->defaultNull()
+                                            ->end()
+
+                                            // ->scalarNode('path')
+                                            //     ->info('Optional custom path for this endpoint.')
+                                            //     ->defaultNull()
+                                            // ->end()
+
+                                            ->arrayNode('methods')
+                                                ->info('Allowed HTTP methods. Must be explicitly defined to avoid accidental exposure.')
+                                                ->requiresAtLeastOneElement()
+                                                ->isRequired()
+                                                ->scalarPrototype()->end()
+                                            ->end()
+
+                                            ->scalarNode('controller')
+                                                ->info('Optional Symfony controller (FQCN::method). If not defined, the endpoint will automatically use the configured "repository.method" to fetch and expose data.')
+                                                ->defaultNull()
+                                                ->validate()
+                                                    ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                                                    ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.')
+                                                ->end()
+                                            ->end()
+
+                                            ->arrayNode('requirements')
+                                                ->info('Regex constraints for dynamic route parameters. Keys are parameter names, values are regular expressions that must be matched. For example: {id} must be digits, {slug} must be lowercase letters and dashes.')
+                                                ->normalizeKeys(false)
+                                                ->scalarPrototype()->end()
+                                            ->end()
+
+                                            ->arrayNode('options')
+                                                ->info('Advanced route options used by the Symfony router. Common keys include "utf8" (true to support UTF-8 paths), "compiler_class" (custom RouteCompiler), or any custom metadata for route generation and matching.')
+                                                ->normalizeKeys(false)
+                                                ->scalarPrototype()->end()
+                                            ->end()
+
+                                            ->scalarNode('condition')
+                                                ->info('Optional condition expression for the route.')
+                                                ->defaultNull()
+                                            ->end()
+
+                                        ->end()
                                     ->end()
 
+                                    // ──────────────────────────────
+                                    // Repository config
+                                    // ──────────────────────────────
+                                    ->arrayNode('repository')
+                                    ->info('Specifies how data is retrieved: repository method to call, query criteria, ordering, limits, and loading strategy.')
+                                        ->isRequired()
+                                        ->children()
+
+                                            ->scalarNode('service')
+                                                ->info('Optional: the service ID of a custom repository. Defaults to the default Doctrine repository for the entity.')
+                                                ->defaultNull()
+                                            ->end()
+
+                                            ->scalarNode('method')
+                                                ->info(<<<'INFO'
+                                                    Repository method to call. This can be either:
+                                                    - A standard Doctrine repository method: `find`, `findAll`, `findBy`, `findOneBy`, `count`.
+                                                    - A custom public method defined in your repository class.
+                                                    The method will be called when the controller is null.
+                                                    INFO)
+                                                ->isRequired()
+                                                ->cannotBeEmpty()
+                                            ->end()
+
+                                            ->arrayNode('criteria')
+                                                ->info('Optional array of criteria to filter results when using `findBy` or `findOneBy`. Keys are field names, values are the values to match.')
+                                                ->normalizeKeys(false)
+                                                ->scalarPrototype()->end()
+                                            ->end()
+
+                                            ->arrayNode('order_by')
+                                                ->info('Optional array defining sorting. Keys are field names, values are `ASC` or `DESC`.')
+                                                ->normalizeKeys(false)
+                                                ->scalarPrototype()->end()
+                                            ->end()
+
+                                            ->integerNode('limit')
+                                                ->info('Optional maximum number of results to return.')
+                                                ->defaultNull()
+                                            ->end()
+
+                                            ->enumNode('fetch_mode')
+                                                ->info('Optional fetch mode for Doctrine relations. "lazy" loads relations on demand, "eager" loads them immediately.')
+                                                ->values(['lazy', 'eager'])
+                                                ->defaultNull()
+                                            ->end()
+
+                                        ->end()
+                                    ->end()
+
+                                    // ──────────────────────────────
+                                    // Metadata config
+                                    // ──────────────────────────────
+                                    ->arrayNode('metadata')
+                                        ->info('Holds functional metadata for the endpoint: description, deprecation status, caching, rate limiting, and documentation-related details.')
+                                        ->addDefaultsIfNotSet()
+                                        ->children()
+
+                                            ->scalarNode('description')
+                                                ->info('Short human-readable description of the endpoint. Used for documentation (e.g. OpenAPI summary).')
+                                                ->defaultNull()
+                                            ->end()
+
+                                            ->scalarNode('summary')
+                                                ->info('A brief one-line summary for OpenAPI documentation. Useful when "description" is longer.')
+                                                ->defaultNull()
+                                            ->end()
+
+                                            ->booleanNode('deprecated')
+                                                ->info('Marks the endpoint as deprecated. Tools like Swagger will highlight this.')
+                                                ->defaultFalse()
+                                            ->end()
+
+                                            ->integerNode('cache_ttl')
+                                                ->info('Optional cache lifetime in seconds for responses. Can be used for HTTP cache headers or reverse proxy hints.')
+                                                ->defaultNull()
+                                            ->end()
+
+                                            // ->scalarNode('rate_limit')
+                                            //     ->info('Optional rate limit policy for this endpoint, e.g., "100/hour". Purely informative here unless implemented elsewhere.')
+                                            //     ->defaultNull()
+                                            // ->end()
+
+                                            ->booleanNode('internal_only')
+                                                ->info('If true, marks the endpoint as internal (not exposed in public documentation or API discovery)s.')
+                                                ->defaultFalse()
+                                            ->end()
+
+                                            ->scalarNode('tags')
+                                                ->info('Optional tags to group endpoints in documentation tools like Swagger UI. Accepts a comma-separated string or array.')
+                                                ->defaultNull()
+                                            ->end()
+
+                                            ->arrayNode('examples')
+                                                ->info('Optional example request/response objects for documentation and developer experience. Keys are media types, values are example payloads.')
+                                                ->normalizeKeys(false)
+                                                ->scalarPrototype()->end()
+                                                ->defaultValue([])
+                                            ->end()
+
+                                            ->scalarNode('operation_id')
+                                                ->info('Custom operationId for OpenAPI documentation. If null, it will be generated from the route name.')
+                                                ->defaultNull()
+                                            ->end()
+
+                                            // ->arrayNode('parameters')
+                                            //     ->info('Optional query/path/header parameters documentation. Used mainly for OpenAPI or generated API docs.')
+                                            //     ->normalizeKeys(false)
+                                            //     ->arrayPrototype()
+                                            //         ->children()
+                                            //             ->scalarNode('type')
+                                            //                 ->info('Parameter type (e.g., int, string, boolean). Used for documentation.')
+                                            //                 ->defaultNull()
+                                            //             ->end()
+                                            //             ->booleanNode('required')
+                                            //                 ->info('Whether this parameter is required.')
+                                            //                 ->defaultFalse()
+                                            //             ->end()
+                                            //             ->scalarNode('description')
+                                            //                 ->info('Human-readable description of the parameter.')
+                                            //                 ->defaultNull()
+                                            //             ->end()
+                                            //             ->scalarNode('location')
+                                            //                 ->info('Optional parameter location: query, path, header. Default: query.')
+                                            //                 ->defaultValue('query')
+                                            //             ->end()
+                                            //         ->end()
+                                            //     ->end()
+                                            // ->end()
+
+
+                                            // ->arrayNode('responses')
+                                            //     ->info('Describes possible HTTP responses for this endpoint, used for documentation and OpenAPI generation.')
+                                            //     ->normalizeKeys(false)
+                                            //     ->arrayPrototype()
+                                            //         ->children()
+                                            //             ->scalarNode('description')
+                                            //                 ->info('Human-readable description of the response.')
+                                            //                 ->isRequired()
+                                            //                 ->cannotBeEmpty()
+                                            //             ->end()
+                                            //             ->arrayNode('schema')
+                                            //                 ->info('Optional JSON schema or OpenAPI reference describing the response body structure.')
+                                            //                 ->normalizeKeys(false)
+                                            //                 ->variablePrototype()->end()
+                                            //             ->end()
+                                            //         ->end()
+                                            //     ->end()
+                                            // ->end()
+
+
+                                        ->end()
+                                    ->end()
+
+                                    // ──────────────────────────────
+                                    // Access control
+                                    // ──────────────────────────────
                                     ->arrayNode('granted')
-                                        ->info('Access control for this action (security roles, PUBLIC_ACCESS, etc.).')
-                                        ->scalarPrototype()->end()
+                                        ->info('Defines the access control rules for this endpoint: allowed roles, security expressions, or custom Symfony voters.')
+                                        ->addDefaultsIfNotSet()
+                                        ->children()
+
+                                            ->arrayNode('roles')
+                                                ->info('List of Symfony security roles required to access this endpoint, e.g., ["ROLE_ADMIN", "PUBLIC_ACCESS"].')
+                                                ->scalarPrototype()->end()
+                                            ->end()
+
+                                            ->scalarNode('voter')
+                                                ->info('Optional custom voter FQCN. If set, Symfony will use this voter to determine access instead of roles or expressions.')
+                                                ->defaultNull()
+                                            ->end()
+
+                                        ->end()
                                     ->end()
 
-                                    ->arrayNode('methods')
-                                        ->info('Allowed HTTP methods for this action.')
-                                        ->scalarPrototype()->end()           
+                                    // ──────────────────────────────
+                                    // Hooks & Events
+                                    // ──────────────────────────────
+                                    ->arrayNode('hooks')
+                                        ->info('Define event listeners to execute before or after the endpoint action. Useful for logging, auditing, validation, or custom side effects.')
+                                        ->addDefaultsIfNotSet()
+                                        ->children()
+
+                                            ->arrayNode('before')
+                                                ->info('List of callable listeners to execute **before** the endpoint action is run.')
+                                                ->scalarPrototype()->end()
+                                                ->defaultValue([])
+                                            ->end()
+
+                                            ->arrayNode('after')
+                                                ->info('List of callable listeners to execute **after** the endpoint action has completed.')
+                                                ->scalarPrototype()->end()
+                                                ->defaultValue([])
+                                            ->end()
+
+                                        ->end()
+
+                                        ->validate()
+                                            ->ifTrue(fn($hooks) => !HooksValidator::validate($hooks))
+                                            ->thenInvalid('One or more hooks (before/after) are invalid. They must be valid callables (Class::method or callable).')
+                                        ->end()
                                     ->end()
 
-                                    ->scalarNode('controller')
-                                        ->info('Optional Symfony controller (FQCN::method). Defaults to null.')
+                                    // ──────────────────────────────
+                                    // Serialization
+                                    // ──────────────────────────────
+                                    ->arrayNode('serialization')
+                                        ->info('Configure how the endpoint response should be serialized, including Symfony serialization groups or custom transformers/normalizers.')
+                                        ->addDefaultsIfNotSet()
+                                        ->children()
+
+                                            ->arrayNode('groups')
+                                                ->info('List of Symfony serialization groups to apply when serializing the response for this endpoint.')
+                                                ->scalarPrototype()->end()
+                                                ->defaultValue([])
+                                            ->end()
+
+                                            ->scalarNode('transformer')
+                                                ->info('Optional class FQCN of a transformer or DTO to convert the entity data before serialization.')
+                                                ->defaultNull()
+                                                ->validate()
+                                                    ->ifTrue(fn($v) => !TransformerValidator::isValid($v))
+                                                    ->thenInvalid('The transformer class "%s" does not exist or does not implement __invoke() or transform() method.')
+                                                ->end()
+                                            ->end()
+
+                                        ->end()
+                                    ->end()
+
+                                    // ──────────────────────────────
+                                    // Transformer / DTOs
+                                    // ──────────────────────────────
+                                    ->scalarNode('transformer')
+                                        ->info('Optional FQCN::method of a transformer or DTO to convert entity data before serialization.')
                                         ->defaultNull()
+                                        ->validate()
+                                            ->ifTrue(fn($v) => !TransformerValidator::isValid($v))
+                                            ->thenInvalid('Invalid transformer: class or method does not exist.')
+                                        ->end()
+                                    ->end()
+
+
+                                    // ──────────────────────────────
+                                    // Rate limiting advanced (per role/user)
+                                    // ──────────────────────────────
+                                    ->arrayNode('rate_limit')
+                                        ->addDefaultsIfNotSet()
+                                        ->children()
+
+                                            ->scalarNode('global')
+                                                ->info('Default global rate limit for endpoint.')
+                                                ->defaultNull()
+                                            ->end()
+                                        
+                                            ->arrayNode('by_role')
+                                                ->info('Rate limit per role, e.g. ROLE_ADMIN: 500/hour')
+                                                ->normalizeKeys(false)
+                                                ->scalarPrototype()->end()
+                                                ->defaultValue([])
+                                            ->end()
+                                        
+                                            ->arrayNode('by_user')
+                                                ->info('Optional per-user rate limiting rules.')
+                                                ->normalizeKeys(false)
+                                                ->scalarPrototype()->end()
+                                                ->defaultValue([])
+                                            ->end()
+
+                                        ->end()
                                     ->end()
 
                                 ->end()
@@ -181,7 +520,7 @@ return static function($definition)
 
                 // Validation: entity existence
                 ->validate()
-                    ->ifTrue(fn($v) => EntityValidator::validateClassesExist($v))
+                    ->ifTrue(fn($v) => EntityValidator::validateClassesExist(array_keys($v)))
                     ->thenInvalid('One or more entities defined in "api" do not exist. Check namespaces and spelling.')
                 ->end()
 
@@ -211,80 +550,69 @@ return static function($definition)
                 {
 
                     // 2. Fallback: route name & prefix
-                    if ($collection['route']['name'] == null) 
-                    {
-                        $collection['route']['name'] = $provider['routes']['name'];
-                    }
-                    if ($collection['route']['prefix'] == null) 
-                    {
-                        $collection['route']['prefix'] = $provider['routes']['prefix'];
-                    }
+                    // if ($collection['route']['name'] == null) 
+                    // {
+                    //     $collection['route']['name'] = $provider['routes']['name'];
+                    // }
+                    // if ($collection['route']['prefix'] == null) 
+                    // {
+                    //     $collection['route']['prefix'] = $provider['routes']['prefix'];
+                    // }
 
                     $collection['route']['prefix'] = preg_replace("/{version}/", $provider['version'], $collection['route']['prefix']);
                     // $collection['route']['name'] = preg_replace("/{collection}/", $collection['name'], $collection['route']['name']);
 
                     // 3. Fallback: search & pagination
-                    if (!is_bool($collection['search'])) 
-                    {
-                        $collection['search'] = $provider['search'];
-                    }
+                    // if (!is_bool($collection['search'])) 
+                    // {
+                    //     $collection['search'] = $provider['search'];
+                    // }
                     if ($collection['pagination'] == null) 
                     {
                         $collection['pagination'] = $provider['pagination']['per_page'];
                     }
 
 
-                    // 4. Inject default REST actions if missing
-                    $collection['endpoints'] = array_merge([
-                        'index' => [
-                            'granted' => ['PUBLIC_ACCESS'],
-                            'methods' => ['GET'],
-                        ],
-                        // 'create' => [
-                        //     'granted' => ['PUBLIC_ACCESS'],
-                        //     'methods' => ['HEAD', 'POST'],
-                        // ],
-                        // 'read' => [
-                        //     'granted' => ['PUBLIC_ACCESS'],
-                        //     'methods' => ['GET'],
-                        //     'options' => ['id'],
-                        //     'requirements' => [
-                        //         'id' => "\d+|[\w-]+"
-                        //     ],
-                        // ],
-                        // 'update' => [
-                        //     'granted' => ['PUBLIC_ACCESS'],
-                        //     'methods' => ['HEAD', 'PUT'],
-                        // ],
-                        // 'delete' => [
-                        //     'granted' => ['PUBLIC_ACCESS'],
-                        //     'methods' => ['HEAD', 'DELETE'],
-                        // ],
-                    ], $collection['endpoints']);
-
-
-
-
-                    // 5. Normalize missing action fields
+                    // 4. Normalize missing action fields
                     foreach ($collection['endpoints'] as $endpointName => &$endpoint) 
                     {
-                        // Endpoint route name
-                        if (!isset($endpoint['name'])) 
-                        {
-                            $endpoint['name'] = $collection['route']['name'];
-                        }
-                        
-                        // Endpoint route name
-                        if (!isset($endpoint['methods'])) 
-                        {
-                            $endpoint['methods'] = [];
-                        }
-                        
-                        // Endpoint route requirements
-                        if (!isset($endpoint['requirements'])) 
-                        {
-                            $endpoint['requirements'] = [];
-                        }
+                        // ──────────────────────────────
+                        // Route config
+                        // ──────────────────────────────
+
+                        // Route name
+                        // if (empty(trim($endpoint['route']['name'])))
+                        // {
+                        //     $endpoint['route']['name'] = $collection['route']['name'];
+                        // }
+
+                        // $className = (new \ReflectionClass($entityName))->getShortName();
+                        // $className = strtolower($className);
+                        // $endpoint['route']['name'] = preg_replace("/{version}/", $provider['version'], $endpoint['route']['name']);
+                        // $endpoint['route']['name'] = preg_replace("/{action}/", $endpointName, $endpoint['route']['name']);
+                        // $endpoint['route']['name'] = preg_replace("/{collection}/", $className, $endpoint['route']['name']);
+
+
+
+                        // ──────────────────────────────
+                        // Repository config
+                        // ──────────────────────────────
+
+                        // ──────────────────────────────
+                        // Metadata config
+                        // ──────────────────────────────
+
+                        // ──────────────────────────────
+                        // Access control
+                        // ──────────────────────────────
+
+
+
+                    //     // Endpoint route requirements
+                    //     if (!isset($endpoint['requirements'])) 
+                    //     {
+                    //         $endpoint['requirements'] = [];
+                    //     }
                         
                         // Endpoint route defaults params values
                         // if (!isset($endpoint['defaults'])) 
@@ -293,46 +621,39 @@ return static function($definition)
                         // }
                         
                         // Endpoint route options
-                        if (!isset($endpoint['options'])) 
-                        {
-                            $endpoint['options'] = [];
-                        }
+                    //     if (!isset($endpoint['options'])) 
+                    //     {
+                    //         $endpoint['options'] = [];
+                    //     }
                         
-                        // Endpoint route conditions
-                        if (!isset($endpoint['conditions'])) 
-                        {
-                            $endpoint['conditions'] = '';
-                        }
+                    //     // Endpoint route conditions
+                    //     if (!isset($endpoint['conditions'])) 
+                    //     {
+                    //         $endpoint['conditions'] = '';
+                    //     }
                         
-                        // Endpoint route host
-                        if (!isset($endpoint['host'])) 
-                        {
-                            $endpoint['host'] = '';
-                        }
+                    //     // Endpoint route host
+                    //     if (!isset($endpoint['host'])) 
+                    //     {
+                    //         $endpoint['host'] = '';
+                    //     }
                         
-                        // Endpoint route schemes
-                        if (!isset($endpoint['schemes'])) 
-                        {
-                            $endpoint['schemes'] = [];
-                        }
+                    //     // Endpoint route schemes
+                    //     if (!isset($endpoint['schemes'])) 
+                    //     {
+                    //         $endpoint['schemes'] = [];
+                    //     }
 
-                        if (empty($endpoint['granted'])) 
-                        {
-                            $endpoint['granted'] = ['PUBLIC_ACCESS'];
-                        }
-                        if (!isset($endpoint['controller'])) 
-                        {
-                            $endpoint['controller'] = null;
-                        }
+                    //     if (empty($endpoint['granted'])) 
+                    //     {
+                    //         $endpoint['granted'] = ['PUBLIC_ACCESS'];
+                    //     }
+                    //     if (!isset($endpoint['controller'])) 
+                    //     {
+                    //         $endpoint['controller'] = null;
+                    //     }
 
-
-                        $className = (new \ReflectionClass($entityName))->getShortName();
-                        $className = strtolower($className);
-                        $endpoint['name'] = preg_replace("/{version}/", $provider['version'], $endpoint['name']);
-                        $endpoint['name'] = preg_replace("/{action}/", $endpointName, $endpoint['name']);
-                        $endpoint['name'] = preg_replace("/{collection}/", $className, $endpoint['name']);
                     }
-
                 }
             }
 

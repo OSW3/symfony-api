@@ -12,8 +12,12 @@ class RouteLoader extends Loader
         private RouteService $routeService,
     ){}
 
-    public function load(mixed $resource, string $type = null): RouteCollection
+    public function load(mixed $resource, string $type = null): ?RouteCollection
     {
+        if ($type !== 'api_routes') {
+            return null;
+        }
+
         $exposedRoutes = $this->routeService->getExposedRoutes();
         $routes = new RouteCollection();
 

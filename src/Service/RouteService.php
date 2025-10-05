@@ -13,7 +13,7 @@ final class RouteService
 
     public function getExposedRoutes(): array
     {
-        $providers = $this->configuration->getProviders();
+        $providers = $this->configuration->getAllProviders();
         $routes = [];
 
 
@@ -43,7 +43,7 @@ final class RouteService
             $options = $endpointOption['options'] ?? [];
 
             // Route host
-            $host = $endpointOption['host'] ?? [];
+            $host = $endpointOption['host'] ?? null;
 
             // Route schemes
             $schemes = $endpointOption['schemes'] ?? [];
@@ -52,7 +52,7 @@ final class RouteService
             $methods = $endpointOption['methods'] ?? [];
 
             // Route conditions
-            $conditions = $endpointOption['conditions'] ?? [];
+            $conditions = $endpointOption['conditions'] ?? null;
 
             if (!isset($routes[$name]))
             {
