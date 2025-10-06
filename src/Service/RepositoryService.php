@@ -2,23 +2,105 @@
 namespace OSW3\Api\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\Persistence\ManagerRegistry;
 use OSW3\Api\Service\ConfigurationService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 
 final class RepositoryService
 {
     private readonly Request $request;
 
     public function __construct(
-        private EntityManagerInterface $entityManager,
-        // private RequestService $request,
-        private ConfigurationService $configuration,
-        private RequestStack $requestStack,
+        private readonly EntityManagerInterface $entityManager,
+        private readonly ConfigurationService $configuration,
+        private readonly ManagerRegistry $doctrine,
+        private readonly RequestStack $requestStack,
     ){
         $this->request = $this->requestStack->getCurrentRequest();
     }
     
+
+
+
+
+    public function isRepositoryCallable(): bool 
+    {
+        $provider        = $this->configuration->guessProvider();
+        $collection      = $this->configuration->guessCollection();
+        $endpoint        = $this->configuration->guessEndpoint();
+        $repositoryClass = $this->configuration->getRepositoryClass($provider, $collection, $endpoint);
+        $method          = $this->configuration->getMethod($provider, $collection, $endpoint);
+
+        // If Repository class is not defined, fallback onto Entity repository
+        if (empty($repositoryClass)) {
+            $entityClass = $collection;
+
+            if (!$entityClass || !class_exists($entityClass)) {
+                return false;
+            }
+            
+            $repositoryClass = $this->doctrine->getRepository($entityClass)::class;
+        }
+
+        // Is the repository class exists
+        if (!class_exists($repositoryClass)) {
+            return false;
+        }
+        $repository = $this->getRepositoryInstance($repositoryClass);
+
+        // 4. Méthode : custom ou déterminée automatiquement
+        if (!$method) {
+            $method = $this->resolveRepositoryMethod($this->request);
+        }
+
+        // Check repository::method existance
+        return method_exists($repository, $method);
+    }
+
+    private function getRepositoryInstance(string $repositoryClass): object
+    {
+        if (is_subclass_of($repositoryClass, ServiceEntityRepository::class)) {
+            return new $repositoryClass($this->doctrine);
+        }
+
+        return $this->doctrine->getRepository($repositoryClass);
+    }
+
+    private function resolveRepositoryMethod(Request $request): string
+    {
+        $httpMethod = $request->getMethod();
+        $routeParams = $request->attributes->get('_route_params', []);
+
+        switch ($httpMethod) {
+            case Request::METHOD_GET:
+                if (isset($routeParams['id']) && count($routeParams) > 1) {
+                    return 'findOneBy';
+                }
+                if (isset($routeParams['id'])) {
+                    return 'find';
+                }
+                return 'findBy'; // findAll = findBy([])
+
+            case Request::METHOD_POST:
+                return 'create';
+
+            case Request::METHOD_PUT:
+            case Request::METHOD_PATCH:
+                return 'update';
+
+            case Request::METHOD_DELETE:
+                return 'remove';
+        }
+
+        throw new \RuntimeException("Aucune méthode repository définie pour {$httpMethod}");
+    }
+
+
+
+
+
     public function resolve(): mixed
     {
         $repository = $this->getRepository();

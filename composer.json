@@ -19,6 +19,8 @@
     },
     "require": {
         "doctrine/orm": "*",
-        "symfony/serializer": "*"
+        "symfony/serializer": "*",
+        "symfony/security-core": "*",
+        "symfony/security-bundle": "*"
     }
 }

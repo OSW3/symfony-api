@@ -11,7 +11,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class ConfigurationService
 {
     private readonly array $configuration;
-    private readonly Request $currentRequest;
+    private readonly ?Request $currentRequest;
 
     public function __construct(
         #[Autowire(service: 'service_container')] private readonly ContainerInterface $container,
@@ -364,9 +364,15 @@ class ConfigurationService
     // Endpoints Repository
     // ──────────────────────────────
 
+    public function getRepositoryClass(string $providerName, string $entityClass, string $endpointName): ?string
+    {
+        return $this->getEndpoint($providerName, $entityClass, $endpointName)['repository']['service'] ?? '';
+    }
+
+    // TODO: remove this method
     public function getRepository(string $providerName, string $entityClass, string $endpointName)
     {
-        $repositoryClass = $this->getEndpoint($providerName, $entityClass, $endpointName)['repository']['service'] ?? '';
+        $repositoryClass = $this->getRepositoryClass($providerName, $entityClass, $endpointName);
 
         if (!empty($repositoryClass)) {
             foreach ($this->doctrine->getManager()->getMetadataFactory()->getAllMetadata() as $meta) {
@@ -474,9 +480,9 @@ class ConfigurationService
     // Endpoints Granted
     // ──────────────────────────────
 
-    public function getGranted(string $providerName, string $entityClass, string $endpointName): array
+    public function getRoles(string $providerName, string $entityClass, string $endpointName): array
     {
-        return $this->getEndpoint($providerName, $entityClass, $endpointName)['granted']['roles'] ?? [];
+        return $this->getEndpoint($providerName, $entityClass, $endpointName)['granted']['roles'];
     }
 
     public function getVoter(string $providerName, string $entityClass, string $endpointName): string

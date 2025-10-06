@@ -9,7 +9,7 @@ use Symfony\Component\Routing\RouteCollection;
 class RouteLoader extends Loader
 {
     public function __construct(
-        private RouteService $routeService,
+        private readonly RouteService $routeService,
     ){}
 
     public function load(mixed $resource, string $type = null): ?RouteCollection

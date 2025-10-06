@@ -404,6 +404,7 @@ return static function($definition)
                                             ->arrayNode('roles')
                                                 ->info('List of Symfony security roles required to access this endpoint, e.g., ["ROLE_ADMIN", "PUBLIC_ACCESS"].')
                                                 ->scalarPrototype()->end()
+                                                ->defaultValue(['PUBLIC_ACCESS'])
                                             ->end()
 
                                             ->scalarNode('voter')

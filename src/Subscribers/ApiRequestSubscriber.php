@@ -4,27 +4,22 @@ namespace OSW3\Api\Subscribers;
 use OSW3\Api\Service\RequestService;
 use OSW3\Api\Service\RepositoryService;
 use OSW3\Api\Service\ConfigurationService;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
+use OSW3\Api\Service\SupportService;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 
-class ApiSubscriber implements EventSubscriberInterface 
+class ApiRequestSubscriber implements EventSubscriberInterface 
 {
     public function __construct(
-        // Pour le dev
-        private ConfigurationService $configuration,
-
-        // private RequestStack $requestStack,
-        private RequestService $requestService,
-        private RepositoryService $repository,
-
-        private SerializerInterface $serializer,
+        private readonly ConfigurationService $configuration,
+        private readonly RequestService $requestService,
+        private readonly RepositoryService $repository,
+        private readonly SerializerInterface $serializer,
+        private readonly SupportService $supportService,
     ){}
 
     public static function getSubscribedEvents(): array
@@ -36,16 +31,22 @@ class ApiSubscriber implements EventSubscriberInterface
     }
     
     public function onRequest(RequestEvent $event): void 
-    {        
-        // Check if the current route is defined in the API config
-        if (!$this->requestService->support()) {
+    {
+        // dd($this->supportService->supports());
+        // Check if the request is not a valid defined route
+        if (!$this->supportService->supports()) {
+            return;
+        }
+        
+        // Exit the process when a valid custom controller is defined
+        if ($this->supportService->hasCustomController()) {
             return;
         }
 
-        // Exit if the current route has a valid controller
-        if ($event->getRequest()->attributes->get('_controller') != null) {
-            return;
-        }
+
+
+
+        // TODO: Custom response "Access denied"
 
         $data = $this->repository->resolve();
 
@@ -63,23 +64,23 @@ class ApiSubscriber implements EventSubscriberInterface
         // $entityClass = $this->configuration->guessCollection();
         // dump( $data instanceof $entityClass );
 
-        dump($data);
-        dd('---');
+        // dump($data);
+        // dd('---');
         
 
 
 
-        // $content = [
-        //     'response' => "Test 11"
-        // ];
-        // $statusCode = 200;
-        // $response = new JsonResponse($content, $statusCode);
+        $content = [
+            'response' => $data,
+        ];
+        $statusCode = 200;
+        $response = new JsonResponse($content, $statusCode);
 
 
-        // // Set Response
-        // // --
+        // Set Response
+        // --
 
-        // $event->setResponse($response);
+        $event->setResponse($response);
     }
 
 
@@ -143,6 +144,10 @@ class ApiSubscriber implements EventSubscriberInterface
         $collection = $this->configuration->guessCollection();
         $endpoint   = $this->configuration->guessEndpoint();
         $groups     = $this->configuration->getSerializeGroups($provider, $collection, $endpoint);
+
+        if (empty($groups)) {
+            return [];
+        }
 
         $serialized = $serializer->serialize( $entity, $encoder, [ 
             'groups'             => $groups,

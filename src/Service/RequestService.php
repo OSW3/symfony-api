@@ -1,68 +1,48 @@
 <?php 
 namespace OSW3\Api\Service;
 
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 
 
 final class RequestService 
 {
+    private readonly Request $request;
+
     public function __construct(
         private ConfigurationService $configuration,
         private RequestStack $requestStack,
         // private RouterInterface $routerInterface,
-    ){}
+    ){
+        $this->request = $requestStack->getCurrentRequest();
+    }
 
-    public function support(): bool 
+
+
+    public function hasRequiredParams(): bool 
     {
-        $providers      = $this->configuration->getAllProviders();
-        $currentRequest = $this->requestStack->getCurrentRequest();
-        $currentRoute    = $currentRequest->get('_route');
-        $currentPath    = $currentRequest->getPathInfo();
-        $currentMethod  = $currentRequest->getMethod();
+        $provider    = $this->configuration->guessProvider();
+        $collection  = $this->configuration->guessCollection();
+        $endpoint    = $this->configuration->guessEndpoint();
+        $required    = $this->configuration->getEndpointRouteRequirements($provider, $collection, $endpoint);
+        $routeParams = $this->request->attributes->get('_route_params', []);
 
-        foreach ($providers as $provider) {
-            foreach ($provider['collections'] ?? [] as $collection) {
-                foreach ($collection['endpoints'] ?? [] as $endpoint) {
-
-                    if ($endpoint['route']['name'] === $currentRoute) {
-                        return true;
-                    }
-                    // dump($endpoint['route']['name']);
-                    // dump($currentRoute);
-
-                    // $pathPrefix     = $collection['route']['prefix'];
-                    // $pathCollection = $collection['name'];
-                    // $path           = "{$pathPrefix}/{$pathCollection}";
-                    // $methods        = $endpoint['route']['methods'];
-                    
-                    // $requirements     = $endpoint['route']['requirements'];
-                    // $options     = $endpoint['route']['options'];
-
-
-
-                    // $pathPattern = $currentRequest;
-                    // foreach ($options ?? [] as $param) {
-                    //     $regex = $requirements[$param] ?? '[^/]+';
-                    //     $pathPattern = str_replace("{{$param}}", "($regex)", $pathPattern);
-                    // }
-
-
-                    // dump($currentPath);
-                    // dump($path);
-                    // dump($currentMethod);
-                    // dump($methods);
-                    // dump( $currentPath === $path );
-                    // dump( in_array($currentMethod, $methods) );
-                    // dd( $currentPath === $path && in_array($currentMethod, $methods) );
-
-                    // return $currentPath === $path && in_array($currentMethod, $methods);
-                }
+        foreach (array_keys($required) as $param) {
+            if (!array_key_exists($param, $routeParams)) {
+                return false;
             }
         }
 
-        return false;
+        return true;
     }
+
+
+
+
+
+
+
 
     public function getEntityClassname(): string|null
     {
