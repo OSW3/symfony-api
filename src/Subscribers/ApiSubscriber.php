@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\Serializer\SerializerInterface;
 
 class ApiSubscriber implements EventSubscriberInterface 
 {
@@ -22,6 +23,8 @@ class ApiSubscriber implements EventSubscriberInterface
         // private RequestStack $requestStack,
         private RequestService $requestService,
         private RepositoryService $repository,
+
+        private SerializerInterface $serializer,
     ){}
 
     public static function getSubscribedEvents(): array
@@ -33,9 +36,7 @@ class ApiSubscriber implements EventSubscriberInterface
     }
     
     public function onRequest(RequestEvent $event): void 
-    {
-        // dump( $this->requestStack->getCurrentRequest()->attributes);
-        
+    {        
         // Check if the current route is defined in the API config
         if (!$this->requestService->support()) {
             return;
@@ -46,64 +47,25 @@ class ApiSubscriber implements EventSubscriberInterface
             return;
         }
 
-        $this->repository->execute();
+        $data = $this->repository->resolve();
+
+
+
+        switch (gettype($data)) {
+            case 'array': foreach ($data as $key => $item) $data[$key] = $this->serialize($item); break;
+            case 'object': $data = $this->serialize($data); break;
+            default: $data = [];
+        }
+
+
+        // dump($this->configuration->guessCollection());
+
+        // $entityClass = $this->configuration->guessCollection();
+        // dump( $data instanceof $entityClass );
+
+        dump($data);
         dd('---');
         
-
-
-        $requestParams = $event->getRequest()->attributes->get('_route_params') ?? [];
-        $requestMethod = $event->getRequest()->getMethod();
-        $id     = $requestParams['id'] ?? null;
-        // match ($requestMethod) {
-        //     Request::METHOD_GET    => $id ? $this->findOne($id) : $this->findAll(),
-        //     Request::METHOD_PUT    => $this->update($id),
-        //     Request::METHOD_POST   => $this->create(),
-        //     Request::METHOD_PATCH  => $this->update($id),
-        //     Request::METHOD_DELETE => $this->delete($id),
-        // };
-
-
-        $provider = $this->configuration->guessProvider();
-        $collection = $this->configuration->guessCollection();
-        $endpoint = $this->configuration->guessEndpoint();
-
-        $repository = $this->configuration->getRepository($provider, $collection, $endpoint);
-        $repositoryMethod = $this->configuration->getMethod($provider, $collection, $endpoint);
-
-        // dump( $provider );
-        // dump( $collection );
-        // dump( $endpoint );
-
-        // dump( $requestMethod );
-        // dump( $repository );
-        // dump( $repositoryMethod );
-        // dump( $repository->$repositoryMethod() );
-
-
-
-        $data = match ($requestMethod) {
-            Request::METHOD_GET    => $id ? $repository->$repositoryMethod($id) : $repository->$repositoryMethod(),
-            Request::METHOD_PUT    => $repository->$repositoryMethod($id),
-            Request::METHOD_POST   => $repository->$repositoryMethod(),
-            Request::METHOD_PATCH  => $repository->$repositoryMethod($id),
-            Request::METHOD_DELETE => $repository->$repositoryMethod($id),
-        };
-
-        dump( $data );
-
-
-        // dump( $requestParams );
-        // dump( $requestMethod );
-        // dump( $id );
-        dd( __METHOD__);
-
-
-
-
-
-
-
-
 
 
 
@@ -168,183 +130,170 @@ class ApiSubscriber implements EventSubscriberInterface
 
 
 
-    private function findAll(): void
+
+    private function serialize($entity)
     {
-        // $data = $this->repository->findAll();
+        $class = $this->configuration->guessCollection();
+        // dump( $entity instanceof $class );
 
-        // dump($data);
-        // $this->responseService->setData($data);
-    }
+        $encoder    = 'json';
+        $serializer = $this->serializer;
 
-    private function findOne(int $id): void
-    {
-        dump('FIND ONE');
+        $provider   = $this->configuration->guessProvider();
+        $collection = $this->configuration->guessCollection();
+        $endpoint   = $this->configuration->guessEndpoint();
+        $groups     = $this->configuration->getSerializeGroups($provider, $collection, $endpoint);
 
-        // $data = $this->repository->findOne($id);
-        // empty($data)
-        //     ? $this->headersService->setStatusCode(Response::HTTP_NOT_FOUND)
-        //     : $this->responseService->setData($data)
-        // ;
-    }
-
-    private function create(): void
-    {
-        // $data = $this->repository->create();
+        $serialized = $serializer->serialize( $entity, $encoder, [ 
+            'groups'             => $groups,
+            'datetime_format'    => 'Y-m-d H:i:s',
+            'ignored_attributes' => ['password'],
+        ]);
+        $serialized = json_decode($serialized, true);
         
-        // if (empty($data))
+        // if ($this->configuration->getLinkSupport($provider))
         // {
-        //     $this->headersService->setStatusCode(Response::HTTP_BAD_REQUEST);
+        //     $this->entityLinks($serialized, $entity);
         // }
-        // else 
-        // {
-        //     $this->headersService->setStatusCode(Response::HTTP_CREATED);
-        //     $this->responseService->setData($data);
-        // }
-    }
 
-    private function update(int $id): void 
-    {
-        // $data = $this->repository->patch($id);
-        
-        // empty($data)
-        //     ? $this->headersService->setStatusCode(Response::HTTP_BAD_REQUEST)
-        //     : $this->responseService->setData($data)
-        // ;
-    }
-
-    private function delete(int $id): void 
-    {
-        // $this->repository->delete($id)
-        //     ? $this->headersService->setStatusCode(Response::HTTP_NO_CONTENT)
-        //     : $this->headersService->setStatusCode(Response::HTTP_BAD_REQUEST)
-        // ;
+        // dump($serialized);
+        return $serialized;
     }
 
 
 
 
 
-    private function dumpConfiguration(): void 
-    {
-        $providers = $this->configuration->getAllProviders();
-        // dump( $providers );
-
-        $provider = $this->configuration->getProvider('my_custom_api_v1'); 
-        // dump( $provider );
-
-        $version = $this->configuration->getVersion('my_custom_api_v1');
-        // dump( $version );
-
-        $globalRouteNamePattern = $this->configuration->getRouteNamePattern('my_custom_api_v1'); 
-        $collectionRouteNamePattern = $this->configuration->getRouteNamePattern('my_custom_api_v1', 'App\Entity\Book');
-        $endpointRouteName = $this->configuration->getRouteNamePattern('my_custom_api_v1', 'App\Entity\Book', 'index');
-        // dump( $globalRouteNamePattern );
-        // dump( $collectionRouteNamePattern );
-        // dump( $endpointRouteName );
-
-        $globalRoutePrefix = $this->configuration->getRoutePrefix('my_custom_api_v1'); 
-        $collectionRoutePrefix = $this->configuration->getRoutePrefix('my_custom_api_v1', 'App\Entity\Book');
-        $endpointRoutePrefix = $this->configuration->getRoutePrefix('my_custom_api_v1', 'App\Entity\Book', 'index');
-        // dump( $globalRoutePrefix );
-        // dump( $collectionRoutePrefix );
-        // dump( $endpointRoutePrefix );
-
-        $isGlobalSearchEnabled = $this->configuration->isSearchEnabled('my_custom_api_v1');
-        $isCollectionSearchEnabled = $this->configuration->isSearchEnabled('my_custom_api_v1', 'App\Entity\Book');
-        // dump( $isGlobalSearchEnabled );
-        // dump( $isCollectionSearchEnabled );
-
-        $getCollectionSearchFields = $this->configuration->getSearchFields('my_custom_api_v1', 'App\Entity\Book');
-        // dump($getCollectionSearchFields);
-
-        $isGlobalPaginationEnabled = $this->configuration->isPaginationEnabled('my_custom_api_v1');
-        // dump( $isGlobalPaginationEnabled );
-
-        $getGlobalPaginationPerPage = $this->configuration->getPaginationPerPage('my_custom_api_v1');
-        $getCollectionPaginationPerPage = $this->configuration->getPaginationPerPage('my_custom_api_v1', 'App\Entity\Book');
-        // dump( $getGlobalPaginationPerPage );
-        // dump($getCollectionPaginationPerPage);
-
-        $getGlobalPaginationMaxPerPage = $this->configuration->getPaginationMaxPerPage('my_custom_api_v1');
-        // dump( $getGlobalPaginationMaxPerPage );
-
-        $hasUrlSupport = $this->configuration->hasUrlSupport('my_custom_api_v1');
-        // dump( $hasUrlSupport );
-
-        $isUrlAbsolute = $this->configuration->isUrlAbsolute('my_custom_api_v1');
-        // dump( $isUrlAbsolute );
-
-        $collections = $this->configuration->getCollections('my_custom_api_v1');
-        $collection = $this->configuration->getCollection('my_custom_api_v1', 'App\Entity\Book');
-        // dump($collections);
-        // dump($collection);
-
-        $endpoints = $this->configuration->getEndpoints('my_custom_api_v1', 'App\Entity\Book');
-        $endpoint = $this->configuration->getEndpoint('my_custom_api_v1', 'App\Entity\Book', 'index');
-        // dump($endpoints);
-        // dump($endpoint);
 
 
-        $endpointRoute = $this->configuration->getEndpointRoute('my_custom_api_v1', 'App\Entity\Book', 'index');
-        // dump($endpointRoute);
-        $endpointRouteName = $this->configuration->getEndpointRouteName('my_custom_api_v1', 'App\Entity\Book', 'index');
-        // dump($endpointRouteName);
-        $endpointRouteMethods = $this->configuration->getEndpointRouteMethods('my_custom_api_v1', 'App\Entity\Book', 'index');
-        // dump($endpointRouteMethods);
-        $endpointRouteController = $this->configuration->getEndpointRouteController('my_custom_api_v1', 'App\Entity\Book', 'index');
-        // dump($endpointRouteController);
-        $endpointRouteOptions = $this->configuration->getEndpointRouteOptions('my_custom_api_v1', 'App\Entity\Book', 'index');
-        // dump($endpointRouteOptions);
-        $endpointRouteCondition = $this->configuration->getEndpointRouteCondition('my_custom_api_v1', 'App\Entity\Book', 'index');
-        // dump($endpointRouteCondition);
-        $endpointRouteRequirements = $this->configuration->getEndpointRouteRequirements('my_custom_api_v1', 'App\Entity\Book', 'index');
-        // dump($endpointRouteRequirements);
+
+    
+
+
+
+
+
+    // private function dumpConfiguration(): void 
+    // {
+    //     $providers = $this->configuration->getAllProviders();
+    //     // dump( $providers );
+
+    //     $provider = $this->configuration->getProvider('my_custom_api_v1'); 
+    //     // dump( $provider );
+
+    //     $version = $this->configuration->getVersion('my_custom_api_v1');
+    //     // dump( $version );
+
+    //     $globalRouteNamePattern = $this->configuration->getRouteNamePattern('my_custom_api_v1'); 
+    //     $collectionRouteNamePattern = $this->configuration->getRouteNamePattern('my_custom_api_v1', 'App\Entity\Book');
+    //     $endpointRouteName = $this->configuration->getRouteNamePattern('my_custom_api_v1', 'App\Entity\Book', 'index');
+    //     // dump( $globalRouteNamePattern );
+    //     // dump( $collectionRouteNamePattern );
+    //     // dump( $endpointRouteName );
+
+    //     $globalRoutePrefix = $this->configuration->getRoutePrefix('my_custom_api_v1'); 
+    //     $collectionRoutePrefix = $this->configuration->getRoutePrefix('my_custom_api_v1', 'App\Entity\Book');
+    //     $endpointRoutePrefix = $this->configuration->getRoutePrefix('my_custom_api_v1', 'App\Entity\Book', 'index');
+    //     // dump( $globalRoutePrefix );
+    //     // dump( $collectionRoutePrefix );
+    //     // dump( $endpointRoutePrefix );
+
+    //     $isGlobalSearchEnabled = $this->configuration->isSearchEnabled('my_custom_api_v1');
+    //     $isCollectionSearchEnabled = $this->configuration->isSearchEnabled('my_custom_api_v1', 'App\Entity\Book');
+    //     // dump( $isGlobalSearchEnabled );
+    //     // dump( $isCollectionSearchEnabled );
+
+    //     $getCollectionSearchFields = $this->configuration->getSearchFields('my_custom_api_v1', 'App\Entity\Book');
+    //     // dump($getCollectionSearchFields);
+
+    //     $isGlobalPaginationEnabled = $this->configuration->isPaginationEnabled('my_custom_api_v1');
+    //     // dump( $isGlobalPaginationEnabled );
+
+    //     $getGlobalPaginationPerPage = $this->configuration->getPaginationPerPage('my_custom_api_v1');
+    //     $getCollectionPaginationPerPage = $this->configuration->getPaginationPerPage('my_custom_api_v1', 'App\Entity\Book');
+    //     // dump( $getGlobalPaginationPerPage );
+    //     // dump($getCollectionPaginationPerPage);
+
+    //     $getGlobalPaginationMaxPerPage = $this->configuration->getPaginationMaxPerPage('my_custom_api_v1');
+    //     // dump( $getGlobalPaginationMaxPerPage );
+
+    //     $hasUrlSupport = $this->configuration->hasUrlSupport('my_custom_api_v1');
+    //     // dump( $hasUrlSupport );
+
+    //     $isUrlAbsolute = $this->configuration->isUrlAbsolute('my_custom_api_v1');
+    //     // dump( $isUrlAbsolute );
+
+    //     $collections = $this->configuration->getCollections('my_custom_api_v1');
+    //     $collection = $this->configuration->getCollection('my_custom_api_v1', 'App\Entity\Book');
+    //     // dump($collections);
+    //     // dump($collection);
+
+    //     $endpoints = $this->configuration->getEndpoints('my_custom_api_v1', 'App\Entity\Book');
+    //     $endpoint = $this->configuration->getEndpoint('my_custom_api_v1', 'App\Entity\Book', 'index');
+    //     // dump($endpoints);
+    //     // dump($endpoint);
+
+
+    //     $endpointRoute = $this->configuration->getEndpointRoute('my_custom_api_v1', 'App\Entity\Book', 'index');
+    //     // dump($endpointRoute);
+    //     $endpointRouteName = $this->configuration->getEndpointRouteName('my_custom_api_v1', 'App\Entity\Book', 'index');
+    //     // dump($endpointRouteName);
+    //     $endpointRouteMethods = $this->configuration->getEndpointRouteMethods('my_custom_api_v1', 'App\Entity\Book', 'index');
+    //     // dump($endpointRouteMethods);
+    //     $endpointRouteController = $this->configuration->getEndpointRouteController('my_custom_api_v1', 'App\Entity\Book', 'index');
+    //     // dump($endpointRouteController);
+    //     $endpointRouteOptions = $this->configuration->getEndpointRouteOptions('my_custom_api_v1', 'App\Entity\Book', 'index');
+    //     // dump($endpointRouteOptions);
+    //     $endpointRouteCondition = $this->configuration->getEndpointRouteCondition('my_custom_api_v1', 'App\Entity\Book', 'index');
+    //     // dump($endpointRouteCondition);
+    //     $endpointRouteRequirements = $this->configuration->getEndpointRouteRequirements('my_custom_api_v1', 'App\Entity\Book', 'index');
+    //     // dump($endpointRouteRequirements);
         
 
-        $repositoryInstance = $this->configuration->getRepository('my_custom_api_v1', 'App\Entity\Book', 'index');
-        // dump($repositoryInstance);
-        $method = $this->configuration->getMethod('my_custom_api_v1', 'App\Entity\Book', 'index');
-        // dump($method);
-        $criteria = $this->configuration->getCriteria('my_custom_api_v1', 'App\Entity\Book', 'index');
-        // dump($criteria);
-        $orderBy = $this->configuration->getOrderBy('my_custom_api_v1', 'App\Entity\Book', 'index');
-        // dump($orderBy);
-        $limit = $this->configuration->getLimit('my_custom_api_v1', 'App\Entity\Book', 'index');
-        // dump($limit);
-        $fetchMode = $this->configuration->getFetchMode('my_custom_api_v1', 'App\Entity\Book', 'index');
-        // dump($fetchMode);
+    //     $repositoryInstance = $this->configuration->getRepository('my_custom_api_v1', 'App\Entity\Book', 'index');
+    //     // dump($repositoryInstance);
+    //     $method = $this->configuration->getMethod('my_custom_api_v1', 'App\Entity\Book', 'index');
+    //     // dump($method);
+    //     $criteria = $this->configuration->getCriteria('my_custom_api_v1', 'App\Entity\Book', 'index');
+    //     // dump($criteria);
+    //     $orderBy = $this->configuration->getOrderBy('my_custom_api_v1', 'App\Entity\Book', 'index');
+    //     // dump($orderBy);
+    //     $limit = $this->configuration->getLimit('my_custom_api_v1', 'App\Entity\Book', 'index');
+    //     // dump($limit);
+    //     $fetchMode = $this->configuration->getFetchMode('my_custom_api_v1', 'App\Entity\Book', 'index');
+    //     // dump($fetchMode);
 
         
-        $metadata = $this->configuration->getMetadata('my_custom_api_v1', 'App\Entity\Book', 'index');
-        // dump($metadata);
+    //     $metadata = $this->configuration->getMetadata('my_custom_api_v1', 'App\Entity\Book', 'index');
+    //     // dump($metadata);
         
 
-        $granted = $this->configuration->getGranted('my_custom_api_v1', 'App\Entity\Book', 'index');
-        // dump($granted);
-        $voter = $this->configuration->getVoter('my_custom_api_v1', 'App\Entity\Book', 'index');
-        // dump($voter);
+    //     $granted = $this->configuration->getGranted('my_custom_api_v1', 'App\Entity\Book', 'index');
+    //     // dump($granted);
+    //     $voter = $this->configuration->getVoter('my_custom_api_v1', 'App\Entity\Book', 'index');
+    //     // dump($voter);
         
 
-        $hooks = $this->configuration->getHooks('my_custom_api_v1', 'App\Entity\Book', 'index');
-        // dump($hooks);
+    //     $hooks = $this->configuration->getHooks('my_custom_api_v1', 'App\Entity\Book', 'index');
+    //     // dump($hooks);
         
 
-        $serializeGroups = $this->configuration->getSerializeGroups('my_custom_api_v1', 'App\Entity\Book', 'index');
-        // dump($serializeGroups);
-        $serializeTransformer = $this->configuration->getSerializeTransformer('my_custom_api_v1', 'App\Entity\Book', 'index');
-        // dump($serializeTransformer);
+    //     $serializeGroups = $this->configuration->getSerializeGroups('my_custom_api_v1', 'App\Entity\Book', 'index');
+    //     // dump($serializeGroups);
+    //     $serializeTransformer = $this->configuration->getSerializeTransformer('my_custom_api_v1', 'App\Entity\Book', 'index');
+    //     // dump($serializeTransformer);
         
 
-        $transformer = $this->configuration->getTransformer('my_custom_api_v1', 'App\Entity\Book', 'index');
-        // dump($transformer);
+    //     $transformer = $this->configuration->getTransformer('my_custom_api_v1', 'App\Entity\Book', 'index');
+    //     // dump($transformer);
         
 
-        $rateLimit = $this->configuration->getRateLimit('my_custom_api_v1', 'App\Entity\Book', 'index');
-        // dump($rateLimit);
-        $rateLimitByRole = $this->configuration->getRateLimitByRole('my_custom_api_v1', 'App\Entity\Book', 'index');
-        // dump($rateLimitByRole);
-        $rateLimitByUser = $this->configuration->getRateLimitByUser('my_custom_api_v1', 'App\Entity\Book', 'index');
-        // dump($rateLimitByUser);
+    //     $rateLimit = $this->configuration->getRateLimit('my_custom_api_v1', 'App\Entity\Book', 'index');
+    //     // dump($rateLimit);
+    //     $rateLimitByRole = $this->configuration->getRateLimitByRole('my_custom_api_v1', 'App\Entity\Book', 'index');
+    //     // dump($rateLimitByRole);
+    //     $rateLimitByUser = $this->configuration->getRateLimitByUser('my_custom_api_v1', 'App\Entity\Book', 'index');
+    //     // dump($rateLimitByUser);
         
-    }
+    // }
 }

@@ -18,5 +18,7 @@
         }
     },
     "require": {
+        "doctrine/orm": "*",
+        "symfony/serializer": "*"
     }
 }

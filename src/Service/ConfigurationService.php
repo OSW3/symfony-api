@@ -382,50 +382,51 @@ class ConfigurationService
     public function getMethod(string $providerName, string $entityClass, string $endpointName): ?string
     {
         $repositoryMethod = $this->getEndpoint($providerName, $entityClass, $endpointName)['repository']['method'] ?? null;
+        return $repositoryMethod;
 
-        if (!empty($repositoryMethod)) {
-            return $repositoryMethod;
-        }
-
-        $requestMethod = $this->currentRequest->getMethod();
-        $id            = $this->currentRequest->get('id');
-        // $criteria      = $this->getCriteria($providerName, $entityClass, $endpointName);
-        // $orderBy       = $this->getOrderBy($providerName, $entityClass, $endpointName);
-        // $limit         = $this->getLimit($providerName, $entityClass, $endpointName);
-
-        return match ($requestMethod) {
-            // Request::METHOD_GET    => $id ? "find" : "findAll",
-            Request::METHOD_GET    => $id ? "find" : "findBy",
-            Request::METHOD_PUT    => "update",
-            Request::METHOD_POST   => "create",
-            Request::METHOD_PATCH  => "update",
-            Request::METHOD_DELETE => "delete",
-            default => null
-        };
-
-        // // Choix intelligent de la méthode par défaut
-        // if (!$repositoryMethod) {
-        //     $repositoryMethod = match ($request->getMethod()) {
-        //         Request::METHOD_GET    => $id ? 'find' : 'findBy',
-        //         Request::METHOD_PUT    => 'update',
-        //         Request::METHOD_POST   => 'create',
-        //         Request::METHOD_PATCH  => 'update',
-        //         Request::METHOD_DELETE => 'delete',
-        //         default => null
-        //     };
+        // if (!empty($repositoryMethod)) {
+        //     return $repositoryMethod;
         // }
 
-        // // Construction automatique des arguments selon la méthode
-        // $args = match ($repositoryMethod) {
-        //     'find'   => [$id],
-        //     'findBy' => [$criteria, $orderBy ?: null, $limit ?: null, $offset ?: null],
-        //     default  => $id ? [$id] : []
+        // $requestMethod = $this->currentRequest->getMethod();
+        // $id            = $this->currentRequest->get('id');
+        // // $criteria      = $this->getCriteria($providerName, $entityClass, $endpointName);
+        // // $orderBy       = $this->getOrderBy($providerName, $entityClass, $endpointName);
+        // // $limit         = $this->getLimit($providerName, $entityClass, $endpointName);
+
+        // return match ($requestMethod) {
+        //     // Request::METHOD_GET    => $id ? "find" : "findAll",
+        //     Request::METHOD_GET    => $id ? "find" : "findBy",
+        //     Request::METHOD_PUT    => "update",
+        //     Request::METHOD_POST   => "add",
+        //     Request::METHOD_PATCH  => "update",
+        //     Request::METHOD_DELETE => "delete",
+        //     default => null
         // };
 
-        // return [
-        //     'method' => $repositoryMethod,
-        //     'args'   => array_filter($args, fn($v) => $v !== null) // nettoie les null inutiles
-        // ];
+        // // // Choix intelligent de la méthode par défaut
+        // // if (!$repositoryMethod) {
+        // //     $repositoryMethod = match ($request->getMethod()) {
+        // //         Request::METHOD_GET    => $id ? 'find' : 'findBy',
+        // //         Request::METHOD_PUT    => 'update',
+        // //         Request::METHOD_POST   => 'create',
+        // //         Request::METHOD_PATCH  => 'update',
+        // //         Request::METHOD_DELETE => 'delete',
+        // //         default => null
+        // //     };
+        // // }
+
+        // // // Construction automatique des arguments selon la méthode
+        // // $args = match ($repositoryMethod) {
+        // //     'find'   => [$id],
+        // //     'findBy' => [$criteria, $orderBy ?: null, $limit ?: null, $offset ?: null],
+        // //     default  => $id ? [$id] : []
+        // // };
+
+        // // return [
+        // //     'method' => $repositoryMethod,
+        // //     'args'   => array_filter($args, fn($v) => $v !== null) // nettoie les null inutiles
+        // // ];
     }
 
     public function getCriteria(string $providerName, string $entityClass, string $endpointName): array
@@ -440,7 +441,17 @@ class ConfigurationService
 
     public function getLimit(string $providerName, string $entityClass, string $endpointName): ?int
     {
-        return $this->getEndpoint($providerName, $entityClass, $endpointName)['repository']['limit'] ?? null;
+        $limit = $this->getEndpoint($providerName, $entityClass, $endpointName)['repository']['limit'];
+
+        if (!empty($limit)) {
+            return $limit;
+        }
+
+        if ($this->isPaginationEnabled($providerName)) {
+            return $this->getPaginationPerPage($providerName, $entityClass);
+        }
+
+        return null;
     }
 
     public function getFetchMode(string $providerName, string $entityClass, string $endpointName): string
