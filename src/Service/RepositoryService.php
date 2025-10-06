@@ -20,28 +20,65 @@ final class RepositoryService
     ){
         $this->request = $this->requestStack->getCurrentRequest();
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
     
 
-
-
-
-    public function isRepositoryCallable(): bool 
+    public function getRepositoryClass(): ?string
     {
         $provider        = $this->configuration->guessProvider();
         $collection      = $this->configuration->guessCollection();
         $endpoint        = $this->configuration->guessEndpoint();
         $repositoryClass = $this->configuration->getRepositoryClass($provider, $collection, $endpoint);
-        $method          = $this->configuration->getMethod($provider, $collection, $endpoint);
 
         // If Repository class is not defined, fallback onto Entity repository
         if (empty($repositoryClass)) {
             $entityClass = $collection;
 
             if (!$entityClass || !class_exists($entityClass)) {
-                return false;
+                return null;
             }
             
             $repositoryClass = $this->doctrine->getRepository($entityClass)::class;
+        }
+
+        return $repositoryClass;
+    }
+
+    public function getRepositoryMethod(): ?string
+    {
+        $provider        = $this->configuration->guessProvider();
+        $collection      = $this->configuration->guessCollection();
+        $endpoint        = $this->configuration->guessEndpoint();
+        $method          = $this->configuration->getMethod($provider, $collection, $endpoint);
+
+        // Resolve method if not defined
+        if (!$method) {
+            $method = $this->resolveRepositoryMethod();
+        }
+
+        return $method;
+    }
+
+    public function isRepositoryCallable(): bool 
+    {
+        $repositoryClass = $this->getRepositoryClass();
+        $method          = $this->getRepositoryMethod();
+
+        // If Repository class is not defined, fallback onto Entity repository
+        if (empty($repositoryClass)) {
+            return false;
         }
 
         // Is the repository class exists
@@ -50,12 +87,6 @@ final class RepositoryService
         }
         $repository = $this->getRepositoryInstance($repositoryClass);
 
-        // 4. Méthode : custom ou déterminée automatiquement
-        if (!$method) {
-            $method = $this->resolveRepositoryMethod($this->request);
-        }
-
-        // Check repository::method existance
         return method_exists($repository, $method);
     }
 
@@ -68,12 +99,13 @@ final class RepositoryService
         return $this->doctrine->getRepository($repositoryClass);
     }
 
-    private function resolveRepositoryMethod(Request $request): string
+    private function resolveRepositoryMethod(): string
     {
-        $httpMethod = $request->getMethod();
-        $routeParams = $request->attributes->get('_route_params', []);
+        $httpMethod  = $this->request->getMethod();
+        $routeParams = $this->request->attributes->get('_route_params', []);
 
-        switch ($httpMethod) {
+        switch ($httpMethod) 
+        {
             case Request::METHOD_GET:
                 if (isset($routeParams['id']) && count($routeParams) > 1) {
                     return 'findOneBy';
@@ -100,34 +132,70 @@ final class RepositoryService
 
 
 
-
     public function resolve(): mixed
     {
-        $repository = $this->getRepository();
-        $method     = $this->getMethod();
-        $id         = $this->getId();
+        $repository   = $this->getRepository();
+        $httpMethod   = $this->request->getMethod();
+        $method       = $this->resolveRepositoryMethod();
+        $customMethod = $this->getMethod(); // Custom method
+        $criteria     = $this->getCriteria();
+        $order        = $this->getOrderBy();
+        $limit        = $this->getLimit();
+        $offset       = $this->getOffset();
+        $id           = $this->getId();
+        
 
-        if ($method && !in_array($method, ['find', 'findAll', 'findBy', 'findOneBy', 'count']) && method_exists($repository, $method)) {
-            // return $repository->$customMethod($id);
-            dd("CUSTOM METHOD {$method}");
+
+        // Execute Custom repository method
+        if ($customMethod && !in_array($customMethod, ['find', 'findAll', 'findBy', 'findOneBy', 'count']) && method_exists($repository, $customMethod)) {
+            // $params = [];
+            // $params = array_merge($params, $this->request->attributes->get('_route_params', []));
+            // $params = array_merge($params, $this->request->query->all());
+            
+            $params = array_merge(
+                $this->request->query->all(),
+                $this->request->request->all(),
+                $this->request->attributes->all() // paramètres de route (_route_params)
+            );
+
+            // TODO: check allowed parameters (from route.options ?)
+            // $provider   = $this->configuration->guessProvider();
+            // $collection = $this->configuration->guessCollection();
+            // $endpoint   = $this->configuration->guessEndpoint();
+            // $routeOptions = $this->configuration->getEndpointRouteOptions($provider,$collection,$endpoint);
+
+            return $repository->$customMethod($params);
+            // dump($repository->$customMethod($params));
+            // dd("CUSTOM METHOD {$method}");
         }
 
-        $criteria = $this->getCriteria();
-        $order    = $this->getOrderBy();
-        $limit    = $this->getLimit();
-        $offset   = $this->getOffset();
-
-        return match ($this->request->getMethod()) 
+        $data = match ($httpMethod) 
         {
             Request::METHOD_GET    => $this->handleGet($id, $criteria, $order, $limit, $offset),
             Request::METHOD_POST   => $this->create(),
             Request::METHOD_PUT    => $this->update($id),
             Request::METHOD_PATCH  => $this->update($id),
             Request::METHOD_DELETE => $this->delete($id),
-            default => throw new \LogicException("Unsupported HTTP method: $method")
+            default => throw new \LogicException("Unsupported HTTP method: $customMethod")
         };
-    }
 
+        return $data;
+
+        // dump($customMethod, $method);
+        // dump($data);
+        // dd('---');
+
+
+        // return match ($httpMethod) 
+        // {
+        //     Request::METHOD_GET    => $this->handleGet($id, $criteria, $order, $limit, $offset),
+        //     Request::METHOD_POST   => $this->create(),
+        //     Request::METHOD_PUT    => $this->update($id),
+        //     Request::METHOD_PATCH  => $this->update($id),
+        //     Request::METHOD_DELETE => $this->delete($id),
+        //     default => throw new \LogicException("Unsupported HTTP method: $customMethod")
+        // };
+    }
     private function handleGet(?int $id, array $criteria, array $order, ?int $limit, ?int $offset)
     {
         if ($id && !empty($criteria)) {

@@ -1,8 +1,10 @@
 <?php 
 namespace OSW3\Api\Service;
 
+use OSW3\Api\Service\ConfigurationService;
 use OSW3\Api\Exception\AccessDeniedException;
 use Symfony\Component\HttpFoundation\Request;
+use OSW3\Api\Exception\RepositoryCallException;
 use Symfony\Component\HttpFoundation\RequestStack;
 
 final class SupportService 
@@ -40,7 +42,10 @@ final class SupportService
 
         // Is the collection repository callable
         if (!$this->repositoryService->isRepositoryCallable()) {
-            return false;
+            $repository = $this->repositoryService->getRepositoryClass();
+            $method     = $this->repositoryService->getRepositoryMethod();
+            throw RepositoryCallException::invalid($repository, $method);
+
         }
         
         // Is access granted
