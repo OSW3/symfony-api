@@ -2,10 +2,13 @@
 
 use OSW3\Api\Validator\HooksValidator;
 use OSW3\Api\Validator\EntityValidator;
-use OSW3\Api\Generator\ApiVersionGenerator;
 use OSW3\Api\Validator\ControllerValidator;
 use OSW3\Api\Validator\TransformerValidator;
-use OSW3\Api\Generator\CollectionNameGenerator;
+use OSW3\Api\Resolver\CollectionNameResolver;
+use OSW3\Api\Resolver\ApiVersionNumberResolver;
+use OSW3\Api\Resolver\CollectionRouteNameResolver;
+use OSW3\Api\Resolver\CollectionRoutePrefixResolver;
+use OSW3\Api\Resolver\CollectionSearchStatusResolver;
 
 return static function($definition)
 {
@@ -23,10 +26,28 @@ return static function($definition)
             // ──────────────────────────────
             // Versioning
             // ──────────────────────────────
-            ->scalarNode('version')
-                ->info('Specify the version of the API. If null, it will be automatically generated (v1, v2, …).')
-                ->defaultNull()
-            ->end()
+
+			->arrayNode('version')
+            ->info('API version configuration')
+            ->addDefaultsIfNotSet()->children()
+
+                ->scalarNode('number')
+                    ->info('Version number (null = auto-assigned)')
+                    ->defaultNull()
+                ->end()
+
+                ->scalarNode('prefix')
+                    ->info('Version prefix (e.g. "v")')
+                    ->defaultValue('v')
+                ->end()
+
+                ->enumNode('type')
+                    ->info('How the version is exposed: in URL path, HTTP header, query parameter, or subdomain')
+                    ->values(['path', 'header', 'param', 'subdomain'])
+                    ->defaultValue('path')
+                ->end()
+                
+            ->end()->end()
 
             // ──────────────────────────────
             // Global route settings
@@ -100,6 +121,32 @@ return static function($definition)
 
 			->end()->end()
 
+
+            // ──────────────────────────────
+            // Response Template
+            // ──────────────────────────────
+
+            ->scalarNode('template')
+                ->info('')
+                ->defaultValue('Resources/templates/response.yaml')
+            ->end()
+
+			// ->arrayNode('template')
+            // ->info('.')
+            // ->addDefaultsIfNotSet()->children()
+
+			// 	->booleanNode('support')
+            //         ->info('')
+            //         ->defaultTrue()
+            //     ->end()
+
+			// 	->booleanNode('absolute')
+            //         ->info('')
+            //         ->defaultTrue()
+            //     ->end()
+
+			// ->end()->end()
+
             // ──────────────────────────────
             // Collections (Doctrine Entities)
             // ──────────────────────────────
@@ -148,7 +195,7 @@ return static function($definition)
 
                                 ->booleanNode('enabled')
                                     ->info('Enable or disable search for this collection.')
-                                    ->defaultFalse()
+                                    ->defaultNull()
                                 ->end()
 
                                 ->arrayNode('fields')
@@ -523,11 +570,6 @@ return static function($definition)
                     ->thenInvalid('One or more entities defined in "api" do not exist. Check namespaces and spelling.')
                 ->end()
 
-                // Automatic collection name generation
-                ->validate()
-                    ->always(fn($collections) => CollectionNameGenerator::generate($collections))
-                ->end()
-
             ->end() // of collections
 
         ->end() // of version_provider
@@ -541,7 +583,24 @@ return static function($definition)
         ->always(function($providers) {
             
             // 1. Generate missing versions
-            $providers = ApiVersionGenerator::generate($providers);
+            ApiVersionNumberResolver::resolve($providers);
+
+
+            // ──────────────────────────────
+            // Collections (Doctrine Entities)
+            // ──────────────────────────────
+
+            // Resolve the name of the collection App\\Entity\\Book → books
+            CollectionNameResolver::resolve($providers);
+
+            // Resolve default collection route name
+            CollectionRouteNameResolver::default($providers);
+
+            // Resolve collection route path prefix
+            CollectionRoutePrefixResolver::default($providers);
+            CollectionRoutePrefixResolver::resolve($providers);
+
+            CollectionSearchStatusResolver::default($providers);
 
             foreach ($providers as $n => &$provider) 
             {
@@ -550,31 +609,6 @@ return static function($definition)
 
                     // COLLECTION ROUTE
                     // -- 
-
-                    // Provide the default collection route name pattern
-                    if (empty(trim($collection['route']['name']))) 
-                    {
-                        $collection['route']['name'] = $provider['routes']['name'];
-                    }
-
-                    // Provide the default collection route prefix
-                    if (empty(trim($collection['route']['prefix'])))
-                    {
-                        $collection['route']['prefix'] = $provider['routes']['prefix'];
-                    }
-
-                    // Replace pattern in the route prefix
-                    $collection['route']['prefix'] = preg_replace("/{version}/", $provider['version'], $collection['route']['prefix']);
-
-
-                    // COLLECTION SEARCH
-                    // --
-
-                    // Provide collection search enabled
-                    if (!isset($collection['search']['enabled']) || !is_bool($collection['search']['enabled'])) 
-                    {
-                        $collection['search']['enabled'] = $provider['search'];
-                    }
 
 
                     // COLLECTION SEARCH
@@ -607,7 +641,7 @@ return static function($definition)
                         // Generate Endpoint Route Name
                         $className = (new \ReflectionClass($entityName))->getShortName();
                         $className = strtolower($className);
-                        $endpoint['route']['name'] = preg_replace("/{version}/", $provider['version'], $endpoint['route']['name']);
+                        $endpoint['route']['name'] = preg_replace("/{version}/", $provider['version']['number'], $endpoint['route']['name']);
                         $endpoint['route']['name'] = preg_replace("/{action}/", $endpointName, $endpoint['route']['name']);
                         $endpoint['route']['name'] = preg_replace("/{collection}/", $className, $endpoint['route']['name']);
 

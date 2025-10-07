@@ -8,7 +8,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
 
 final class RouteService 
 {
-    private readonly Request $request;
+    private readonly ?Request $request;
     
     public function __construct(
         private readonly ConfigurationService $configuration,
@@ -23,13 +23,15 @@ final class RouteService
         $providers = $this->configuration->getAllProviders();
         $routes = [];
 
-
         // Read APIs definitions
         // my_custom_api_v1, my_custom_api_v2, ...
-        foreach ($providers as $provider) {
+        foreach ($providers as $providerName => $provider) {
             foreach ($provider['collections'] ?? [] as $entityOptions) {
                 foreach ($entityOptions['endpoints'] ?? [] as $endpointName => $endpointOption) 
                 {
+
+
+
                     // Route Name
                     $name = $endpointOption['route']['name'];
 
@@ -39,6 +41,17 @@ final class RouteService
                     $path       = "{$prefix}/{$collection}";
                     foreach ($endpointOption['route']['options'] ?? [] as $opt) $path .= "/{{$opt}}";
         
+
+
+
+        // dump($name);
+        // dump($prefix);
+        // dump($collection);
+        // dump($this->configuration->getVersion($providerName));
+        // dd('---');
+
+
+
                     // Route defaults
                     $defaults = [];
                     $defaults['_controller'] = $endpointOption['route']['controller'] ?? null;

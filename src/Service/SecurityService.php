@@ -8,14 +8,14 @@ use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
 final class SecurityService
 {
-    private readonly Request $request;
+    // private readonly Request $request;
     
     public function __construct(
         private readonly ?AuthorizationCheckerInterface $auth,
         private readonly ConfigurationService $configuration,
-        private readonly RequestStack $requestStack,
+        // private readonly RequestStack $requestStack,
     ) {
-        $this->request = $requestStack->getCurrentRequest();
+        // $this->request = $requestStack->getCurrentRequest();
     }
 
     public function accessGranted(): bool

@@ -42,8 +42,8 @@ final class SupportService
 
         // Is the collection repository callable
         if (!$this->repositoryService->isRepositoryCallable()) {
-            $repository = $this->repositoryService->getRepositoryClass();
-            $method     = $this->repositoryService->getRepositoryMethod();
+            $repository = $this->repositoryService->resolveRepositoryClass();
+            $method     = $this->repositoryService->resolveRepositoryMethod();
             throw RepositoryCallException::invalid($repository, $method);
 
         }

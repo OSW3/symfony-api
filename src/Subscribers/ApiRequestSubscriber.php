@@ -4,13 +4,12 @@ namespace OSW3\Api\Subscribers;
 use OSW3\Api\Service\RequestService;
 use OSW3\Api\Service\RepositoryService;
 use OSW3\Api\Service\ConfigurationService;
+use OSW3\Api\Service\ResponseService;
 use OSW3\Api\Service\SupportService;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
-use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Symfony\Component\Serializer\SerializerInterface;
 
 class ApiRequestSubscriber implements EventSubscriberInterface 
 {
@@ -18,15 +17,14 @@ class ApiRequestSubscriber implements EventSubscriberInterface
         private readonly ConfigurationService $configuration,
         private readonly RequestService $requestService,
         private readonly RepositoryService $repository,
-        private readonly SerializerInterface $serializer,
         private readonly SupportService $supportService,
+        private readonly ResponseService $responseService,
     ){}
 
     public static function getSubscribedEvents(): array
     {
         return [
             KernelEvents::REQUEST => ['onRequest'],
-            // KernelEvents::RESPONSE => ['onResponse'],
         ];
     }
     
@@ -50,120 +48,26 @@ class ApiRequestSubscriber implements EventSubscriberInterface
 
         $data = $this->repository->resolve();
 
-
-
-        switch (gettype($data)) {
-            case 'array': foreach ($data as $key => $item) $data[$key] = $this->serialize($item); break;
-            case 'object': $data = $this->serialize($data); break;
-            default: $data = [];
-        }
-
-
-        // dump($this->configuration->guessCollection());
-
-        // $entityClass = $this->configuration->guessCollection();
-        // dump( $data instanceof $entityClass );
-
-        // dump($data);
-        // dd('---');
-        
-
-
-
-        $content = [
-            'response' => $data,
-        ];
-        $statusCode = 200;
-        $response = new JsonResponse($content, $statusCode);
+        // $content = [
+        //     'response' => ,
+        // ];
+        // $statusCode = 200;
+        // $response = new JsonResponse($content, $statusCode);
 
 
         // Set Response
         // --
 
-        $event->setResponse($response);
-    }
-
-
-    public function onResponse(ResponseEvent $event): void
-    {
-        // dump( $this->requestStack->getCurrentRequest()->attributes);
-        // dd( __METHOD__);
-
-        // // Check if the current route is defined in the API config
-        // if (!$this->requestService->support()) 
-        // {
-        //     return;
-        // }
-
-        // // Exit if the current route has a valid controller
-        // // The custom controller will be executed
-        // if ($event->getRequest()->attributes->get('_controller') != null) 
-        // {
-        //     return;
-        // }
-
-            
-
-        // dump( $this->requestService->support() );
-        // dd( __METHOD__);
-
-        
-
-        // dump($event->getRequest()->attributes->get('_controller'));
-        // dd($event);
-
-
-
-        $content = [
-            'response' => "Test 222"
-        ];
-        $statusCode = 200;
-        $response = new JsonResponse($content, $statusCode);
-
-
-        // Set Response
-        // --
-
-        $event->setResponse($response);
+        $event->setResponse(new JsonResponse(
+            $this->responseService->buildResponse($data), 
+            $this->responseService->getResponseStatusCode()
+        ));
     }
 
 
 
 
 
-
-    private function serialize($entity)
-    {
-        $class = $this->configuration->guessCollection();
-        // dump( $entity instanceof $class );
-
-        $encoder    = 'json';
-        $serializer = $this->serializer;
-
-        $provider   = $this->configuration->guessProvider();
-        $collection = $this->configuration->guessCollection();
-        $endpoint   = $this->configuration->guessEndpoint();
-        $groups     = $this->configuration->getSerializeGroups($provider, $collection, $endpoint);
-
-        if (empty($groups)) {
-            return [];
-        }
-
-        $serialized = $serializer->serialize( $entity, $encoder, [ 
-            'groups'             => $groups,
-            'datetime_format'    => 'Y-m-d H:i:s',
-            'ignored_attributes' => ['password'],
-        ]);
-        $serialized = json_decode($serialized, true);
-        
-        // if ($this->configuration->getLinkSupport($provider))
-        // {
-        //     $this->entityLinks($serialized, $entity);
-        // }
-
-        // dump($serialized);
-        return $serialized;
-    }
 
 
 

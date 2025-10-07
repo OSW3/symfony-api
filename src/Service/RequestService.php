@@ -40,6 +40,15 @@ final class RequestService
 
 
 
+    public function getParams(): array
+    {
+        return array_merge(
+            $this->request->query->all(),
+            $this->request->request->all(),
+            $this->request->attributes->all()
+        );
+    }
+
 
 
 

@@ -54,12 +54,61 @@ class ConfigurationService
         return $this->configuration;
     }
 
+
+    // ──────────────────────────────
+    // Context
+    // ──────────────────────────────
+
     /**
      * Guess the provider name by the current route name
      */
     public function guessProvider(): ?string
     {
         return $this->findRouteMapping()['provider'] ?? null;
+    }
+
+    /**
+     * Guess the collection name by the current route name
+     */
+    public function guessCollection(): ?string
+    {
+        return $this->findRouteMapping()['collection'] ?? null;
+    }
+
+    /**
+     * Guess the endpoint name by the current route name
+     */
+    public function guessEndpoint(): ?string
+    {
+        return $this->findRouteMapping()['endpoint'] ?? null;
+    }
+
+    /**
+     * Get provider, collection and endpoint by current route name
+     */
+    private function findRouteMapping(): array|null
+    {
+        $route = $this->currentRequest->get('_route');
+
+        if (!$route) {
+            return null;
+        }
+
+        foreach ($this->getAllProviders() as $providerName => $provider) {
+            foreach ($provider['collections'] ?? [] as $collectionName => $entityOptions) {
+                foreach ($entityOptions['endpoints'] ?? [] as $endpointName => $endpointOption) {
+                    if (($endpointOption['route']['name'] ?? null) === $route) {
+                        return [
+                            'provider'   => $providerName,
+                            'collection' => $collectionName,
+                            'endpoint'   => $endpointName,
+                        ];
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 
 
@@ -76,9 +125,37 @@ class ConfigurationService
      * @example
      * $version = $configurationService->getVersion('my_custom_api_v1'); // returns 'v1'
      */
-    public function getVersion(string $providerName): ?string
+    public function getVersion(string $providerName): string
     {
-        return $this->configuration[$providerName]['version'] ?? null;
+        $prefix = $this->getVersionPrefix($providerName);
+        $number = $this->getVersionNumber($providerName);
+        
+        return "{$prefix}{$number}";
+    }
+
+    public function getVersionNumber(string $providerName): int
+    {
+        return $this->configuration[$providerName]['version']['number'];
+    }
+    public function getVersionPrefix(string $providerName): string
+    {
+        return $this->configuration[$providerName]['version']['prefix'];
+    }
+    public function getVersionType(string $providerName): string
+    {
+        return $this->configuration[$providerName]['version']['type'];
+    }
+
+
+    // ──────────────────────────────
+    // Response
+    // ──────────────────────────────
+
+    /**
+     */
+    public function getTemplate(string $providerName): string
+    {
+        return $this->configuration[$providerName]['template'];
     }
 
 
@@ -288,14 +365,6 @@ class ConfigurationService
         return $this->configuration[$providerName]['collections'][$entityClass] ?? null;
     }
 
-    /**
-     * Guess the collection name by the current route name
-     */
-    public function guessCollection(): ?string
-    {
-        return $this->findRouteMapping()['collection'] ?? null;
-    }
-
     // ──────────────────────────────
     // Endpoints
     // ──────────────────────────────
@@ -308,14 +377,6 @@ class ConfigurationService
     public function getEndpoint(string $providerName, string $entityClass, string $endpointName): ?array
     {
         return $this->getCollection($providerName, $entityClass)['endpoints'][$endpointName] ?? null;
-    }
-
-    /**
-     * Guess the endpoint name by the current route name
-     */
-    public function guessEndpoint(): ?string
-    {
-        return $this->findRouteMapping()['endpoint'] ?? null;
     }
 
 
@@ -475,6 +536,36 @@ class ConfigurationService
         return $this->getEndpoint($providerName, $entityClass, $endpointName)['metadata'] ?? null;
     }
 
+    public function getMetadataDescription(string $providerName, string $entityClass, string $endpointName): ?string
+    {
+        return $this->getMetadata($providerName, $entityClass, $endpointName)['description'] ?? null;
+    }
+
+    public function getMetadataSummary(string $providerName, string $entityClass, string $endpointName): ?string
+    {
+        return $this->getMetadata($providerName, $entityClass, $endpointName)['summary'] ?? null;
+    }
+
+    public function getMetadataDeprecated(string $providerName, string $entityClass, string $endpointName): bool
+    {
+        return $this->getMetadata($providerName, $entityClass, $endpointName)['deprecated'] ?? false;
+    }
+
+    public function getMetadataCacheTTL(string $providerName, string $entityClass, string $endpointName): ?int
+    {
+        return $this->getMetadata($providerName, $entityClass, $endpointName)['cache_ttl'] ?? null;
+    }
+
+    public function getMetadataTags(string $providerName, string $entityClass, string $endpointName): ?string
+    {
+        return $this->getMetadata($providerName, $entityClass, $endpointName)['tags'] ?? null;
+    }
+
+    public function getMetadataOperationId(string $providerName, string $entityClass, string $endpointName): ?string
+    {
+        return $this->getMetadata($providerName, $entityClass, $endpointName)['operation_id'] ?? null;
+    }
+
 
     // ──────────────────────────────
     // Endpoints Granted
@@ -549,33 +640,6 @@ class ConfigurationService
     // ──────────────────────────────
     // Utils
     // ──────────────────────────────
-
-    /**
-     * Get provider, collection and endpoint by current route name
-     */
-    private function findRouteMapping(): array|null
-    {
-        $route = $this->currentRequest->get('_route');
-        if (!$route) {
-            return null;
-        }
-
-        foreach ($this->getAllProviders() as $providerName => $provider) {
-            foreach ($provider['collections'] ?? [] as $collectionName => $entityOptions) {
-                foreach ($entityOptions['endpoints'] ?? [] as $endpointName => $endpointOption) {
-                    if (($endpointOption['route']['name'] ?? null) === $route) {
-                        return [
-                            'provider'   => $providerName,
-                            'collection' => $collectionName,
-                            'endpoint'   => $endpointName,
-                        ];
-                    }
-                }
-            }
-        }
-
-        return null;
-    }
 
 
     public function getEntityRepository(string $entity)

@@ -17,35 +17,54 @@ final class RepositoryService
         private readonly ConfigurationService $configuration,
         private readonly ManagerRegistry $doctrine,
         private readonly RequestStack $requestStack,
+        private readonly UtilsService $utilsService,
+        private readonly RequestService $requestService,
+        private readonly ResponseService $responseService,
     ){
         $this->request = $this->requestStack->getCurrentRequest();
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-    
-
-    public function getRepositoryClass(): ?string
+    private function getContext(): array 
     {
-        $provider        = $this->configuration->guessProvider();
-        $collection      = $this->configuration->guessCollection();
-        $endpoint        = $this->configuration->guessEndpoint();
-        $repositoryClass = $this->configuration->getRepositoryClass($provider, $collection, $endpoint);
+        return [
+            'provider'   => $this->configuration->guessProvider(),
+            'collection' => $this->configuration->guessCollection(),
+            'endpoint'   => $this->configuration->guessEndpoint(),
+        ];
+    }
+    
+    private function getRepository(): object
+    {
+        ['provider' => $provider,'collection' => $collection,'endpoint' => $endpoint] = $this->getContext();
+        return $this->configuration->getRepository($provider, $collection, $endpoint);
+    }
+
+    private function getOffset(): int
+    {
+        return 0;
+    }
+
+
+    // ──────────────────────────────
+    // Resolvers
+    // ──────────────────────────────
+
+    /**
+     * Define the repository class to use
+     * Try to find custom class (repository.service), fallback to the entity (collection name) repository
+     */
+    public function resolveRepositoryClass(): ?string
+    {
+        [
+            'provider'   => $provider,
+            'collection' => $entityClass,
+            'endpoint'   => $endpoint
+        ] = $this->getContext();
+
+        $repositoryClass = $this->configuration->getRepositoryClass($provider, $entityClass, $endpoint);
 
         // If Repository class is not defined, fallback onto Entity repository
         if (empty($repositoryClass)) {
-            $entityClass = $collection;
-
             if (!$entityClass || !class_exists($entityClass)) {
                 return null;
             }
@@ -56,25 +75,75 @@ final class RepositoryService
         return $repositoryClass;
     }
 
-    public function getRepositoryMethod(): ?string
+    public function resolveRepositoryMethod(): ?string
     {
-        $provider        = $this->configuration->guessProvider();
-        $collection      = $this->configuration->guessCollection();
-        $endpoint        = $this->configuration->guessEndpoint();
-        $method          = $this->configuration->getMethod($provider, $collection, $endpoint);
+        [
+            'provider'   => $provider,
+            'collection' => $collection,
+            'endpoint'   => $endpoint
+        ] = $this->getContext();
+
+        // Try to get  the custom method from the config (repository.method)
+        $method = $this->configuration->getMethod($provider, $collection, $endpoint);
 
         // Resolve method if not defined
-        if (!$method) {
-            $method = $this->resolveRepositoryMethod();
+        if (!$method) 
+        {
+            $httpMethod  = $this->request->getMethod();
+            $routeParams = $this->request->attributes->get('_route_params', []);
+
+            switch ($httpMethod) 
+            {
+                case Request::METHOD_GET:
+                    if (isset($routeParams['id']) && count($routeParams) > 1) {
+                        $method = 'findOneBy';
+                        break;
+                    }
+                    $method = isset($routeParams['id']) ? 'find' : 'findBy';
+                break;
+
+
+                case Request::METHOD_POST:
+                    $method = 'create';
+                break;
+
+                case Request::METHOD_PUT:
+                case Request::METHOD_PATCH:
+                    $method = 'update';
+                break;
+
+                case Request::METHOD_DELETE:
+                    $method = 'delete';
+                break;
+            }
         }
 
         return $method;
     }
 
+    public function resolveRepositoryInstance(string $repositoryClassOrEntity): object
+    {
+        // Si c’est une entité connue par Doctrine, retourne son repository standard
+        if (class_exists($repositoryClassOrEntity) && $this->doctrine->getManagerForClass($repositoryClassOrEntity)) {
+            return $this->doctrine->getRepository($repositoryClassOrEntity);
+        }
+
+        // Si c’est un repository custom héritant de ServiceEntityRepository, instancie avec Doctrine
+        if (class_exists($repositoryClassOrEntity) && is_subclass_of($repositoryClassOrEntity, ServiceEntityRepository::class)) {
+            return new $repositoryClassOrEntity($this->doctrine);
+        }
+
+        throw new \RuntimeException(
+            sprintf('Impossible de récupérer une instance pour "%s". Vérifie que c’est une entité ou un repository valide.', $repositoryClassOrEntity)
+        );
+    }
+
     public function isRepositoryCallable(): bool 
     {
-        $repositoryClass = $this->getRepositoryClass();
-        $method          = $this->getRepositoryMethod();
+        $repositoryClass = $this->resolveRepositoryClass();
+        $method          = $this->resolveRepositoryMethod();
+
+        // dd($repositoryClass, $method);
 
         // If Repository class is not defined, fallback onto Entity repository
         if (empty($repositoryClass)) {
@@ -85,227 +154,46 @@ final class RepositoryService
         if (!class_exists($repositoryClass)) {
             return false;
         }
-        $repository = $this->getRepositoryInstance($repositoryClass);
+        $repository = $this->resolveRepositoryInstance($repositoryClass);
+
+        if ($this->isStandardHttpMethod($method)) {
+            return true;
+        }
 
         return method_exists($repository, $method);
     }
 
-    private function getRepositoryInstance(string $repositoryClass): object
+    private function isStandardHttpMethod(string $method): bool
     {
-        if (is_subclass_of($repositoryClass, ServiceEntityRepository::class)) {
-            return new $repositoryClass($this->doctrine);
-        }
-
-        return $this->doctrine->getRepository($repositoryClass);
-    }
-
-    private function resolveRepositoryMethod(): string
-    {
-        $httpMethod  = $this->request->getMethod();
-        $routeParams = $this->request->attributes->get('_route_params', []);
-
-        switch ($httpMethod) 
-        {
-            case Request::METHOD_GET:
-                if (isset($routeParams['id']) && count($routeParams) > 1) {
-                    return 'findOneBy';
-                }
-                if (isset($routeParams['id'])) {
-                    return 'find';
-                }
-                return 'findBy'; // findAll = findBy([])
-
-            case Request::METHOD_POST:
-                return 'create';
-
-            case Request::METHOD_PUT:
-            case Request::METHOD_PATCH:
-                return 'update';
-
-            case Request::METHOD_DELETE:
-                return 'remove';
-        }
-
-        throw new \RuntimeException("Aucune méthode repository définie pour {$httpMethod}");
+        return in_array($method, ['create', 'update', 'delete', 'find', 'findOneBy', 'findBy', 'count'], true);
     }
 
 
-
-
-    public function resolve(): mixed
-    {
-        $repository   = $this->getRepository();
-        $httpMethod   = $this->request->getMethod();
-        $method       = $this->resolveRepositoryMethod();
-        $customMethod = $this->getMethod(); // Custom method
-        $criteria     = $this->getCriteria();
-        $order        = $this->getOrderBy();
-        $limit        = $this->getLimit();
-        $offset       = $this->getOffset();
-        $id           = $this->getId();
-        
-
-
-        // Execute Custom repository method
-        if ($customMethod && !in_array($customMethod, ['find', 'findAll', 'findBy', 'findOneBy', 'count']) && method_exists($repository, $customMethod)) {
-            // $params = [];
-            // $params = array_merge($params, $this->request->attributes->get('_route_params', []));
-            // $params = array_merge($params, $this->request->query->all());
-            
-            $params = array_merge(
-                $this->request->query->all(),
-                $this->request->request->all(),
-                $this->request->attributes->all() // paramètres de route (_route_params)
-            );
-
-            // TODO: check allowed parameters (from route.options ?)
-            // $provider   = $this->configuration->guessProvider();
-            // $collection = $this->configuration->guessCollection();
-            // $endpoint   = $this->configuration->guessEndpoint();
-            // $routeOptions = $this->configuration->getEndpointRouteOptions($provider,$collection,$endpoint);
-
-            return $repository->$customMethod($params);
-            // dump($repository->$customMethod($params));
-            // dd("CUSTOM METHOD {$method}");
-        }
-
-        $data = match ($httpMethod) 
-        {
-            Request::METHOD_GET    => $this->handleGet($id, $criteria, $order, $limit, $offset),
-            Request::METHOD_POST   => $this->create(),
-            Request::METHOD_PUT    => $this->update($id),
-            Request::METHOD_PATCH  => $this->update($id),
-            Request::METHOD_DELETE => $this->delete($id),
-            default => throw new \LogicException("Unsupported HTTP method: $customMethod")
-        };
-
-        return $data;
-
-        // dump($customMethod, $method);
-        // dump($data);
-        // dd('---');
-
-
-        // return match ($httpMethod) 
-        // {
-        //     Request::METHOD_GET    => $this->handleGet($id, $criteria, $order, $limit, $offset),
-        //     Request::METHOD_POST   => $this->create(),
-        //     Request::METHOD_PUT    => $this->update($id),
-        //     Request::METHOD_PATCH  => $this->update($id),
-        //     Request::METHOD_DELETE => $this->delete($id),
-        //     default => throw new \LogicException("Unsupported HTTP method: $customMethod")
-        // };
-    }
-    private function handleGet(?int $id, array $criteria, array $order, ?int $limit, ?int $offset)
-    {
-        if ($id && !empty($criteria)) {
-            return $this->findOneBy($criteria);
-        }
-
-        if ($id) {
-            return $this->find($id);
-        }
-
-        return $this->findBy($criteria, $order, $limit, $offset);
-    }
-
-
-
-    /**
-     * Get the repository
-     */
-    private function getRepository(): object
-    {
-        $provider   = $this->configuration->guessProvider();
-        $collection = $this->configuration->guessCollection();
-        $endpoint   = $this->configuration->guessEndpoint();
-
-        return $this->configuration->getRepository($provider, $collection, $endpoint);
-    }
-
-    /**
-     * Get the repository method
-     */
-    private function getMethod(): ?string
-    {
-        $provider   = $this->configuration->guessProvider();
-        $collection = $this->configuration->guessCollection();
-        $endpoint   = $this->configuration->guessEndpoint();
-
-        return $this->configuration->getMethod($provider, $collection, $endpoint);
-    }
-
-    /**
-     * Get the repository criteria
-     */
-    private function getCriteria(): array
-    {
-        $provider   = $this->configuration->guessProvider();
-        $collection = $this->configuration->guessCollection();
-        $endpoint   = $this->configuration->guessEndpoint();
-
-        return $this->configuration->getCriteria($provider, $collection, $endpoint);
-    }
-
-    /**
-     * Get the repository Order By
-     */
-    private function getOrderBy(): array
-    {
-        $provider   = $this->configuration->guessProvider();
-        $collection = $this->configuration->guessCollection();
-        $endpoint   = $this->configuration->guessEndpoint();
-
-        return $this->configuration->getOrderBy($provider, $collection, $endpoint);
-    }
-
-    /**
-     * Get the repository Limit
-     */
-    private function getLimit(): ?int
-    {
-        $provider   = $this->configuration->guessProvider();
-        $collection = $this->configuration->guessCollection();
-        $endpoint   = $this->configuration->guessEndpoint();
-
-        return $this->configuration->getLimit($provider, $collection, $endpoint);
-    }
-
-    private function getOffset(): ?int
-    {
-        return null;
-    }
-
-    private function getId(): ?string 
-    {
-        return $this->request->get('id');
-    }
-
-
-
+    // ──────────────────────────────
+    // Executor
+    // ──────────────────────────────
 
     private function findBy(array $criteria, array $order, ?int $limit, ?int $offset): array
     {
-        $repository = $this->getRepository();
-        $entities   = $repository->findBy($criteria, $order, $limit, $offset);
-
-        return $entities;
+        $this->responseService->setResponseStatusCode(200);
+        return $this->getRepository()->findBy($criteria, $order, $limit, $offset);
     }
 
     private function find(int|string $id): object|null
     {
-        $repository = $this->getRepository();
-        $entity     = $repository->find($id);
-
-        return $entity;
+        $this->responseService->setResponseStatusCode(200);
+        return $this->getRepository()->find($id);
     }
 
     private function findOneBy(array $criteria): object|null
     {
-        $repository = $this->getRepository();
-        $entity     = $repository->findOneBy($criteria);
+        $this->responseService->setResponseStatusCode(200);
+        return $this->getRepository()->findOneBy($criteria);
+    }
 
-        return $entity;
+    private function count(array $criteria): int
+    {
+        return $this->getRepository()->count($criteria);
     }
 
     private function create(): object|null
@@ -323,13 +211,13 @@ final class RepositoryService
         $this->entityManager->persist($entity);
         $this->entityManager->flush();
         
+        $this->responseService->setResponseStatusCode(201);
         return $entity;
     }
 
     private function update(int|string $id): object|null
     {
-        $repository = $this->getRepository();
-        if ($entity = $repository->find($id))
+        if ($entity = $this->getRepository()->find($id))
         {
             $data = $this->request->getContent();
             $data = json_decode($data);
@@ -342,24 +230,31 @@ final class RepositoryService
             $this->entityManager->flush();
         }
 
+        $this->responseService->setResponseStatusCode(200);
         return $entity;
     }
 
     private function delete(int|string $id): bool
     {
-        $repository = $this->getRepository();
-        if ($entity = $repository->find($id))
+        if ($entity = $this->getRepository()->find($id))
         {
             $this->entityManager->remove($entity);
             $this->entityManager->flush();
 
+            $this->responseService->setResponseStatusCode(200);
             return true;
         }
 
+
+        $this->responseService->setResponseStatusCode(404);
         return false;
     }
 
 
+
+    // ──────────────────────────────
+    // Hydrator
+    // ──────────────────────────────
 
     private function hydrate($entity, $data): bool
     {
@@ -376,20 +271,14 @@ final class RepositoryService
                     {
                         foreach ($value as $id)
                         {
-                            $value = $this->getEntity(
-                                $associatedEntity,
-                                $id
-                            );
+                            $value = $this->getEntity($associatedEntity,$id);
                             $isValidProperty = $this->adder($reflectionClass, $entity, $property, $value);
 
                             if (!$isValidProperty) break;
                         }
                     }
                     else {
-                        $value = $this->getEntity(
-                            $associatedEntity,
-                            $value
-                        );
+                        $value = $this->getEntity($associatedEntity,$value);
                         $isValidProperty = $this->setter($reflectionClass, $entity, $property, $value);
                     }
                 }
@@ -412,26 +301,27 @@ final class RepositoryService
     }
     private function setter($reflection, $entity, $property, $value): bool
     {
-        $set = 'set' . ucfirst($property);
-        if (!$reflection->hasMethod($set))
+        $method = 'set' . $this->utilsService->camelize($property);
+
+        if (!$reflection->hasMethod($method))
         {
             return false;
         }
 
-        $entity->$set($value);
+        $entity->$method($value);
         return true;
         
     }
     private function adder($reflection, $entity, $property, $value): bool
     {
         $property = $this->singularize($property);
-        $add = 'add' . ucfirst($property);
-        if (!$reflection->hasMethod($add)) 
+        $method = 'add' . $this->utilsService->camelize($property);
+        if (!$reflection->hasMethod($method)) 
         {
             return false;
         }
 
-        $entity->$add($value);
+        $entity->$method($value);
         return true;
     }
     /**
@@ -458,4 +348,116 @@ final class RepositoryService
         }
     }
 
+
+
+
+
+    // public function resolve(): mixed
+    // {
+    //     ['provider' => $provider,'collection' => $collection,'endpoint' => $endpoint] = $this->getContext();
+
+    //     $repository   = $this->configuration->getRepository($provider, $collection, $endpoint);
+    //     $httpMethod   = $this->request->getMethod();
+    //     $customMethod = $this->configuration->getMethod($provider, $collection, $endpoint);
+    //     $criteria     = $this->configuration->getCriteria($provider, $collection, $endpoint);
+    //     $order        = $this->configuration->getOrderBy($provider, $collection, $endpoint);
+    //     $limit        = $this->configuration->getLimit($provider, $collection, $endpoint);
+    //     $offset       = $this->getOffset();
+    //     $id           = $this->request->get('id');
+        
+    //     // Execute Custom repository method
+    //     if ($customMethod && !in_array($customMethod, ['find', 'findAll', 'findBy', 'findOneBy', 'count']) && is_callable($repository, $customMethod)) {
+
+    //         $params = $this->requestService->getParams();
+
+    //         // TODO: check allowed parameters (from route.options ?)
+    //         // $provider   = $this->configuration->guessProvider();
+    //         // $collection = $this->configuration->guessCollection();
+    //         // $endpoint   = $this->configuration->guessEndpoint();
+    //         // $routeOptions = $this->configuration->getEndpointRouteOptions($provider,$collection,$endpoint);
+
+    //         return $repository->$customMethod($params);
+    //         // dump($repository->$customMethod($params));
+    //         // dd("CUSTOM METHOD {$method}");
+    //     }
+
+    //     $data = match ($httpMethod) 
+    //     {
+    //         Request::METHOD_GET    => $this->handleGet($id, $criteria, $order, $limit, $offset),
+    //         Request::METHOD_POST   => $this->create(),
+    //         Request::METHOD_PUT    => $this->update($id),
+    //         Request::METHOD_PATCH  => $this->update($id),
+    //         Request::METHOD_DELETE => $this->delete($id),
+    //         default => throw new \LogicException("Unsupported HTTP method: $customMethod")
+    //     };
+
+    //     return $data;
+    // }
+    // private function handleGet(?int $id, array $criteria, array $order, ?int $limit, ?int $offset)
+    // {
+    //     if ($id && !empty($criteria)) {
+    //         return $this->findOneBy($criteria);
+    //     }
+
+    //     if ($id) {
+    //         return $this->find($id);
+    //     }
+
+    //     return $this->findBy($criteria, $order, $limit, $offset);
+    // }
+
+
+    public function resolve(): mixed
+    {
+        // ──────────────
+        // Contexte & repository
+        // ──────────────
+        ['provider' => $provider, 'collection' => $collection, 'endpoint' => $endpoint] = $this->getContext();
+
+        // Résolution repository
+        $repositoryClass = $this->resolveRepositoryClass();
+        if (!$repositoryClass) {
+            throw new \RuntimeException("Aucun repository trouvé pour {$collection}");
+        }
+        $repository = $this->resolveRepositoryInstance($repositoryClass);
+
+        // Résolution méthode
+        $customMethod = $this->configuration->getMethod($provider, $collection, $endpoint);
+        $method = $customMethod ?? $this->resolveRepositoryMethod();
+
+        // Paramètres pour méthode custom
+        $params = $customMethod ? $this->requestService->getParams() : [];
+
+        // ──────────────
+        // Execution
+        // ──────────────
+        if ($customMethod) {
+            // Si la méthode existe et est callable
+            if (!is_callable([$repository, $customMethod])) {
+                throw new \RuntimeException(
+                    sprintf('Méthode custom "%s" introuvable dans "%s"', $customMethod, $repositoryClass)
+                );
+            }
+            return $repository->$customMethod(...array_values($params));
+        }
+
+        // Méthodes standard HTTP
+        $id       = $this->request->get('id');
+        $criteria = $this->configuration->getCriteria($provider, $collection, $endpoint);
+        $order    = $this->configuration->getOrderBy($provider, $collection, $endpoint);
+        $limit    = $this->configuration->getLimit($provider, $collection, $endpoint);
+        $offset   = $this->getOffset();
+
+        return match ($method) {
+            'find'       => $this->find($id),
+            'findOneBy'  => $this->findOneBy($criteria),
+            'findBy'     => $this->findBy($criteria, $order, $limit, $offset),
+            'findAll'    => $this->findBy([], [], null, null),
+            'count'      => $this->count($criteria),
+            'create'     => $this->create(),
+            'update'     => $this->update($id),
+            'delete'     => $this->delete($id),
+            default      => throw new \LogicException("Méthode non supportée: {$method}"),
+        };
+    }
 }
