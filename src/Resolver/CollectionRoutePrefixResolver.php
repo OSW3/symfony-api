@@ -24,9 +24,13 @@ final class CollectionRoutePrefixResolver
 
                 $versionNumber = $provider['version']['number'];
                 $versionPrefix = $provider['version']['prefix'];
-                $fullVersion = "{$versionPrefix}{$versionNumber}";
+                $versionType   = $provider['version']['type'];
+                $path = preg_replace("#/$#", "", $collection['route']['prefix']);
+                $fullVersion   = "{$versionPrefix}{$versionNumber}";
 
-                $collection['route']['prefix'] = preg_replace("/{version}/", $fullVersion, $collection['route']['prefix']);
+                if ($versionType === 'path') {
+                    $collection['route']['prefix'] = "{$path}/{$fullVersion}";
+                }
             }
         }
 

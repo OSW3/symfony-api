@@ -7,8 +7,11 @@ use OSW3\Api\Validator\TransformerValidator;
 use OSW3\Api\Resolver\CollectionNameResolver;
 use OSW3\Api\Resolver\ApiVersionNumberResolver;
 use OSW3\Api\Resolver\CollectionRouteNameResolver;
+use OSW3\Api\Resolver\CollectionPaginationResolver;
 use OSW3\Api\Resolver\CollectionRoutePrefixResolver;
+use OSW3\Api\Resolver\CollectionRoutePatternResolver;
 use OSW3\Api\Resolver\CollectionSearchStatusResolver;
+use OSW3\Api\Resolver\EndpointRouteNameResolver;
 
 return static function($definition)
 {
@@ -56,14 +59,14 @@ return static function($definition)
             ->info('Default route naming and URL prefix for this API provider.')
             ->addDefaultsIfNotSet()->children()
 
-                ->scalarNode('name')
+                ->scalarNode('pattern')
                     ->info('Pattern for route names. Available placeholders: {version}, {collection}, {action}.')
                     ->defaultValue('api:{version}:{collection}:{action}')
                 ->end()
 
                 ->scalarNode('prefix')
                     ->info('Default URL prefix for all routes in this API version.')
-                    ->defaultValue('/api/{version}')
+                    ->defaultValue('/api/')
                 ->end()
                 
             ->end()->end()
@@ -130,22 +133,7 @@ return static function($definition)
                 ->info('')
                 ->defaultValue('Resources/templates/response.yaml')
             ->end()
-
-			// ->arrayNode('template')
-            // ->info('.')
-            // ->addDefaultsIfNotSet()->children()
-
-			// 	->booleanNode('support')
-            //         ->info('')
-            //         ->defaultTrue()
-            //     ->end()
-
-			// 	->booleanNode('absolute')
-            //         ->info('')
-            //         ->defaultTrue()
-            //     ->end()
-
-			// ->end()->end()
+            
 
             // ──────────────────────────────
             // Collections (Doctrine Entities)
@@ -172,7 +160,7 @@ return static function($definition)
                             ->info('Override default route name or URL prefix for this specific collection.')
                             ->addDefaultsIfNotSet()->children()
 
-                                ->scalarNode('name')
+                                ->scalarNode('pattern')
                                     ->info('Custom route name pattern. Falls back to global `routes.name` if null.')
                                     ->defaultNull()
                                 ->end()
@@ -210,10 +198,9 @@ return static function($definition)
                         // ──────────────────────────────
                         // Per-collection pagination override
                         // ──────────────────────────────
-                        ->integerNode('pagination')
+                        ->scalarNode('pagination')
                             ->info('Override pagination items per page for this collection.')
                             ->defaultNull()
-                            ->min(1)
                         ->end()
 
                         // ──────────────────────────────
@@ -594,56 +581,36 @@ return static function($definition)
             CollectionNameResolver::resolve($providers);
 
             // Resolve default collection route name
-            CollectionRouteNameResolver::default($providers);
+            CollectionRoutePatternResolver::default($providers);
 
             // Resolve collection route path prefix
             CollectionRoutePrefixResolver::default($providers);
             CollectionRoutePrefixResolver::resolve($providers);
 
+            // Resolve collection search
             CollectionSearchStatusResolver::default($providers);
 
-            foreach ($providers as $n => &$provider) 
-            {
-                foreach ($provider['collections'] as $entityName => &$collection)
-                {
+            // Resolve collection pagination (per page)
+            CollectionPaginationResolver::default($providers);
 
-                    // COLLECTION ROUTE
-                    // -- 
+            
+            // ──────────────────────────────
+            // REST endpoints
+            // ──────────────────────────────
 
-
-                    // COLLECTION SEARCH
-                    // --
-
-                    if (!isset($collection['pagination']) || $collection['pagination'] === null) 
-                    {
-                        $collection['pagination'] = $provider['pagination']['per_page'];
-                    }
+            EndpointRouteNameResolver::default($providers);
+            EndpointRouteNameResolver::resolve($providers);
 
 
 
 
+            foreach ($providers as $providerName => &$provider) {
+                foreach ($provider['collections'] as $collectionName => &$collection) {
+                    foreach ($collection['endpoints'] as $endpointName => &$endpoint) {
 
-
-
-                    // 4. Normalize missing action fields
-                    foreach ($collection['endpoints'] as $endpointName => &$endpoint) 
-                    {
-                        // ──────────────────────────────
-                        // Route config
-                        // ──────────────────────────────
-
-                        // Route name
-                        if (empty(trim($endpoint['route']['name'])))
-                        {
-                            $endpoint['route']['name'] = $collection['route']['name'];
-                        }
-
-                        // Generate Endpoint Route Name
-                        $className = (new \ReflectionClass($entityName))->getShortName();
-                        $className = strtolower($className);
-                        $endpoint['route']['name'] = preg_replace("/{version}/", $provider['version']['number'], $endpoint['route']['name']);
-                        $endpoint['route']['name'] = preg_replace("/{action}/", $endpointName, $endpoint['route']['name']);
-                        $endpoint['route']['name'] = preg_replace("/{collection}/", $className, $endpoint['route']['name']);
+                        // EndpointRouteNameResolver::default($collection, $endpoint);
+                        // EndpointRouteNameResolver::resolve($provider, $endpoint, $endpointName, $collectionName);
+                        
 
 
 

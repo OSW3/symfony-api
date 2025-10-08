@@ -42,17 +42,18 @@ class ApiRequestSubscriber implements EventSubscriberInterface
         }
 
 
-
-
-        // TODO: Custom response "Access denied"
+        // Retrieve data from database
+        // --
 
         $data = $this->repository->resolve();
 
-        // $content = [
-        //     'response' => ,
-        // ];
-        // $statusCode = 200;
-        // $response = new JsonResponse($content, $statusCode);
+
+        // Data serialization
+        // --
+
+
+        // Build the response
+        // --
 
 
         // Set Response

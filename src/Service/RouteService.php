@@ -23,6 +23,8 @@ final class RouteService
         $providers = $this->configuration->getAllProviders();
         $routes = [];
 
+        
+
         // Read APIs definitions
         // my_custom_api_v1, my_custom_api_v2, ...
         foreach ($providers as $providerName => $provider) {
@@ -46,7 +48,7 @@ final class RouteService
 
         // dump($name);
         // dump($prefix);
-        // dump($collection);
+        // dump($path);
         // dump($this->configuration->getVersion($providerName));
         // dd('---');
 
