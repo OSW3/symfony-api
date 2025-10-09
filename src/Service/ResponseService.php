@@ -6,7 +6,7 @@ use Symfony\Component\Filesystem\Path;
 use OSW3\Api\Service\ConfigurationService;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\KernelInterface;
-use Symfony\Component\Serializer\SerializerInterface;
+// use Symfony\Component\Serializer\SerializerInterface;
 
 final class ResponseService 
 {
@@ -15,7 +15,7 @@ final class ResponseService
     public function __construct(
         private readonly KernelInterface $kernel,
         private readonly ConfigurationService $configuration,
-        private readonly SerializerInterface $serializer,
+        // private readonly SerializerInterface $serializer,
     ){}
 
     private function getContext(): array 
@@ -90,11 +90,11 @@ final class ResponseService
 
 
 
-        switch (gettype($data)) {
-            case 'array': foreach ($data as $key => $item) $data[$key] = $this->serialize($item); break;
-            case 'object': $data = $this->serialize($data); break;
-            default: $data = [];
-        }
+        // switch (gettype($data)) {
+        //     case 'array': foreach ($data as $key => $item) $data[$key] = $this->serialize($item); break;
+        //     case 'object': $data = $this->serialize($data); break;
+        //     default: $data = [];
+        // }
 
 
         // Remplacement des expressions {xxx,yyy} dans le template
@@ -169,37 +169,4 @@ final class ResponseService
 
 
 
-
-    private function serialize($entity)
-    {
-        $class = $this->configuration->guessCollection();
-        // dump( $entity instanceof $class );
-
-        $encoder    = 'json';
-        $serializer = $this->serializer;
-
-        $provider   = $this->configuration->guessProvider();
-        $collection = $this->configuration->guessCollection();
-        $endpoint   = $this->configuration->guessEndpoint();
-        $groups     = $this->configuration->getSerializeGroups($provider, $collection, $endpoint);
-
-        if (empty($groups)) {
-            return [];
-        }
-
-        $serialized = $serializer->serialize( $entity, $encoder, [ 
-            'groups'             => $groups,
-            'datetime_format'    => 'Y-m-d H:i:s',
-            'ignored_attributes' => ['password'],
-        ]);
-        $serialized = json_decode($serialized, true);
-        
-        // if ($this->configuration->getLinkSupport($provider))
-        // {
-        //     $this->entityLinks($serialized, $entity);
-        // }
-
-        // dump($serialized);
-        return $serialized;
-    }
 }

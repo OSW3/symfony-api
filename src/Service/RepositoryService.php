@@ -407,11 +407,8 @@ final class RepositoryService
     // }
 
 
-    public function resolve(): mixed
+    public function execute(): mixed
     {
-        // ──────────────
-        // Contexte & repository
-        // ──────────────
         ['provider' => $provider, 'collection' => $collection, 'endpoint' => $endpoint] = $this->getContext();
 
         // Résolution repository

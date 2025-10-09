@@ -5,6 +5,7 @@ use OSW3\Api\Service\RequestService;
 use OSW3\Api\Service\RepositoryService;
 use OSW3\Api\Service\ConfigurationService;
 use OSW3\Api\Service\ResponseService;
+use OSW3\Api\Service\SerializeService;
 use OSW3\Api\Service\SupportService;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -19,6 +20,7 @@ class ApiRequestSubscriber implements EventSubscriberInterface
         private readonly RepositoryService $repository,
         private readonly SupportService $supportService,
         private readonly ResponseService $responseService,
+        private readonly SerializeService $serializeService,
     ){}
 
     public static function getSubscribedEvents(): array
@@ -45,11 +47,13 @@ class ApiRequestSubscriber implements EventSubscriberInterface
         // Retrieve data from database
         // --
 
-        $data = $this->repository->resolve();
+        $data = $this->repository->execute();
 
 
         // Data serialization
         // --
+
+        $data = $this->serializeService->normalize($data);
 
 
         // Build the response

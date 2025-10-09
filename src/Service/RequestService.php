@@ -2,9 +2,7 @@
 namespace OSW3\Api\Service;
 
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
-
 
 final class RequestService 
 {
@@ -13,7 +11,6 @@ final class RequestService
     public function __construct(
         private ConfigurationService $configuration,
         private RequestStack $requestStack,
-        // private RouterInterface $routerInterface,
     ){
         $this->request = $requestStack->getCurrentRequest();
     }

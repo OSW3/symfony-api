@@ -29,7 +29,6 @@ return static function($definition)
             // ──────────────────────────────
             // Versioning
             // ──────────────────────────────
-
 			->arrayNode('version')
             ->info('API version configuration')
             ->addDefaultsIfNotSet()->children()
@@ -122,19 +121,61 @@ return static function($definition)
                     ->defaultTrue()
                 ->end()
 
-			->end()->end()
+                ->scalarNode('property')
+                    ->info('The name of the URL property.')
+                    ->defaultValue('url')
+                ->end()
 
+			->end()->end()
 
             // ──────────────────────────────
             // Response Template
             // ──────────────────────────────
-
             ->scalarNode('template')
-                ->info('')
+                ->info('Path to the response template file used as a model for formatting the API output (e.g. YAML or JSON structure).')
                 ->defaultValue('Resources/templates/response.yaml')
             ->end()
-            
 
+            // ──────────────────────────────
+            // Serialization
+            // ──────────────────────────────
+            ->arrayNode('serialization')
+                ->info('Defines serialization settings applied to API responses, including ignored attributes, date formatting, and null value handling.')
+                ->addDefaultsIfNotSet()
+                ->children()
+
+                    ->arrayNode('ignore')
+                        ->info('List of attributes to exclude from the response.')
+                        ->scalarPrototype()->end()
+                        ->defaultValue([])
+                    ->end()
+
+                    ->arrayNode('datetime')
+                        ->info('Controls how datetime objects are formatted during serialization.')
+                        ->addDefaultsIfNotSet()
+                        ->children()
+
+                            ->scalarNode('format')
+                                ->info('Date/time output format (e.g. "Y-m-d H:i:s" or ISO 8601). Set to null to use Symfony’s default format.')
+                                ->defaultValue('Y-m-d H:i:s')
+                            ->end()
+
+                            ->scalarNode('timezone')
+                                ->info('Timezone applied when serializing datetime values (e.g. "UTC", "Europe/Paris"). Set to null to use the system default.')
+                                ->defaultValue('UTC')
+                            ->end()
+
+                        ->end()
+                    ->end()
+
+                    ->booleanNode('skip_null')
+                        ->info('If true, fields with null values are omitted from the serialized response.')
+                        ->defaultFalse()
+                    ->end()
+
+                ->end()
+            ->end()
+            
             // ──────────────────────────────
             // Collections (Doctrine Entities)
             // ──────────────────────────────
@@ -487,6 +528,12 @@ return static function($definition)
 
                                             ->arrayNode('groups')
                                                 ->info('List of Symfony serialization groups to apply when serializing the response for this endpoint.')
+                                                ->scalarPrototype()->end()
+                                                ->defaultValue([])
+                                            ->end()
+
+                                            ->arrayNode('ignore')
+                                                ->info('List of entity attributes or properties to explicitly exclude from serialization.')
                                                 ->scalarPrototype()->end()
                                                 ->defaultValue([])
                                             ->end()

@@ -31,9 +31,6 @@ final class RouteService
             foreach ($provider['collections'] ?? [] as $entityOptions) {
                 foreach ($entityOptions['endpoints'] ?? [] as $endpointName => $endpointOption) 
                 {
-
-
-
                     // Route Name
                     $name = $endpointOption['route']['name'];
 
@@ -42,16 +39,6 @@ final class RouteService
                     $collection = $entityOptions['name'];
                     $path       = "{$prefix}/{$collection}";
                     foreach ($endpointOption['route']['options'] ?? [] as $opt) $path .= "/{{$opt}}";
-        
-
-
-
-        // dump($name);
-        // dump($prefix);
-        // dump($path);
-        // dump($this->configuration->getVersion($providerName));
-        // dd('---');
-
 
 
                     // Route defaults

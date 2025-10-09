@@ -155,7 +155,7 @@ class ConfigurationService
      */
     public function getTemplate(string $providerName): string
     {
-        return $this->configuration[$providerName]['template'];
+        return $this->configuration[$providerName]['template'] ?? 'Resources/templates/response.yaml';
     }
 
 
@@ -333,6 +333,11 @@ class ConfigurationService
     public function isUrlAbsolute(string $providerName): bool
     {
         return $this->configuration[$providerName]['url']['absolute'] ?? false;
+    }
+
+    public function getUrlProperty(string $providerName): string
+    {
+        return $this->configuration[$providerName]['url']['property'] ?? 'url';
     }
 
 
@@ -593,15 +598,38 @@ class ConfigurationService
 
 
     // ──────────────────────────────
-    // Endpoints Transformer
+    // Endpoints Serializer
     // ──────────────────────────────
 
-    public function getSerializeGroups(string $providerName, string $entityClass, string $endpointName): array
+    public function getSerializerGroups(string $providerName, string $entityClass, string $endpointName): array
     {
         return $this->getEndpoint($providerName, $entityClass, $endpointName)['serialization']['groups'] ?? [];
     }
 
-    public function getSerializeTransformer(string $providerName, string $entityClass, string $endpointName): string
+    public function getSerializerIgnore(string $providerName, string $entityClass, string $endpointName): array
+    {
+        return array_merge(
+            $this->configuration[$providerName]['serialization']['ignore'],
+            $this->getEndpoint($providerName, $entityClass, $endpointName)['serialization']['ignore']
+        );
+    }
+
+    public function getSerializerDatetimeFormat(string $providerName): string
+    {
+        return $this->configuration[$providerName]['serialization']['datetime']['format'] ?? 'Y-m-d H:i:s';
+    }
+
+    public function getSerializerDatetimeTimezone(string $providerName): string
+    {
+        return $this->configuration[$providerName]['serialization']['datetime']['timezone'] ?? 'UTC';
+    }
+
+    public function getSerializerSkipNull(string $providerName): bool
+    {
+        return $this->configuration[$providerName]['serialization']['skip_null'] ?? false;
+    }
+
+    public function getSerializerTransformer(string $providerName, string $entityClass, string $endpointName): string
     {
         return $this->getEndpoint($providerName, $entityClass, $endpointName)['serialization']['transformer'] ?? '';
     }
