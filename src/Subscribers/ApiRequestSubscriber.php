@@ -30,7 +30,6 @@ class ApiRequestSubscriber implements EventSubscriberInterface
     {
         return [
             KernelEvents::REQUEST => ['onRequest'],
-            // KernelEvents::RESPONSE => ['onResponse'],
         ];
     }
     
@@ -72,25 +71,9 @@ class ApiRequestSubscriber implements EventSubscriberInterface
         $event->setResponse($response);
     }
 
-    // public function onResponse(ResponseEvent $event): void 
-    // {
-    //     $response = $event->getResponse();
-    //     $response->headers->remove('X-Powered-By');
-    // }
 
 
 
-
-
-
-
-
-
-
-
-
-
-    
 
 
 

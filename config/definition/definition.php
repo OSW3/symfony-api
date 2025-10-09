@@ -1,17 +1,19 @@
 <?php
 
+use OSW3\Api\Resolver\ApiVendorResolver;
 use OSW3\Api\Validator\HooksValidator;
 use OSW3\Api\Validator\EntityValidator;
 use OSW3\Api\Validator\ControllerValidator;
 use OSW3\Api\Validator\TransformerValidator;
 use OSW3\Api\Resolver\CollectionNameResolver;
 use OSW3\Api\Resolver\ApiVersionNumberResolver;
+use OSW3\Api\Resolver\EndpointRouteNameResolver;
 use OSW3\Api\Resolver\CollectionRouteNameResolver;
 use OSW3\Api\Resolver\CollectionPaginationResolver;
 use OSW3\Api\Resolver\CollectionRoutePrefixResolver;
+use OSW3\Api\Resolver\ApiVersionHeaderFormatResolver;
 use OSW3\Api\Resolver\CollectionRoutePatternResolver;
 use OSW3\Api\Resolver\CollectionSearchStatusResolver;
-use OSW3\Api\Resolver\EndpointRouteNameResolver;
 
 return static function($definition)
 {
@@ -25,6 +27,14 @@ return static function($definition)
         ->arrayPrototype()
         ->info('Each key is an API provider. Typically used to group routes, versions and settings.')
         ->children()
+
+            // ──────────────────────────────
+            // Versioning
+            // ──────────────────────────────
+            ->scalarNode('vendor')
+                ->info('Unique vendor or application identifier used across API headers, documentation, and versioning.')
+                ->defaultNull()
+            ->end()
 
             // ──────────────────────────────
             // Versioning
@@ -44,23 +54,23 @@ return static function($definition)
                 ->end()
 
                 ->enumNode('type')
-                    ->info('How the version is exposed: in URL path, HTTP header, query parameter, or subdomain')
+                    ->info('How the version is exposed: in URL path, HTTP header, query parameter, or subdomain.')
                     ->values(['path', 'header', 'param', 'subdomain'])
                     ->defaultValue('path')
                 ->end()
 
                 ->scalarNode('header_format')
-                    ->info('.')
+                    ->info('Defines the MIME type format used for API versioning via HTTP headers. Placeholders {vendor} and {version} will be replaced dynamically.')
                     ->defaultValue("application/vnd.{vendor}.{version}+json")
                 ->end()
 
                 ->booleanNode('deprecated')
-                    ->info('.')
+                    ->info('Indicates whether this API version is deprecated. If true, clients should migrate to a newer version.')
                     ->defaultFalse()
                 ->end()
                 
             ->end()->end()
-
+            
             // ──────────────────────────────
             // Global route settings
             // ──────────────────────────────
@@ -520,6 +530,18 @@ return static function($definition)
                                                 ->defaultValue([])
                                             ->end()
 
+                                            ->arrayNode('on_success')
+                                                ->info('List of callable listeners to execute on success action.')
+                                                ->scalarPrototype()->end()
+                                                ->defaultValue([])
+                                            ->end()
+
+                                            ->arrayNode('on_error')
+                                                ->info('List of callable listeners to execute on error action.')
+                                                ->scalarPrototype()->end()
+                                                ->defaultValue([])
+                                            ->end()
+
                                         ->end()
 
                                         ->validate()
@@ -626,8 +648,12 @@ return static function($definition)
     ->validate()
         ->always(function($providers) {
             
+
+            ApiVendorResolver::resolve($providers);
+
             // 1. Generate missing versions
             ApiVersionNumberResolver::resolve($providers);
+            ApiVersionHeaderFormatResolver::resolve($providers);
 
 
             // ──────────────────────────────

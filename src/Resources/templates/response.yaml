@@ -1,26 +1,99 @@
 # API
-api_version: "{api.version}"
-api_deprecated: "{api.deprecated}"
+api.version: "{api.version}"
+api.deprecated: "{api.deprecated}"
+api.name: "{api.name}"
+api.vendor: "{api.vendor}"
+api.base_url: "{api.base_url}"
+api.documentation_url: "{api.doc_url}"
+
+# Request
+request.method: "{request.method}"
+request.uri: "{request.uri}"
+request.path: "{request.path}"
+request.query: "{request.query}"
+request.ip: "{request.ip}"
+request.user_agent: "{request.user_agent}"
+request.locale: "{request.locale}"
+request.id: "{request.id}"              # Unique UUID for traceability (per request)
+request.referer: "{request.referer}"    # HTTP Referer header
+request.scheme: "{request.scheme}"      # http / https
+# request_headers: "{request.headers}"    # Optional (can be masked for privacy)
+request.body_size: "{request.body_size}"
+request.content_type: "{request.content_type}"
 
 # Status
-status_code: "{status.code}"
-status_state: "{status.state}"
-status_reason: "{status.reason}"
+status.code: "{status.code}"
+status.state: "{status.state}"
+status.reason: "{status.reason}"
 
-# Response times
-timestamp: "{response.timestamp}"
-tse: "{response.tse}"
+# Server
+server.host: "{server.host}"
+server.env: "{server.env}"
+server.php_version: "{server.php_version}"
+server.framework: "{server.framework}"
+server.name: "{server.name}"            # Server identifier (useful in clusters)
+server.os: "{server.os}"                # e.g. "Linux", "Windows"
+server.uptime: "{server.uptime}"        # Optional, for monitoring
+server.app_version: "{server.app_version}" # Semantic version of your app (1.3.2)
+server.timezone: "{server.timezone}"
+
+# Pagination
+pagination.page: "{pagination.page}"
+pagination.limit: "{pagination.limit}"
+pagination.total: "{pagination.total}"
+pagination.pages: "{pagination.pages}"
+
+# User
+user.id: "{user.id}"
+user.username: "{user.username}"
+user.roles: "{user.roles}"
+user.email: "{user.email}"
+user.authenticated: "{user.authenticated}"  # true/false
+user.token_issued_at: "{user.token_issued_at}"
+user.token_expires_at: "{user.token_expires_at}"
+user.permissions: "{user.permissions}"      # More granular than roles
 
 
+# Debug
+debug.memory: "{debug.memory}"
+debug.peak_memory: "{debug.peak_memory}"
+debug.execution_time: "{debug.execution_time}"
+debug.db_queries: "{debug.db_queries}"       # Count of Doctrine queries
+debug.db_time: "{debug.db_time}"             # Time spent in DB (ms)
+debug.cache_hits: "{debug.cache_hits}"       # Cache hits (e.g. Redis)
+debug.cache_misses: "{debug.cache_misses}"   # Cache misses
+debug.log_level: "{debug.log_level}"         # Current Symfony log level
+debug.included_files: "{debug.included_files}" # Count of included PHP files
 
-message: "{metadata.description}"
-summary: "{metadata.summary}"
-error: "{response.error}"
-response: "{response.data}"
-meta:
-    description: "{metadata.description}"
-    summary: "{metadata.summary}"
-    deprecated: "{metadata.deprecated}"
-    cacheTTL: "{metadata.cacheTTL}"
-    tags: "{metadata.tags}"
-    operationId: "{metadata.operationId}"
+# Resource
+resource.provider: "{resource.provider}"
+resource.collection: "{resource.collection}"
+resource.endpoint: "{resource.endpoint}"
+resource.count: "{resource.count}"
+
+# Response
+response.timestamp: "{response.timestamp}"
+response.error: "{response.error}"
+response.data: "{response.data}"
+response.size: "{response.size}"             # JSON size in bytes
+response.hash: "{response.hash}"             # SHA-1/MD5 hash of payload for caching
+response.compressed: "{response.compressed}" # Boolean if gzip/deflate
+response.cache_control: "{response.cache_control}" # e.g. "public, max-age=3600"
+response.tse: "{response.tse}"               # Execution time already present, keep it
+
+
+# Metadata
+meta.description: "{meta.description}"
+meta.summary: "{meta.summary}"
+meta.deprecated: "{meta.deprecated}"
+meta.cache_ttl: "{meta.cache_ttl}"
+meta.tags: "{meta.tags}"
+meta.operation_id: "{meta.operation_id}"
+meta.license: "{meta.license}"           # License info (e.g. MIT)
+meta.author: "{meta.author}"             # Maintainer / author
+meta.contact: "{meta.contact}"           # Support or contact email
+meta.category: "{meta.category}"         # e.g. “Public API”, “Internal”
+meta.visibility: "{meta.visibility}"     # public / private
+meta.links: "{meta.links}"               # Array of doc or resource links
+meta.example_request: "{meta.example_request}" # Optional for doc tools
+meta.example_response: "{meta.example_response}"

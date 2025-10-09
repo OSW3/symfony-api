@@ -56,9 +56,12 @@ final class RouteService
         
                     // Route host
                     $host = $endpointOption['route']['host'] ?? null;
+                    // $host = 'osw3.net';
         
                     // Route schemes
                     $schemes = $endpointOption['route']['schemes'] ?? [];
+                    // $schemes = ['http', 'https'];
+                    // $schemes = [];
         
                     // Route methods
                     $methods = $endpointOption['route']['methods'] ?? [];

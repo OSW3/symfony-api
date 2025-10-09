@@ -145,6 +145,14 @@ class ConfigurationService
     {
         return $this->configuration[$providerName]['version']['type'];
     }
+    public function getVersionHeaderFormat(string $providerName): string
+    {
+        if ($this->getVersionType($providerName) === 'header') {
+            return $this->configuration[$providerName]['version']['header_format'];
+        }
+        
+        return '';
+    }
 
     public function isDeprecated(string $providerName): bool
     {
