@@ -1,7 +1,18 @@
-status: "{response.status, OK}"
-code: "{response.statusCode}"
-text: "{response.statusText}"
+# API
+api_version: "{api.version}"
+api_deprecated: "{api.deprecated}"
+
+# Status
+status_code: "{status.code}"
+status_state: "{status.state}"
+status_reason: "{status.reason}"
+
+# Response times
 timestamp: "{response.timestamp}"
+tse: "{response.tse}"
+
+
+
 message: "{metadata.description}"
 summary: "{metadata.summary}"
 error: "{response.error}"
@@ -13,4 +24,3 @@ meta:
     cacheTTL: "{metadata.cacheTTL}"
     tags: "{metadata.tags}"
     operationId: "{metadata.operationId}"
-    version: "{api.version}"

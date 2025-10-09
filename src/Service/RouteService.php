@@ -35,7 +35,7 @@ final class RouteService
                     $name = $endpointOption['route']['name'];
 
                     // Route path
-                    $prefix     = $entityOptions['route']['prefix'];
+                    $prefix     = preg_replace("#/$#", "", $entityOptions['route']['prefix']);
                     $collection = $entityOptions['name'];
                     $path       = "{$prefix}/{$collection}";
                     foreach ($endpointOption['route']['options'] ?? [] as $opt) $path .= "/{{$opt}}";

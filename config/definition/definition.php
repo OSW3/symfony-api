@@ -48,6 +48,16 @@ return static function($definition)
                     ->values(['path', 'header', 'param', 'subdomain'])
                     ->defaultValue('path')
                 ->end()
+
+                ->scalarNode('header_format')
+                    ->info('.')
+                    ->defaultValue("application/vnd.{vendor}.{version}+json")
+                ->end()
+
+                ->booleanNode('deprecated')
+                    ->info('.')
+                    ->defaultFalse()
+                ->end()
                 
             ->end()->end()
 

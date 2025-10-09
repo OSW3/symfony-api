@@ -11,6 +11,7 @@ use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\HttpKernel\Event\ResponseEvent;
 
 class ApiRequestSubscriber implements EventSubscriberInterface 
 {
@@ -21,12 +22,15 @@ class ApiRequestSubscriber implements EventSubscriberInterface
         private readonly SupportService $supportService,
         private readonly ResponseService $responseService,
         private readonly SerializeService $serializeService,
-    ){}
+    ){
+        $this->responseService->setTseStart();
+    }
 
     public static function getSubscribedEvents(): array
     {
         return [
             KernelEvents::REQUEST => ['onRequest'],
+            // KernelEvents::RESPONSE => ['onResponse'],
         ];
     }
     
@@ -59,15 +63,20 @@ class ApiRequestSubscriber implements EventSubscriberInterface
         // Build the response
         // --
 
+        $response = $this->responseService->create($data);
+
 
         // Set Response
         // --
 
-        $event->setResponse(new JsonResponse(
-            $this->responseService->buildResponse($data), 
-            $this->responseService->getResponseStatusCode()
-        ));
+        $event->setResponse($response);
     }
+
+    // public function onResponse(ResponseEvent $event): void 
+    // {
+    //     $response = $event->getResponse();
+    //     $response->headers->remove('X-Powered-By');
+    // }
 
 
 

@@ -175,19 +175,19 @@ final class RepositoryService
 
     private function findBy(array $criteria, array $order, ?int $limit, ?int $offset): array
     {
-        $this->responseService->setResponseStatusCode(200);
+        $this->responseService->setStatusCode(200);
         return $this->getRepository()->findBy($criteria, $order, $limit, $offset);
     }
 
     private function find(int|string $id): object|null
     {
-        $this->responseService->setResponseStatusCode(200);
+        $this->responseService->setStatusCode(200);
         return $this->getRepository()->find($id);
     }
 
     private function findOneBy(array $criteria): object|null
     {
-        $this->responseService->setResponseStatusCode(200);
+        $this->responseService->setStatusCode(200);
         return $this->getRepository()->findOneBy($criteria);
     }
 
@@ -211,7 +211,7 @@ final class RepositoryService
         $this->entityManager->persist($entity);
         $this->entityManager->flush();
         
-        $this->responseService->setResponseStatusCode(201);
+        $this->responseService->setStatusCode(201);
         return $entity;
     }
 
@@ -230,7 +230,7 @@ final class RepositoryService
             $this->entityManager->flush();
         }
 
-        $this->responseService->setResponseStatusCode(200);
+        $this->responseService->setStatusCode(200);
         return $entity;
     }
 
@@ -241,12 +241,12 @@ final class RepositoryService
             $this->entityManager->remove($entity);
             $this->entityManager->flush();
 
-            $this->responseService->setResponseStatusCode(200);
+            $this->responseService->setStatusCode(200);
             return true;
         }
 
 
-        $this->responseService->setResponseStatusCode(404);
+        $this->responseService->setStatusCode(404);
         return false;
     }
 

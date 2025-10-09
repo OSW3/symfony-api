@@ -146,6 +146,11 @@ class ConfigurationService
         return $this->configuration[$providerName]['version']['type'];
     }
 
+    public function isDeprecated(string $providerName): bool
+    {
+        return $this->configuration[$providerName]['version']['deprecated'] ?? false;
+    }
+
 
     // ──────────────────────────────
     // Response
