@@ -9,7 +9,7 @@ final class CollectionPaginationResolver
             foreach ($provider['collections'] as &$collection) {
                 if (!isset($collection['pagination']) || $collection['pagination'] === null) 
                 {
-                    $collection['pagination'] = $provider['pagination']['per_page'];
+                    $collection['pagination'] = $provider['pagination']['limit'];
                 }
             }
         }

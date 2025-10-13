@@ -1,17 +1,17 @@
 <?php 
 namespace OSW3\Api\Subscribers;
 
+use OSW3\Api\Service\DebugService;
 use OSW3\Api\Service\RequestService;
-use OSW3\Api\Service\RepositoryService;
-use OSW3\Api\Service\ConfigurationService;
+use OSW3\Api\Service\SupportService;
 use OSW3\Api\Service\ResponseService;
 use OSW3\Api\Service\SerializeService;
-use OSW3\Api\Service\SupportService;
+use OSW3\Api\Service\RepositoryService;
+use OSW3\Api\Service\ConfigurationService;
 use Symfony\Component\HttpKernel\KernelEvents;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class ApiRequestSubscriber implements EventSubscriberInterface 
 {
@@ -21,15 +21,18 @@ class ApiRequestSubscriber implements EventSubscriberInterface
         private readonly RepositoryService $repository,
         private readonly SupportService $supportService,
         private readonly ResponseService $responseService,
+        private readonly DebugService $debug,
         private readonly SerializeService $serializeService,
     ){
-        $this->responseService->setTseStart();
+        $this->debug->setExecutionTimeStart();
     }
 
     public static function getSubscribedEvents(): array
     {
         return [
             KernelEvents::REQUEST => ['onRequest'],
+            KernelEvents::RESPONSE => ['onResponse'],
+
         ];
     }
     
@@ -70,6 +73,13 @@ class ApiRequestSubscriber implements EventSubscriberInterface
 
         $event->setResponse($response);
     }
+    
+
+    
+    public function onResponse(ResponseEvent $event): void 
+    {
+        $event->getResponse()->headers->remove('X-Powered-By');
+    }
 
 
 
@@ -86,6 +96,10 @@ class ApiRequestSubscriber implements EventSubscriberInterface
 
     //     $provider = $this->configuration->getProvider('my_custom_api_v1'); 
     //     // dump( $provider );
+
+    //     $isDocumentationEnabled = $this->configuration->isDocumentationEnabled('my_custom_api_v1'); 
+    //     dump( $isDocumentationEnabled );
+
 
     //     $version = $this->configuration->getVersion('my_custom_api_v1');
     //     // dump( $version );
@@ -184,9 +198,9 @@ class ApiRequestSubscriber implements EventSubscriberInterface
     //     // dump($hooks);
         
 
-    //     $serializeGroups = $this->configuration->getSerializeGroups('my_custom_api_v1', 'App\Entity\Book', 'index');
+    //     $serializeGroups = $this->configuration->getSerializerGroups('my_custom_api_v1', 'App\Entity\Book', 'index');
     //     // dump($serializeGroups);
-    //     $serializeTransformer = $this->configuration->getSerializeTransformer('my_custom_api_v1', 'App\Entity\Book', 'index');
+    //     $serializeTransformer = $this->configuration->getSerializerTransformer('my_custom_api_v1', 'App\Entity\Book', 'index');
     //     // dump($serializeTransformer);
         
 
@@ -201,5 +215,7 @@ class ApiRequestSubscriber implements EventSubscriberInterface
     //     $rateLimitByUser = $this->configuration->getRateLimitByUser('my_custom_api_v1', 'App\Entity\Book', 'index');
     //     // dump($rateLimitByUser);
         
+
+    //     dd('');
     // }
 }

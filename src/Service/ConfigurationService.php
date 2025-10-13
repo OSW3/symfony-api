@@ -4,6 +4,7 @@ namespace OSW3\Api\Service;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\HttpFoundation\Request;
 use OSW3\Api\DependencyInjection\Configuration;
+use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -11,47 +12,16 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class ConfigurationService
 {
     private readonly array $configuration;
-    private readonly ?Request $currentRequest;
+    private readonly ?Request $request;
 
     public function __construct(
         #[Autowire(service: 'service_container')] private readonly ContainerInterface $container,
+        private readonly KernelInterface $kernel,
         private readonly ManagerRegistry $doctrine,
         private readonly RequestStack $requestStack,
     ){
         $this->configuration = $container->getParameter(Configuration::NAME);
-        $this->currentRequest = $this->requestStack->getCurrentRequest();
-    }
-
-
-    // ──────────────────────────────
-    // Providers
-    // ──────────────────────────────
-
-    /**
-     * Returns the configuration array for a specific API provider.
-     *
-     * @param string $providerName The name of the API provider (e.g., 'my_custom_api_v1').
-     * @return array|null Returns the provider configuration array if found, or null if the provider does not exist.
-     *
-     * @example
-     * $provider = $configurationService->getProvider('my_custom_api_v1'); 
-     */
-    public function getProvider(string $providerName): ?array
-    {
-        return $this->configuration[$providerName] ?? null;
-    }
-
-    /**
-     * Returns the configuration for all API providers.
-     * 
-     * @return array An associative array of all providers. Each key is the provider name and each value is its configuration array.
-     *
-     * @example
-     * $providers = $configurationService->getAllProviders();
-     */
-    public function getAllProviders(): array
-    {
-        return $this->configuration;
+        $this->request = $this->requestStack->getCurrentRequest();
     }
 
 
@@ -88,7 +58,7 @@ class ConfigurationService
      */
     private function findRouteMapping(): array|null
     {
-        $route = $this->currentRequest->get('_route');
+        $route = $this->request->get('_route');
 
         if (!$route) {
             return null;
@@ -113,8 +83,60 @@ class ConfigurationService
 
 
     // ──────────────────────────────
+    // Providers
+    // ──────────────────────────────
+
+    /**
+     * Returns the configuration array for a specific API provider.
+     *
+     * @param string $providerName The name of the API provider (e.g., 'my_custom_api_v1').
+     * @return array|null Returns the provider configuration array if found, or null if the provider does not exist.
+     *
+     * @example
+     * $provider = $configurationService->getProvider('my_custom_api_v1'); 
+     */
+    public function getProvider(string $providerName): ?array
+    {
+        return $this->configuration[$providerName] ?? null;
+    }
+
+    /**
+     * Returns the configuration for all API providers.
+     * 
+     * @return array An associative array of all providers. Each key is the provider name and each value is its configuration array.
+     *
+     * @example
+     * $providers = $configurationService->getAllProviders();
+     */
+    public function getAllProviders(): array
+    {
+        return $this->configuration;
+    }
+
+
+    // ──────────────────────────────
     // Versioning
     // ──────────────────────────────
+
+    public function getAllVersions(): array 
+    {
+        $versions = [];
+        $providers = $this->getAllProviders();
+
+        foreach($providers as $providerName => $provider) {
+            $isDeprecated = $this->isDeprecated($providerName);
+            $version = $this->getVersion($providerName);
+
+            if ($isDeprecated)
+            {
+                continue;
+            }
+
+            array_push($versions, $version);
+        }
+
+        return $versions;
+    }
 
     /**
      * Returns the version of a specific API provider.
@@ -157,18 +179,6 @@ class ConfigurationService
     public function isDeprecated(string $providerName): bool
     {
         return $this->configuration[$providerName]['version']['deprecated'] ?? false;
-    }
-
-
-    // ──────────────────────────────
-    // Response
-    // ──────────────────────────────
-
-    /**
-     */
-    public function getTemplate(string $providerName): string
-    {
-        return $this->configuration[$providerName]['template'] ?? 'Resources/templates/response.yaml';
     }
 
 
@@ -252,6 +262,16 @@ class ConfigurationService
         return $this->configuration[$providerName]['routes']['prefix'] ?? '';
     }
 
+    public function getHosts(string $providerName): array
+    {
+        return $this->configuration[$providerName]['routes']['hosts'] ?? [];
+    }
+
+    public function getSchemes(string $providerName): array
+    {
+        return $this->configuration[$providerName]['routes']['schemes'] ?? [];
+    }
+
 
     // ──────────────────────────────
     // Search 
@@ -270,6 +290,31 @@ class ConfigurationService
     public function getSearchFields(string $providerName, string $entityClass): array
     {
         return $this->configuration[$providerName]['collections'][$entityClass]['search']['fields'] ?? [];
+    }
+
+    
+    // ──────────────────────────────
+    // Debug 
+    // ──────────────────────────────
+
+    public function isDebugEnabled(string $providerName): bool
+    {
+        return $this->configuration[$providerName]['debug']['enable'] ?? false;
+    }
+
+    
+    // ──────────────────────────────
+    // Tracing 
+    // ──────────────────────────────
+
+    public function isTracingEnabled(string $providerName): bool
+    {
+        return $this->configuration[$providerName]['tracing']['enable'] ?? false;
+    }
+
+    public function isTracingIdRequestEnabled(string $providerName): bool
+    {
+        return $this->configuration[$providerName]['tracing']['request'] ?? false;
     }
 
 
@@ -291,14 +336,14 @@ class ConfigurationService
         return $this->configuration[$providerName]['pagination']['enable'] ?? false;
     }
 
-    public function getPaginationPerPage(string $providerName, ?string $entityClass = null): int
+    public function getPaginationLimit(string $providerName, ?string $entityClass = null): int
     {
         $collection = $entityClass ? $this->getCollection($providerName, $entityClass) : null;
         if ($collection && isset($collection['pagination'])) {
             return $collection['pagination'];
         }
 
-        return $this->configuration[$providerName]['pagination']['per_page'] ?? 10;
+        return $this->configuration[$providerName]['pagination']['limit'] ?? 10;
     }
 
     /**
@@ -310,9 +355,9 @@ class ConfigurationService
      * @example
      * $maxPerPage = $configService->getPaginationMaxPerPage('my_custom_api_v1');
      */
-    public function getPaginationMaxPerPage(string $providerName): int
+    public function getPaginationMaxLimit(string $providerName): int
     {
-        return $this->configuration[$providerName]['pagination']['max_per_page'] ?? 100;
+        return $this->configuration[$providerName]['pagination']['max_limit'] ?? 100;
     }
 
 
@@ -351,6 +396,28 @@ class ConfigurationService
     public function getUrlProperty(string $providerName): string
     {
         return $this->configuration[$providerName]['url']['property'] ?? 'url';
+    }
+
+
+    // ──────────────────────────────
+    // Response
+    // ──────────────────────────────
+
+    /**
+     */
+    public function getTemplate(string $providerName): string
+    {
+        return $this->configuration[$providerName]['template'] ?? 'Resources/templates/response.yaml';
+    }
+
+
+    // ──────────────────────────────
+    // Documentation
+    // ──────────────────────────────
+
+    public function isDocumentationEnabled(string $providerName): bool
+    {
+        return $this->configuration[$providerName]['documentation']['enable'] ?? false;
     }
 
 
@@ -473,8 +540,8 @@ class ConfigurationService
         //     return $repositoryMethod;
         // }
 
-        // $requestMethod = $this->currentRequest->getMethod();
-        // $id            = $this->currentRequest->get('id');
+        // $requestMethod = $this->request->getMethod();
+        // $id            = $this->request->get('id');
         // // $criteria      = $this->getCriteria($providerName, $entityClass, $endpointName);
         // // $orderBy       = $this->getOrderBy($providerName, $entityClass, $endpointName);
         // // $limit         = $this->getLimit($providerName, $entityClass, $endpointName);
@@ -533,7 +600,7 @@ class ConfigurationService
         }
 
         if ($this->isPaginationEnabled($providerName)) {
-            return $this->getPaginationPerPage($providerName, $entityClass);
+            return $this->getPaginationLimit($providerName, $entityClass);
         }
 
         return null;

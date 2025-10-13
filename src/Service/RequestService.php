@@ -9,11 +9,165 @@ final class RequestService
     private readonly Request $request;
 
     public function __construct(
-        private ConfigurationService $configuration,
-        private RequestStack $requestStack,
+        private readonly ConfigurationService $configuration,
+        private readonly RequestStack $requestStack,
     ){
         $this->request = $requestStack->getCurrentRequest();
     }
+
+
+    // ──────────────────────────────
+    // Current Request 
+    // ──────────────────────────────
+
+    /**
+     * Get current request
+     * 
+     * @return Request
+     */
+    public function getRequest(): Request 
+    {
+        return $this->request;
+    }
+
+    /**
+     * Get the HTTP Method (GET, POST, ...)
+     * 
+     * @return string
+     */
+    public function getMethod(): string 
+    {
+        return $this->request->getMethod();
+    }
+
+    /**
+     * Get the request scheme (HTTP, HTTPS)
+     * 
+     * @return string
+     */
+    public function getScheme(): string 
+    {
+        if (!$this->request) {
+            return 'http';
+        }
+
+        return $this->request->getScheme();
+    }
+
+    /**
+     * Return true if HTTPS
+     * 
+     * @return bool
+     */
+    public function isSecure(): bool
+    {
+        return str_ends_with("s", $this->getScheme());
+    }
+
+    public function getBase(): string 
+    {
+        $scheme   = $this->request->getScheme();
+        $host     = $this->request->getHost();
+        $port     = $this->getPort();
+        $basePath = rtrim($this->request->getBasePath(), '/');
+        $portPart = in_array($port, [80, 443], true) ? '' : ":{$port}";
+
+        return sprintf('%s://%s%s%s', $scheme, $host, $portPart, $basePath);
+    }
+
+    public function getPort(): int 
+    {
+        return $this->request->getPort();
+    }
+
+    /**
+     * Get the request URI
+     * 
+     * @return string
+     */
+    public function getUri(): string 
+    {
+        return $this->request->getUri();
+    }
+
+    /**
+     * Get the URI Path
+     * 
+     * @var string
+     */
+    public function getPath(): string 
+    {
+        return $this->request->getPathInfo();
+    }
+
+    /**
+     * Get all params
+     * 
+     * @return array
+     */
+    public function getParams(): array
+    {
+        return array_merge(
+            $this->getQueryParams(),
+            $this->getRequestParams(),
+            $this->getAttributesParams()
+        );
+    }
+
+    /**
+     * Get the query params
+     * 
+     * @return array
+     */
+    public function getQueryParams(): array 
+    {
+        return $this->request->query->all();
+    }
+
+    /**
+     * Get the request params
+     * 
+     * @return array
+     */
+    public function getRequestParams(): array 
+    {
+        return $this->request->request->all();
+    }
+
+    /**
+     * Get the attributes params
+     * 
+     * @return array
+     */
+    public function getAttributesParams(): array 
+    {
+        return $this->request->attributes->all();
+    }
+
+    /**
+     * Request locale
+     * 
+     * @return string
+     */
+    public function getLocale(): string 
+    {
+        return $this->request->getLocale();
+    }
+
+    
+    // ──────────────────────────────
+    // Xxxxx
+    // ──────────────────────────────
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -33,22 +187,6 @@ final class RequestService
 
         return true;
     }
-
-
-
-
-    public function getParams(): array
-    {
-        return array_merge(
-            $this->request->query->all(),
-            $this->request->request->all(),
-            $this->request->attributes->all()
-        );
-    }
-
-
-
-
 
     public function getEntityClassname(): string|null
     {

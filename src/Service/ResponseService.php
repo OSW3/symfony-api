@@ -1,29 +1,34 @@
 <?php 
 namespace OSW3\Api\Service;
 
+use OSW3\Api\Service\AppService;
 use Symfony\Component\Yaml\Yaml;
+use OSW3\Api\Service\ClientService;
+use OSW3\Api\Service\RequestService;
 use Symfony\Component\Filesystem\Path;
 use OSW3\Api\Service\ConfigurationService;
-use Symfony\Component\HttpFoundation\Request;
+use OSW3\Api\Service\DocumentationService;
+use OSW3\Api\Service\ResponseStatusService;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\RequestStack;
 
 final class ResponseService 
 {
-    private Request $request;
-    private int $statusCode = Response::HTTP_OK;
-    private array $headers = [];
-    private string $tseStart;
-
     public function __construct(
+        private readonly AppService $app,
+        private readonly DebugService $debug,
+        private readonly ClientService $client,
+        private readonly ServerService $server,
+        private readonly HeaderService $headers,
         private readonly KernelInterface $kernel,
+        private readonly RequestService $request,
+        private readonly SecurityService $security,
+        private readonly PaginationService $pagination,
+        private readonly ResponseStatusService $status,
         private readonly ConfigurationService $configuration,
-        private readonly RequestStack $requestStack,
-    ){
-        $this->request = $requestStack->getCurrentRequest();
-    }
+        private readonly DocumentationService $documentation,
+    ){}
 
     private function getContext(): array 
     {
@@ -41,53 +46,42 @@ final class ResponseService
 
     public function create(array $data): Response
     {
-        ['provider' => $provider,'collection' => $collection,'endpoint' => $endpoint] = $this->getContext();
+        // ['provider' => $provider,'collection' => $collection,'endpoint' => $endpoint] = $this->getContext();
 
-
-        $this->setStatusCode(418);
-
-        $statusCode = $this->getStatusCode();
+        $statusCode = $this->status->getCode();
         $payload    = $this->payload($data);
+        $response   = new JsonResponse();
+        
 
-        $response = new JsonResponse($payload);
-        $response->setStatusCode($statusCode);
-
-
-        unset($this->headers['X-Powered-By']);
-
-
-        $version = $this->configuration->getVersion($provider);
-        $versionType = $this->configuration->getVersionType($provider);
-        $versionFormat = $this->configuration->getVersionHeaderFormat($provider);
-
-        if ( $versionType === 'header') {
-            $this->headers['Accept'] = $versionFormat;
-            $this->headers['API-Version'] = $version;
-        }
+        $this->headers
+            ->init($response->headers)
+            ->addApiVersion()
+        ;
 
 
+        // dump($response->headers->all());
 
-        foreach ($this->headers as $key => $value) 
-        {
-            $response->headers->set($key, $value);
-        }
+        // foreach ($this->headers->all() as $key => $value) 
+        // {
+        //     $response->headers->set($key, $value);
+        // }
+        // dd($response->headers->all());
 
-
-        // $response->headers->remove('X-Powered-By');
 
         // $response->headers->set('X-App-Version', '1.2.3');
         // $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate');
         // $response->headers->set('Access-Control-Allow-Origin', '*');
 
+        $response->setContent(json_encode($payload));
+        $response->setStatusCode($statusCode);
+
         return $response;
     }
-
 
     public function payload(mixed $data)
     {
         ['provider' => $provider,'collection' => $collection,'endpoint' => $endpoint] = $this->getContext();
 
-        $provider     = $this->configuration->guessProvider();
         $bundle       = $this->kernel->getBundle('ApiBundle');
         $bundlePath   = $bundle->getPath();
         $templatePath = $this->configuration->getTemplate($provider);
@@ -99,15 +93,9 @@ final class ResponseService
 
         $template = Yaml::parseFile($templatePath);
 
-
-
-
-        // Remplacement des expressions {xxx,yyy} dans le template
         array_walk_recursive($template, function (&$value, $k) use ($data, $provider, $collection, $endpoint) {
             
-            if (!is_string($value)) {
-                return;
-            }
+            if (!is_string($value)) return;
 
             $expression = null;
             $default    = null;
@@ -117,88 +105,158 @@ final class ResponseService
                 $default    = isset($matches[2]) ? trim($matches[2]) : null;
             }
 
-            // Calcul de la valeur finale
+
+            // App
             $value = match($expression) {
-                // Current API Version (v1, v2, ...)
-                'api.version'           => $this->configuration->getVersion($provider) ?? $default,
-                'api.deprecated'        => $this->configuration->isDeprecated($provider),
-                'api.name'              => null,
-                'api.vendor'            => null,
-                'api.base_url'          => null,
-                'api.doc_url'           => null,
+                'app.name'    => $this->app->getName(),
+                'app.vendor'  => $this->app->getVendor(),
+                'app.version' => $this->app->getVersion(),
+                default       => $default ?? $value,
+            };
 
-                // Request
-                'request.method'        => $this->request->getMethod(),
-                'request.uri'           => $this->request->getUri(),
-                'request.path'          => $this->request->getPathInfo(),
-                'request.query'         => $this->request->query->all(),
-                'request.ip'            => $this->request->getClientIp(),
-                'request.user_agent'    => $this->request->headers->get('User-Agent'),
-                'request.locale'        => $this->request->getLocale(),
-                'request.id'            => null,
-                'request.referer'       => null,
-                'request.scheme'        => null,
-                'request.body_size'     => null,
-                'request.content_type'  => null,
+            // API
+            $value = match($expression) {
+                'api.version'            => $this->configuration->getVersion($provider),
+                'api.version.number'     => $this->configuration->getVersionNumber($provider),
+                'api.version.prefix'     => $this->configuration->getVersionPrefix($provider),
+                'api.supported_versions' => $this->configuration->getAllVersions(),
+                'api.deprecated'         => $this->configuration->isDeprecated($provider),
+                default                  => $default ?? $value,
+            };
 
-                // Response Status
-                'status.state'          => $this->getStatusState() ?? $default,
-                'status.reason'         => $this->getStatusReason() ?? $default,
-                'status.code'           => $this->getStatusCode() ?? $default,
+            // Documentation
+            $value = match($expression) {
+                'documentation.url' => $this->documentation->getUrl($provider),
+                default             => $default ?? $value,
+            };
 
-                // Server
-                'server.host'           => gethostname(),
-                'server.env'            => $_ENV['APP_ENV'] ?? 'prod',
-                'server.php_version'    => PHP_VERSION,
-                'server.framework'      => 'Symfony ' . \Symfony\Component\HttpKernel\Kernel::VERSION,
-                'server.name'           => null,
-                'server.os'             => null,
-                'server.uptime'         => null,
-                'server.app_version'    => null,
-                'server.timezone'       => null,
+            // Status
+            $value = match($expression) {
+                'status.code'  => $this->status->getCode(),
+                'status.text'  => $this->status->getText(),
+                'status.state' => $this->status->getState(),
+                default        => $default ?? $value,
+            };
 
-                // Pagination
-                'pagination.page'       => 0, // $this->pagination->getPage() ?? 1,
-                'pagination.limit'      => 0, // $this->pagination->getLimit() ?? 25,
-                'pagination.total'      => 0, // $this->pagination->getTotal() ?? 0,
-                'pagination.pages'      => 0, // $this->pagination->getTotalPages() ?? 0,
+            // Request
+            $value = match($expression) {
+                'request.scheme' => $this->request->getScheme(),
+                'request.secure' => $this->request->isSecure(),
+                'request.base'   => $this->request->getBase(),
+                'request.port'   => $this->request->getPort(),
+                'request.uri'    => $this->request->getUri(),
+                'request.path'   => $this->request->getPath(),
+                'request.query'  => $this->request->getQueryParams(),
+                'request.method' => $this->request->getMethod(),
+                'request.locale' => $this->request->getLocale(),
+                default          => $default ?? $value,
+            };
+
+            // Client
+            $value = match($expression) {
+                'client.ip'              => $this->client->getIp(),
+                'client.vpn_status'      => $this->client->getVpnStatus(),
+                'client.user_agent'      => $this->client->getUserAgent(),
+                'client.device'          => $this->client->getDevice(),
+                'client.is_mobile'       => $this->client->isMobile(),
+                'client.is_tablet'       => $this->client->isTablet(),
+                'client.is_desktop'      => $this->client->isDesktop(),
+                'client.browser'         => $this->client->getBrowser(),
+                'client.browser_version' => $this->client->getBrowserVersion(),
+                'client.os'              => $this->client->getOs(),
+                'client.os_version'      => $this->client->getOsVersion(),
+                'client.engine'          => $this->client->getEngine(),
+                'client.languages'       => $this->client->getLanguages(),
+                'client.language'        => $this->client->getLanguage(),
+                default                  => $default ?? $value,
+            };
+
+            // Server
+            $value = match($expression) {
+                'server.ip'              => $this->server->getIp(),
+                'server.host'            => $this->server->getHostname(),
+                'server.env'             => $this->server->getEnvironment(),
+                'server.php_version'     => $this->server->getPhpVersion(),
+                'server.symfony_version' => $this->server->getSymfonyVersion(),
+                'server.name'            => $this->server->getName(),
+                'server.os'              => $this->server->getOs(),
+                'server.os_version'      => $this->server->getOsVersion(),
+                'server.os_release'      => $this->server->getOsRelease(),
+                'server.date'            => $this->server->getDate(),
+                'server.time'            => $this->server->getTime(),
+                'server.timezone'        => $this->server->getTimezone(),
+                'server.region'          => $this->server->getRegion(),
+                default                  => $default ?? $value,
+            };
+
+            // Pagination
+            if ($this->configuration->isPaginationEnabled($provider))
+            {
+                $value = match($expression) {
+                    'pagination.page'     => $this->pagination->getPage() ?? 1,
+                    'pagination.limit'    => $this->pagination->getLimit() ?? 25,
+                    'pagination.total'    => $this->pagination->getTotal() ?? 0,
+                    'pagination.pages'    => $this->pagination->getTotalPages() ?? 0,
+                    'pagination.prev'     => $this->pagination->getPrev(),
+                    'pagination.next'     => $this->pagination->getNext(),
+                    'pagination.first'    => $this->pagination->getFirst(),
+                    'pagination.last'     => $this->pagination->getLast(),
+                    'pagination.is_first' => $this->pagination->isFirst(),
+                    'pagination.is_last'  => $this->pagination->isLast(),
+                    default               => $default ?? $value,
+                };
+            }
+
+
+
+            $value = match($expression) {
 
                 // User
-                'user.id'               => null, //$this->security->getUser()?->getId(),
-                'user.username'         => null, //$this->security->getUser()?->getUserIdentifier(),
-                'user.roles'            => null, //$this->security->getUser()?->getRoles(),
-                'user.email'            => null,
-                'user.authenticated'    => null,
-                'user.token_issued_at'  => null,
-                'user.token_expires_at' => null,
-                'user.permissions'      => null,
+                'user.id'                    => $this->security->getId(),
+                'user.username'              => $this->security->getUserName(),
+                'user.roles'                 => $this->security->getRoles(),
+                'user.email'                 => $this->security->getEmail(),
+                'user.token_issued_at'       => null,
+                'user.token_expires_at'      => null,
+                'user.token_scopes'          => [],
+                'user.permissions'           => null,
+                'user.mfa_enabled'           => null,
 
                 // Debug
-                'debug.memory'          => memory_get_usage(true),
-                'debug.peak_memory'     => memory_get_peak_usage(true),
-                'debug.execution_time'  => $this->getTse(),
-                'debug.db_queries'      => null,
-                'debug.db_time'         => null,
-                'debug.cache_hits'      => null,
-                'debug.cache_misses'    => null,
-                'debug.log_level'       => null,
-                'debug.included_files'  => null,
+                // 'debug.memory'               => $this->debug->getMemoryUsage(),
+                // 'debug.peak_memory'          => $this->debug->getMemoryPeak(),
+                // 'debug.execution_time'       => $this->debug->getExecutionTime(),
+                // 'debug.log_level'            => $this->debug->getLogLevel(),
+                // 'debug.count_included_files' => $this->debug->getCountIncludedFiles(),
+                // 'debug.included_files'       => $this->debug->getIncludedFiles(),
+                // // 'debug.queue_time'           => $this->debug->getQueueTime(),
 
                 // Resource
-                'resource.provider'     => $provider,
-                'resource.collection'   => $collection,
-                'resource.endpoint'     => $endpoint,
-                'resource.count'        => is_countable($data) ? count($data) : 1,
+                'resource.provider'          => $provider,
+                'resource.collection'        => $collection,
+                'resource.endpoint'          => $endpoint,
+                'resource.count'             => is_countable($data) ? count($data) : 1,
 
                 // Response
-                'response.timestamp'    => $this->getTimestamp(),
-                'response.error'        => "error",
-                'response.data'         => $data,
-                'response.size'         => null,
-                'response.hash'         => md5(json_encode($data)),
-                'response.compressed'   => null,
-                'response.cache_control'=> null,
-                'response.tse'          => null,
+                'response.timestamp'     => gmdate('c'),
+                'response.data'          => $data,
+                'response.size'          => null,
+                'response.hash'          => md5(json_encode($data)),
+                'response.compressed'    => null,
+                'response.cache_control' => null,
+                'response.tse'           => null,
+                'response.error.code'    => null,
+                'response.error.message' => null,
+                'response.error.details' => null,
+                'response.error.doc_url' => null,
+                'response.etag'          => null,
+                'response.format'        => null,
+                'response.latency'       => null,
+                'response.validated'     => null,
+                'response.signature'     => null,
+                'response.cache_key'     => null,
+                'response.cors'          => null,
+                'response.locale'        => null,
 
                 // Metadata
                 'meta.description'      => $this->configuration->getMetadataDescription($provider, $collection, $endpoint) ?? $default,
@@ -216,8 +274,30 @@ final class ResponseService
                 'meta.example_request'  => null,
                 'meta.example_response' => null,
 
+                // Rate Limit
+                'rate_limit.limit'     => null,
+                'rate_limit.remaining' => null,
+                'rate_limit.reset'     => null,
+
                 default                => $default ?? $value,
             };
+
+
+            // Debug
+            if ($this->configuration->isDebugEnabled($provider))
+            {
+                $value = match($expression) {
+                    'debug.memory'               => $this->debug->getMemoryUsage(),
+                    'debug.peak_memory'          => $this->debug->getMemoryPeak(),
+                    'debug.execution_time'       => $this->debug->getExecutionTime(),
+                    'debug.log_level'            => $this->debug->getLogLevel(),
+                    'debug.count_included_files' => $this->debug->getCountIncludedFiles(),
+                    'debug.included_files'       => $this->debug->getIncludedFiles(),
+                    // 'debug.queue_time'           => $this->debug->getQueueTime(),
+    
+                    default                => $default ?? $value,
+                };
+            }
 
         });
 
@@ -227,74 +307,11 @@ final class ResponseService
 
 
     // ──────────────────────────────
-    // API
-    // ──────────────────────────────
-
-
-    // ──────────────────────────────
-    // Status
-    // ──────────────────────────────
-
-    public function setStatusCode(int $statusCode): static 
-    {
-        $this->statusCode = $statusCode;
-        return $this;
-    }
-    public function getStatusCode(): int 
-    {
-        return $this->statusCode;
-    }
-
-    public function getStatusState(): string 
-    {
-        $code = $this->getStatusCode();
-
-        return match (true) {
-            $code >= 200 && $code < 300 => 'success',
-            $code >= 400 && $code < 500 => 'failed',
-            default                     => 'error',
-        };
-    }
-
-    public function getStatusReason(): string 
-    {
-        return Response::$statusTexts[ $this->getStatusCode() ];
-    }
-
-
-    // ──────────────────────────────
     // Response times
     // ──────────────────────────────
-
-    public function setTseStart(): static 
-    {
-        $this->tseStart = microtime(true);
-
-        // dd($this->tseStart);
-        return $this;
-    }
-    public function getTseStart(): string 
-    {
-        return $this->tseStart;
-    }
-
-    public function getTse(): string 
-    {
-        return (microtime(true) - $this->getTseStart()) * 1000;
-    }
 
     public function getTimestamp(): string 
     {
         return gmdate('c');
     }
-
-
-    // ──────────────────────────────
-    // MetaData
-    // ──────────────────────────────
-
-
-    // ──────────────────────────────
-    // Error
-    // ──────────────────────────────
 }

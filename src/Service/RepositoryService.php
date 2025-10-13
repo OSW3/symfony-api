@@ -20,6 +20,8 @@ final class RepositoryService
         private readonly UtilsService $utilsService,
         private readonly RequestService $requestService,
         private readonly ResponseService $responseService,
+        private readonly ResponseStatusService $responseStatusService,
+        private readonly PaginationService $pagination,
     ){
         $this->request = $this->requestStack->getCurrentRequest();
     }
@@ -175,19 +177,19 @@ final class RepositoryService
 
     private function findBy(array $criteria, array $order, ?int $limit, ?int $offset): array
     {
-        $this->responseService->setStatusCode(200);
+        $this->responseStatusService->setCode(200);
         return $this->getRepository()->findBy($criteria, $order, $limit, $offset);
     }
 
     private function find(int|string $id): object|null
     {
-        $this->responseService->setStatusCode(200);
+        $this->responseStatusService->setCode(200);
         return $this->getRepository()->find($id);
     }
 
     private function findOneBy(array $criteria): object|null
     {
-        $this->responseService->setStatusCode(200);
+        $this->responseStatusService->setCode(200);
         return $this->getRepository()->findOneBy($criteria);
     }
 
@@ -211,7 +213,7 @@ final class RepositoryService
         $this->entityManager->persist($entity);
         $this->entityManager->flush();
         
-        $this->responseService->setStatusCode(201);
+        $this->responseStatusService->setCode(201);
         return $entity;
     }
 
@@ -230,7 +232,7 @@ final class RepositoryService
             $this->entityManager->flush();
         }
 
-        $this->responseService->setStatusCode(200);
+        $this->responseStatusService->setCode(200);
         return $entity;
     }
 
@@ -241,12 +243,12 @@ final class RepositoryService
             $this->entityManager->remove($entity);
             $this->entityManager->flush();
 
-            $this->responseService->setStatusCode(200);
+            $this->responseStatusService->setCode(200);
             return true;
         }
 
 
-        $this->responseService->setStatusCode(404);
+        $this->responseStatusService->setCode(404);
         return false;
     }
 
@@ -444,6 +446,8 @@ final class RepositoryService
         $order    = $this->configuration->getOrderBy($provider, $collection, $endpoint);
         $limit    = $this->configuration->getLimit($provider, $collection, $endpoint);
         $offset   = $this->getOffset();
+
+        $this->pagination->setTotal( $this->count($criteria) );
 
         return match ($method) {
             'find'       => $this->find($id),

@@ -1,6 +1,5 @@
 <?php
 
-use OSW3\Api\Resolver\ApiVendorResolver;
 use OSW3\Api\Validator\HooksValidator;
 use OSW3\Api\Validator\EntityValidator;
 use OSW3\Api\Validator\ControllerValidator;
@@ -8,7 +7,6 @@ use OSW3\Api\Validator\TransformerValidator;
 use OSW3\Api\Resolver\CollectionNameResolver;
 use OSW3\Api\Resolver\ApiVersionNumberResolver;
 use OSW3\Api\Resolver\EndpointRouteNameResolver;
-use OSW3\Api\Resolver\CollectionRouteNameResolver;
 use OSW3\Api\Resolver\CollectionPaginationResolver;
 use OSW3\Api\Resolver\CollectionRoutePrefixResolver;
 use OSW3\Api\Resolver\ApiVersionHeaderFormatResolver;
@@ -29,12 +27,23 @@ return static function($definition)
         ->children()
 
             // ──────────────────────────────
-            // Versioning
+            // Documentation
             // ──────────────────────────────
-            ->scalarNode('vendor')
-                ->info('Unique vendor or application identifier used across API headers, documentation, and versioning.')
-                ->defaultNull()
-            ->end()
+			->arrayNode('documentation')
+            ->info('API documentation configuration')
+            ->addDefaultsIfNotSet()->children()
+
+                ->booleanNode('enable')
+                    ->info('Enable or disable the documentation for this API provider.')
+                    ->defaultFalse()
+                ->end()
+
+                ->scalarNode('prefix')
+                    ->info('Path prefix')
+                    ->defaultValue('_documentation')
+                ->end()
+                
+            ->end()->end()
 
             // ──────────────────────────────
             // Versioning
@@ -87,6 +96,16 @@ return static function($definition)
                     ->info('Default URL prefix for all routes in this API version.')
                     ->defaultValue('/api/')
                 ->end()
+
+                ->arrayNode('hosts')
+                    ->info('.')
+                    // ->defaultValue([])
+                ->end()
+
+                ->arrayNode('schemes')
+                    ->info('.')
+                    // ->defaultValue([])
+                ->end()
                 
             ->end()->end()
 
@@ -97,6 +116,39 @@ return static function($definition)
                 ->info('Enable or disable search globally for all collections.')
                 ->defaultFalse()
             ->end()
+
+            // ──────────────────────────────
+            // Debug
+            // ──────────────────────────────
+			->arrayNode('debug')
+            ->info('.')
+            ->addDefaultsIfNotSet()->children()
+
+				->booleanNode('enable')
+                    ->info('Enable or disable debug.')
+                    ->defaultTrue()
+                ->end()
+
+			->end()->end()
+
+            // ──────────────────────────────
+            // Debug
+            // ──────────────────────────────
+			->arrayNode('tracing')
+            ->info('.')
+            ->addDefaultsIfNotSet()->children()
+
+				->booleanNode('enable')
+                    ->info('Enable or disable tracing.')
+                    ->defaultTrue()
+                ->end()
+
+				->booleanNode('request')
+                    ->info('Enable or disable request_id.')
+                    ->defaultTrue()
+                ->end()
+
+			->end()->end()
 
             // ──────────────────────────────
             // Pagination defaults
@@ -110,13 +162,13 @@ return static function($definition)
                     ->defaultTrue()
                 ->end()
 
-				->integerNode('per_page')
+				->integerNode('limit')
                     ->info('Default number of items per page.')
                     ->defaultValue(10)
                     ->min(1)
                 ->end()
 
-				->integerNode('max_per_page')
+				->integerNode('max_limit')
                     ->info('Max number of items per page.')
                     ->defaultValue(100)
                     ->min(1)
@@ -649,7 +701,7 @@ return static function($definition)
         ->always(function($providers) {
             
 
-            ApiVendorResolver::resolve($providers);
+            // ApiVendorResolver::resolve($providers);
 
             // 1. Generate missing versions
             ApiVersionNumberResolver::resolve($providers);
