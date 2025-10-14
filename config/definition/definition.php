@@ -42,7 +42,7 @@ return static function($definition)
                     ->info('Path prefix')
                     ->defaultValue('_documentation')
                 ->end()
-                
+
             ->end()->end()
 
             // ──────────────────────────────
@@ -62,7 +62,7 @@ return static function($definition)
                     ->defaultValue('v')
                 ->end()
 
-                ->enumNode('type')
+                ->enumNode('location')
                     ->info('How the version is exposed: in URL path, HTTP header, query parameter, or subdomain.')
                     ->values(['path', 'header', 'param', 'subdomain'])
                     ->defaultValue('path')
@@ -194,19 +194,141 @@ return static function($definition)
                 ->end()
 
                 ->scalarNode('property')
-                    ->info('The name of the URL property.')
+                    ->info('The name of the URL property in response.')
                     ->defaultValue('url')
                 ->end()
 
 			->end()->end()
 
             // ──────────────────────────────
-            // Response Template
+            // Response formatting 
             // ──────────────────────────────
-            ->scalarNode('template')
-                ->info('Path to the response template file used as a model for formatting the API output (e.g. YAML or JSON structure).')
-                ->defaultValue('Resources/templates/response.yaml')
-            ->end()
+			->arrayNode('response')
+            ->info('.')
+            ->addDefaultsIfNotSet()->children()
+
+                ->scalarNode('template')
+                    ->info('Path to the response template file used as a model for formatting the API output (e.g. YAML or JSON structure).')
+                    ->defaultValue('Resources/templates/response.yaml')
+                ->end()
+
+                ->enumNode('format')
+                    ->info('Default response format if not specified by the client via Accept header or URL extension.')
+                    ->values(['json', 'xml', 'yaml'])
+                    ->defaultValue('json')
+                ->end()
+
+                ->arrayNode('cache_control')
+                ->info('Defines HTTP caching behavior for API responses, including Cache-Control directives and related headers.')
+                ->addDefaultsIfNotSet()->children()
+
+                    ->booleanNode('public')
+                        ->info('If true, sets Cache-Control to "public", allowing shared caches. If false, sets to "private".')
+                        ->defaultTrue()
+                    ->end()
+
+                    ->booleanNode('no_store')
+                        ->info('If true, adds "no-store" to Cache-Control.')
+                        ->defaultFalse()
+                    ->end()
+
+                    ->booleanNode('must_revalidate')
+                        ->info('If true, adds "must-revalidate" to Cache-Control.')
+                        ->defaultTrue()
+                    ->end()
+
+                    ->integerNode('max_age')
+                        ->info('Max age in seconds (0 = no cache).')
+                        ->defaultValue(3600)
+                    ->end()
+
+                ->end()->end()
+
+                ->arrayNode('headers')
+                ->info('.')
+                ->addDefaultsIfNotSet()->children()
+
+                    ->arrayNode('expose')
+                        ->info('List of headers to expose via CORS.')
+                        ->scalarPrototype()->end()
+                        ->defaultValue(['Content-Type', 'Authorization', 'X-Requested-With', 'API-Version', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'])
+                    ->end()
+
+                    ->arrayNode('allow')
+                        ->info('List of headers allowed in CORS requests.')
+                        ->scalarPrototype()->end()
+                        ->defaultValue(['Content-Type', 'Authorization', 'X-Requested-With', 'API-Version'])
+                    ->end()
+
+                    ->arrayNode('vary')
+                        ->info('List of headers to include in the Vary response header.')
+                        ->scalarPrototype()->end()
+                        ->defaultValue(['Accept', 'API-Version'])  
+                    ->end()
+
+                    ->arrayNode('cache_control')
+                        ->info('Default Cache-Control directives to include in responses.')
+                        ->scalarPrototype()->end()
+                        ->defaultValue(['no-cache', 'no-store', 'must-revalidate']) 
+                    ->end()
+
+                    ->arrayNode('custom')
+                        ->info('Custom headers to always include in responses. Key is header name, value is header value.')
+                        ->normalizeKeys(false)
+                        ->scalarPrototype()->end()
+                        ->defaultValue(['X-Powered-By' => 'OSW3 Api'])
+                    ->end() 
+
+                    ->arrayNode('remove')
+                        ->info('List of headers to remove from responses.')
+                        ->scalarPrototype()->end()
+                        ->defaultValue(['X-Powered-By'])
+                    ->end()
+
+                ->end()->end()
+
+                ->enumNode('algorithm')
+                    ->info('Hash algorithm to use for response hashing. Options include "md5", "sha1", "sha256", etc.')
+                    ->values(['md5', 'sha1', 'sha256', 'sha512'])
+                    ->defaultValue('md5')
+                ->end()
+
+			->end()->end()
+
+            // ──────────────────────────────
+            // Rate Limit
+            // ──────────────────────────────
+			->arrayNode('rate_limiting')
+            ->info('.')
+            ->addDefaultsIfNotSet()->children()
+
+                ->booleanNode('enable')
+                    ->info('Enable or disable rate limiting for this API provider.')
+                    ->defaultFalse()
+                ->end()
+
+                ->scalarNode('limit')
+                    ->info('Maximum number of requests allowed in the defined period.')
+                    ->defaultValue('1000')
+                ->end()
+
+                ->enumNode('scope')
+                    ->info('Defines the scope of the rate limit: by IP address, authenticated user, or application. "ip" limits per client IP, "user" limits per logged-in user, "app" limits per API key or application.')
+                    ->defaultValue('user')
+                    ->values(['ip', 'user', 'app'])
+                ->end()
+
+                ->scalarNode('period')
+                    ->info('Time period for the rate limit (e.g. "hour", "minute", "day").')
+                    ->defaultValue('day')
+                ->end()
+
+                ->booleanNode('include_headers')
+                    ->info('Whether to include rate limit headers in responses.')
+                    ->defaultTrue()
+                ->end()
+
+            ->end()->end()
 
             // ──────────────────────────────
             // Serialization

@@ -61,7 +61,7 @@ class ApiRequestSubscriber implements EventSubscriberInterface
 
         $data = $this->serializeService->normalize($data);
 
-
+        
         // Build the response
         // --
 

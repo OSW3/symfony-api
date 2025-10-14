@@ -1,3 +1,11 @@
+## Custom callable
+## --
+
+# callable_method: App\Callable\TestCallable::myCustomData
+# callable_method_static: App\Callable\TestCallable::myCustomStaticData
+
+
+
 ## APP
 ## --
 
@@ -5,19 +13,19 @@
 ## Need to define the "name" property in composer.json
 ## 
 ## @var string
-# app.name: "{app.name}"
+app.name: "{app.name}"
 
 ## App Vendor
 ## Need to define the "name" property in composer.json
 ## 
 ## @var string
-# app.vendor: "{app.vendor}"
+app.vendor: "{app.vendor}"
 
 ## App Version
 ## Need to define the "version" property in composer.json
 ## 
 ## @var string
-# app.version: "{app.version}"
+app.version: "{app.version}"
 
 
 
@@ -29,29 +37,29 @@
 ## Full version number
 ## 
 ## @var string
-# api.version: "{api.version}"
+api.version: "{api.version}"
 
 ## API Version Number
 ## 
 ## @var int
-# api.version.number: "{api.version.number}"
+api.version.number: "{api.version.number}"
 
 ## API Version Prefix
 ## 
 ## @var string
-# api.version.prefix: "{api.version.prefix}"
+api.version.prefix: "{api.version.prefix}"
 
 ## API Versions
 ## List of supported API Version
 ## 
 ## @var array
-# api.supported_versions: "{api.supported_versions}"
+api.supported_versions: "{api.supported_versions}"
 
 ## API Is Deprecated
 ## Indicate if the API version is deprecated
 ## 
 ## @var bool
-# api.deprecated: "{api.deprecated}"
+api.deprecated: "{api.deprecated}"
 
 
 
@@ -260,6 +268,21 @@
 ## @var string
 # server.name: "{server.name}"
 
+## Server Software
+##
+## @var string
+# server.software: "{server.software}"
+
+## Server Software Version
+##
+## @var string
+# server.software_version: "{server.software_version}"
+
+## Server Software Release
+##
+## @var string
+# server.software_release: "{server.software_release}"
+
 ## Server OS
 ##
 ## @var string
@@ -304,52 +327,52 @@
 ## Current page number
 ##
 ## @var int
-pagination.page: "{pagination.page}"
+# pagination.page: "{pagination.page}"
 
 ## Number of item per page
 ##
 ## @var int
-pagination.limit: "{pagination.limit}"
+# pagination.limit: "{pagination.limit}"
 
 ## Total of items
 ##
 ## @var int
-pagination.total: "{pagination.total}"
+# pagination.total: "{pagination.total}"
 
 ## Total of pages
 ##
 ## @var int
-pagination.pages: "{pagination.pages}"
+# pagination.pages: "{pagination.pages}"
 
 ## Next pagination URL
 ##
 ## @var string
-pagination.prev: "{pagination.prev}"
+# pagination.prev: "{pagination.prev}"
 
 ## Previous pagination URL
 ##
 ## @var string
-pagination.next: "{pagination.next}"
+# pagination.next: "{pagination.next}"
 
 ## First pagination URL
 ##
 ## @var string
-pagination.first: "{pagination.first}"
+# pagination.first: "{pagination.first}"
 
 ## Last pagination URL
 ##
 ## @var string
-pagination.last: "{pagination.last}"
+# pagination.last: "{pagination.last}"
 
 ## Is First Page
 ##
 ## @var bool
-pagination.is_first: "{pagination.is_first}"
+# pagination.is_first: "{pagination.is_first}"
 
 ## Is Last Page
 ##
 ## @var bool
-pagination.is_last: "{pagination.is_last}"
+# pagination.is_last: "{pagination.is_last}"
 
 
 
@@ -357,15 +380,50 @@ pagination.is_last: "{pagination.is_last}"
 ## User
 ## --
 
-user.id: "{user.id}"                         # Identifiant utilisateur
-user.username: "{user.username}"             # Nom d'utilisateur
-user.roles: "{user.roles}"                   # Rôles (tableau)
-user.email: "{user.email}"                   # Email (sensible, optionnel)
-user.token_issued_at: "{user.token_issued_at}" # Date d'émission du token
-user.token_expires_at: "{user.token_expires_at}" # Date d'expiration
-user.token_scopes: "{user.token_scopes}" # si tu utilises des OAuth2/JWT, les scopes peuvent être utiles.
-user.permissions: "{user.permissions}"       # Permissions granulaires
-user.mfa_enabled: "{user.mfa_enabled}"       # Multi-factor authentication activée (true/false).
+## User ID
+##
+## @var int|string|null
+# user.id: "{user.id}"
+
+## User Username
+##
+## @var string
+# user.username: "{user.username}"
+
+## User Roles
+##
+## @var array
+# user.roles: "{user.roles}"
+
+## User Email
+##
+## @var string
+# user.email: "{user.email}"
+
+## Token emission date
+##
+## @var string
+# user.token_issued_at: "{user.token_issued_at}" 
+
+## Token expiration date
+##
+## @var string
+# user.token_expires_at: "{user.token_expires_at}"
+
+## User Token Scopes
+##
+## @var array
+# user.token_scopes: "{user.token_scopes}"
+
+## User Permissions
+##
+## @var array
+# user.permissions: "{user.permissions}"
+
+## User MFA Enabled
+##
+## @var bool
+# user.mfa_enabled: "{user.mfa_enabled}"
 
 
 
@@ -411,13 +469,23 @@ user.mfa_enabled: "{user.mfa_enabled}"       # Multi-factor authentication activ
 
 
 
-## Resource
+## Context
 ## --
 
-resource.provider: "{resource.provider}"         # Fournisseur de la ressource
-resource.collection: "{resource.collection}"     # Collection accédée
-resource.endpoint: "{resource.endpoint}"         # Endpoint spécifique
-resource.count: "{resource.count}"               # Nombre d'éléments retournés
+## Current Provider name
+## 
+## @var string
+# context.provider: "{context.provider}"
+
+## Current Collection name
+##
+## @var string
+# context.collection: "{context.collection}"
+
+## Current Endpoint name
+##
+## @var string
+# context.endpoint: "{context.endpoint}"
 
 
 
@@ -425,24 +493,63 @@ resource.count: "{resource.count}"               # Nombre d'éléments retourné
 ## Response
 ## --
 
-response.timestamp: "{response.timestamp}"       # Timestamp de la réponse
-response.error.code: "{error.code}"                 # Code d'erreur interne
-response.error.message: "{error.message}"           # Message lisible
-response.error.details: "{error.details}"           # Détails supplémentaires
-response.error.doc_url: "{error.doc_url}"           # Lien vers doc
-response.data: "{response.data}"                # Données de la réponse
-response.size: "{response.size}"                # JSON size in bytes
-response.hash: "{response.hash}"                # SHA-1/MD5 hash of payload for caching
-response.compressed: "{response.compressed}"    # Compression activée, Boolean if gzip/deflate
-response.cache_control: "{response.cache_control}" # Contrôle de cache, e.g. "public, max-age=3600"
-response.etag: "{response.etag}"                # ETag pour cache conditionnel
-response.format: "{response.format}"            # Format de la réponse (json, xml, etc.)
-response.latency: "{response.latency}"  # : Latence totale (ms) entre réception et envoi.
-response.validated: "{response.validated}"  # : Booléen indiquant si la réponse a passé une validation JSON Schema.
-response.signature: "{response.signature}"  # : Signature numérique (si tu veux signer les payloads).
-response.cache_key: "{response.cache_key}"  #  : clé de cache utilisée pour cette réponse.
-response.cors: "{response.cors}"  #  pour indiquer les politiques CORS (ex. Access-Control-Allow-Origin).
-response.locale: "{response.locale}"  #  si l'API renvoie des données localisées (ex. messages d'erreur traduits).
+## Response Timestamp
+## ISO 8601 date format
+##
+## @var string
+# response.timestamp: "{response.timestamp}"
+
+## Response Data
+##
+## @var array
+# response.data: "{response.data}"
+
+## Response data Count
+##
+## @var int
+# response.count: "{response.count}"
+
+## Response Size in bytes
+##
+## @var int
+# response.size: "{response.size}"
+
+## Response Hash
+##
+## @var string
+# response.hash: "{response.hash}"
+
+## MD5 Hash of the response data
+##
+## @var string
+# response.hash_md5: "{response.hash_md5}"
+
+## SHA-1 Hash of the response data
+##
+## @var string
+# response.hash_sha1: "{response.hash_sha1}"
+
+## SHA-256 Hash of the response data
+##
+## @var string
+# response.hash_sha256: "{response.hash_sha256}"
+
+## SHA-512 Hash of the response data
+##
+## @var string
+# response.hash_sha512: "{response.hash_sha512}"
+
+
+# response.compressed: "{response.compressed}"    # Compression activée, Boolean if gzip/deflate
+# response.error.code: "{error.code}"                 # Code d'erreur interne
+# response.error.message: "{error.message}"           # Message lisible
+# response.error.details: "{error.details}"           # Détails supplémentaires
+# response.error.doc_url: "{error.doc_url}"           # Lien vers doc
+# response.etag: "{response.etag}"                # ETag pour cache conditionnel
+# response.validated: "{response.validated}"  # : Booléen indiquant si la réponse a passé une validation JSON Schema.
+# response.signature: "{response.signature}"  # : Signature numérique (si tu veux signer les payloads).
+# response.cache_key: "{response.cache_key}"  #  : clé de cache utilisée pour cette réponse.
+# response.cors: "{response.cors}"  #  pour indiquer les politiques CORS (ex. Access-Control-Allow-Origin).
 
 
 
@@ -450,28 +557,37 @@ response.locale: "{response.locale}"  #  si l'API renvoie des données localisé
 ## Metadata
 ## --
 
-meta.description: "{meta.description}"       # Description de l'API
-meta.deprecated: "{meta.deprecated}"         # Dépréciation spécifique
-meta.cache_ttl: "{meta.cache_ttl}"          # TTL pour cache
-meta.tags: "{meta.tags}"                    # Tags (tableau)
-meta.operation_id: "{meta.operation_id}"    # ID pour OpenAPI
-meta.license: "{meta.license}"              # License info (e.g. MIT)
-meta.author: "{meta.author}"                # Maintainer / author
-meta.contact: "{meta.contact}"              # Support or contact email
-meta.category: "{meta.category}"            # e.g. “Public API”, “Internal”
-meta.visibility: "{meta.visibility}"        # public/private
-meta.links: "{meta.links}"                  # Array of doc or resource links
-meta.example_request: "{meta.example_request}" # Optional for doc tools
-meta.example_response: "{meta.example_response}" # Optional for doc tools
-meta.version_history: "{meta.version_history}" # Liste des versions précédentes (utile pour les docs).
-meta.changelog: "{meta.changelog}" # Derniers changements (utile pour les outils de versioning).
+# meta.description: "{meta.description}"       # Description de l'API
+# meta.deprecated: "{meta.deprecated}"         # Dépréciation spécifique
+# meta.cache_ttl: "{meta.cache_ttl}"          # TTL pour cache
+# meta.tags: "{meta.tags}"                    # Tags (tableau)
+# meta.operation_id: "{meta.operation_id}"    # ID pour OpenAPI
+# meta.license: "{meta.license}"              # License info (e.g. MIT)
+# meta.author: "{meta.author}"                # Maintainer / author
+# meta.contact: "{meta.contact}"              # Support or contact email
+# meta.category: "{meta.category}"            # e.g. “Public API”, “Internal”
+# meta.visibility: "{meta.visibility}"        # public/private
+# meta.links: "{meta.links}"                  # Array of doc or resource links
+# meta.example_request: "{meta.example_request}" # Optional for doc tools
+# meta.example_response: "{meta.example_response}" # Optional for doc tools
+# meta.version_history: "{meta.version_history}" # Liste des versions précédentes (utile pour les docs).
+# meta.changelog: "{meta.changelog}" # Derniers changements (utile pour les outils de versioning).
 
 
-
-
-## Rate Limiting : Ajoutez des champs comme rate_limit.limit, rate_limit.remaining, et rate_limit.reset pour informer les clients des limites d'utilisation de l'API.
+## Rate Limit
 ## --
 
-rate_limit.limit: "{rate_limit.limit}"
-rate_limit.remaining: "{rate_limit.remaining}"
-rate_limit.reset: "{rate_limit.reset}"
+## Maximum number of requests allowed in the current time window
+##
+## @var int
+# rate_limit.limit: "{rate_limit.limit}"
+
+## Number of requests remaining in the current time window
+##
+## @var int
+# rate_limit.remaining: "{rate_limit.remaining}"
+
+## Time at which the current rate limit window resets in UTC epoch seconds
+##
+## @var int
+# rate_limit.reset: "{rate_limit.reset}"

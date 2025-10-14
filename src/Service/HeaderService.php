@@ -10,6 +10,8 @@ final class HeaderService
     private array $excludes = ['X-Powered-By'];
 
     public function __construct(
+        private readonly ApiService $api,
+        private readonly AppService $app,
         private readonly ConfigurationService $configuration,
     ){}
 
@@ -38,15 +40,22 @@ final class HeaderService
     public function addApiVersion(): static 
     {
         $provider = $this->configuration->guessProvider();
-        $type     = $this->configuration->getVersionType($provider);
-        $version  = $this->configuration->getVersion($provider);
-        $format   = $this->configuration->getVersionHeaderFormat($provider);
+        $vendor   = $this->app->getVendor();
+        $version  = $this->api->getFullVersion();
+        $pattern  = $this->configuration->getVersionHeaderFormat($provider);
+        $pattern  = preg_replace("/{vendor}/", $vendor, $pattern);
+        $pattern  = preg_replace("/{version}/", $version, $pattern);
+        
+        $this->headers->set('API-Version', $version);
+        $this->headers->set('Accept', $pattern);
 
-        if ( $type === 'header') 
-        {
-            $this->headers->set('API-Version', $version);
-            $this->headers->set('Accept', $format);
-        }
+        return $this;
+    }
+
+    public function addCacheControl(): static 
+    {
+        $provider = $this->configuration->guessProvider();
+        $this->headers->set('Cache-Control', $this->configuration->getResponseCacheControl($provider) ?? null);
 
         return $this;
     }

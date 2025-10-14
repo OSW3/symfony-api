@@ -89,7 +89,12 @@ final class RouteService
         return $routes;
     }
 
-
+    /**
+     * Check if a given route is registered in the API configuration
+     *
+     * @param string $route
+     * @return bool
+     */
     public function isRegisteredRoute(string $route): bool 
     {
         $providers = $this->configuration->getAllProviders();
@@ -107,6 +112,12 @@ final class RouteService
         return false;
     }
 
+    /**
+     * Check if the current request method is supported by the given route
+     *
+     * @param string $route
+     * @return bool
+     */
     public function isMethodSupported(string $route): bool 
     {
         $providers = $this->configuration->getAllProviders();

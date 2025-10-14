@@ -1,4 +1,9 @@
 {
+  "app.name": "{app.name}",
+  "app.vendor": "{app.vendor}",
+  "app.version": "{app.version}",
+
+
   "status": "success",
   "code": 200,
   "message": "Ressource récupérée avec succès.",

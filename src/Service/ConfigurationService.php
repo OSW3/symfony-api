@@ -118,64 +118,56 @@ class ConfigurationService
     // Versioning
     // ──────────────────────────────
 
-    public function getAllVersions(): array 
-    {
-        $versions = [];
-        $providers = $this->getAllProviders();
-
-        foreach($providers as $providerName => $provider) {
-            $isDeprecated = $this->isDeprecated($providerName);
-            $version = $this->getVersion($providerName);
-
-            if ($isDeprecated)
-            {
-                continue;
-            }
-
-            array_push($versions, $version);
-        }
-
-        return $versions;
-    }
-
     /**
-     * Returns the version of a specific API provider.
-     *
-     * @param string $providerName The name of the API provider (e.g., 'my_custom_api_v1').
-     * @return string|null The version string (e.g., 'v1') if defined, or null if the provider does not exist or the version is not set.
-     *
-     * @example
-     * $version = $configurationService->getVersion('my_custom_api_v1'); // returns 'v1'
+     * Get version number for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return int Version number
      */
-    public function getVersion(string $providerName): string
-    {
-        $prefix = $this->getVersionPrefix($providerName);
-        $number = $this->getVersionNumber($providerName);
-        
-        return "{$prefix}{$number}";
-    }
-
     public function getVersionNumber(string $providerName): int
     {
         return $this->configuration[$providerName]['version']['number'];
     }
+
+    /**
+     * Get version prefix for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string Version prefix (e.g., 'v')
+     */
     public function getVersionPrefix(string $providerName): string
     {
         return $this->configuration[$providerName]['version']['prefix'];
     }
-    public function getVersionType(string $providerName): string
+
+    /**
+     * Get version location for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string Version location (e.g., 'header', 'url')
+     */
+    public function getVersionLocation(string $providerName): string
     {
-        return $this->configuration[$providerName]['version']['type'];
-    }
-    public function getVersionHeaderFormat(string $providerName): string
-    {
-        if ($this->getVersionType($providerName) === 'header') {
-            return $this->configuration[$providerName]['version']['header_format'];
-        }
-        
-        return '';
+        return $this->configuration[$providerName]['version']['location'];
     }
 
+    /**
+     * Get version header format for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string Version header format (e.g., 'application/vnd.{vendor}.v{version}+json')
+     */
+    public function getVersionHeaderFormat(string $providerName): string
+    {
+        return $this->configuration[$providerName]['version']['header_format'] ?? '';
+    }
+
+    /**
+     * Check if a specific API provider is marked as deprecated.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return bool True if the provider is deprecated, false otherwise
+     */
     public function isDeprecated(string $providerName): bool
     {
         return $this->configuration[$providerName]['version']['deprecated'] ?? false;
@@ -404,10 +396,218 @@ class ConfigurationService
     // ──────────────────────────────
 
     /**
+     * Get the response template path for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string Path to the response template file
      */
-    public function getTemplate(string $providerName): string
+    public function getResponseTemplate(string $providerName): string
     {
-        return $this->configuration[$providerName]['template'] ?? 'Resources/templates/response.yaml';
+        return $this->configuration[$providerName]['response']['template'] ?? 'Resources/templates/response.yaml';
+    }
+
+    /**
+     * Get the response format for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string Response format (e.g., 'json', 'xml')
+     */
+    public function getResponseFormat(string $providerName): string
+    {
+        return $this->configuration[$providerName]['response']['format'] ?? 'json';
+    }
+
+    /**
+     * Get custom HTTP headers to include in all API responses for a specific provider.
+     *
+     * @param string $providerName Name of the API provider
+     * @return array Associative array of HTTP headers (e.g., ['X-Custom-Header' => 'Value'])
+     */
+    public function getResponseHeaders(string $providerName): array
+    {
+        return $this->configuration[$providerName]['response']['headers'] ?? [];
+    }
+
+    /**
+     * Construct the Cache-Control header value based on configuration settings.
+     *
+     * @param string $providerName Name of the API provider
+     * @return string Constructed Cache-Control header value
+     *
+     * @example
+     * $cacheControl = $configService->getResponseCacheControl('my_custom_api_v1');
+     * // Possible output: "public, max-age=3600, must-revalidate"
+     */
+    public function getResponseCacheControl(string $providerName): string
+    {
+        $isPublic       = $this->getResponseCacheControlIsPublic($providerName);
+        $noStore        = $this->getResponseCacheControlNoStore($providerName);
+        $mustRevalidate = $this->getResponseCacheControlMustRevalidate($providerName);
+        $maxAge         = $this->getResponseCacheControlMaxAge($providerName);
+
+        $directives     = [];
+        $directives[]   = $isPublic ? 'public' : 'private';
+        $directives[]   = $noStore ? 'no-store' : null;
+        $directives[]   = $mustRevalidate ? 'must-revalidate' : '';
+        $directives[]   = $maxAge ? 'max-age=' . (int) $maxAge : '';
+
+        $directives = array_filter($directives, static fn($v) => !empty(trim($v)));
+
+        return implode(', ', $directives);
+    }
+
+    /**
+     * Get the hashing algorithm used for generating response hashes.
+     *
+     * @param string $providerName Name of the API provider
+     * @return string Hashing algorithm (e.g., 'md5', 'sha256')
+     */
+    public function getResponseCacheControlIsPublic(string $providerName): bool
+    {
+        return $this->configuration[$providerName]['response']['cache_control']['public'] ?? false;
+    }
+
+    /**
+     * Determine if the 'no-store' directive should be included in the Cache-Control header.
+     *
+     * @param string $providerName Name of the API provider
+     * @return bool True if 'no-store' should be included, false otherwise
+     *
+     * @example
+     * $noStore = $configService->getResponseCacheControlNoStore('my_custom_api_v1'); // returns true or false
+     */
+    public function getResponseCacheControlNoStore(string $providerName): bool
+    {
+        return $this->configuration[$providerName]['response']['cache_control']['no_store'] ?? false;
+    }
+
+    /**
+     * Determine if the 'must-revalidate' directive should be included in the Cache-Control header.
+     *
+     * @param string $providerName Name of the API provider
+     * @return bool True if 'must-revalidate' should be included, false otherwise
+     *
+     * @example
+     * $mustRevalidate = $configService->getResponseCacheControlMustRevalidate('my_custom_api_v1'); // returns true or false
+     */
+    public function getResponseCacheControlMustRevalidate(string $providerName): bool
+    {
+        return $this->configuration[$providerName]['response']['cache_control']['must_revalidate'] ?? false;
+    }
+
+    /**
+     * Get the maximum age (in seconds) for the Cache-Control header.
+     *
+     * @param string $providerName Name of the API provider
+     * @return int Maximum age in seconds
+     *
+     * @example
+     * $maxAge = $configService->getResponseCacheControlMaxAge('my_custom_api_v1'); // returns 3600
+     */
+    public function getResponseCacheControlMaxAge(string $providerName): int
+    {
+        return $this->configuration[$providerName]['response']['cache_control']['max_age'] ?? 0;
+    }
+
+    /**
+     * Get the hashing algorithm used for generating response hashes.
+     *
+     * @param string $providerName Name of the API provider
+     * @return string Hashing algorithm (e.g., 'md5', 'sha256')
+     *
+     * @example
+     * $algorithm = $configService->getResponseHashAlgorithm('my_custom_api_v1'); // returns 'md5'
+     */
+    public function getResponseHashAlgorithm(string $providerName): string
+    {
+        return $this->configuration[$providerName]['response']['algorithm'] ?? 'md5';
+    }
+
+
+    // ──────────────────────────────
+    // Rate Limit
+    // ──────────────────────────────
+
+    public function isRateLimitEnabled(string $providerName): bool
+    {
+        return $this->configuration[$providerName]['rate_limiting']['enable'] ?? false;
+    }
+
+    public function getRateLimit(string $providerName): int
+    {
+        return $this->configuration[$providerName]['rate_limiting']['limit'] ?? 1000;
+    }
+
+    // public function getRateLimit(string $providerName, string $entityClass, string $endpointName): string
+    // {
+    //     return $this->getEndpoint($providerName, $entityClass, $endpointName)['rate_limit']['global'] ?? '';
+    // }
+
+    // public function getRateLimitByRole(string $providerName, string $entityClass, string $endpointName): array
+    // {
+    //     return $this->getEndpoint($providerName, $entityClass, $endpointName)['rate_limit']['by_role'] ?? [];
+    // }
+
+    // public function getRateLimitByUser(string $providerName, string $entityClass, string $endpointName): array
+    // {
+    //     return $this->getEndpoint($providerName, $entityClass, $endpointName)['rate_limit']['by_user'] ?? [];
+    // }
+
+    // ──────────────────────────────
+    // Serialization
+    // ──────────────────────────────
+
+    public function getSerializerGroups(string $providerName, string $entityClass, string $endpointName): array
+    {
+        return $this->getEndpoint($providerName, $entityClass, $endpointName)['serialization']['groups'] ?? [];
+    }
+
+    public function getSerializerIgnore(string $providerName, string $entityClass, string $endpointName): array
+    {
+        return array_merge(
+            $this->configuration[$providerName]['serialization']['ignore'],
+            $this->getEndpoint($providerName, $entityClass, $endpointName)['serialization']['ignore']
+        );
+    }
+
+    public function getSerializerDatetimeFormat(string $providerName): string
+    {
+        return $this->configuration[$providerName]['serialization']['datetime']['format'] ?? 'Y-m-d H:i:s';
+    }
+
+    /**
+     * Get the timezone used for serializing datetime fields in API responses.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string Timezone identifier (e.g., 'UTC', 'America/New_York')
+     */
+    public function getSerializerTimezone(string $providerName): string
+    {
+        return $this->configuration[$providerName]['serialization']['datetime']['timezone'] ?? 'UTC';
+    }
+
+    /**
+     * Determine if null values should be skipped during serialization in API responses.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return bool True if null values should be skipped, false otherwise
+     */
+    public function getSerializerSkipNull(string $providerName): bool
+    {
+        return $this->configuration[$providerName]['serialization']['skip_null'] ?? false;
+    }
+
+    /**
+     * Get the custom transformer service used for serializing entities in API responses.
+     * 
+     * @param string $providerName Name of the API provider
+     * @param string $entityClass Fully qualified class name of the entity (e.g., 'App\Entity\Book')
+     * @param string $endpointName Name of the specific endpoint (e.g., 'list', 'detail')
+     * @return string Fully qualified class name of the transformer service, or an empty string if not defined
+     */
+    public function getSerializerTransformer(string $providerName, string $entityClass, string $endpointName): string
+    {
+        return $this->getEndpoint($providerName, $entityClass, $endpointName)['serialization']['transformer'] ?? '';
     }
 
 
@@ -415,6 +615,15 @@ class ConfigurationService
     // Documentation
     // ──────────────────────────────
 
+    /**
+     * Check if API documentation is enabled for a specific provider.
+     *
+     * @param string $providerName Name of the API provider
+     * @return bool True if documentation is enabled, false otherwise
+     *
+     * @example
+     * $enabled = $configService->isDocumentationEnabled('my_custom_api_v1'); // returns true or false
+     */
     public function isDocumentationEnabled(string $providerName): bool
     {
         return $this->configuration[$providerName]['documentation']['enable'] ?? false;
@@ -678,70 +887,12 @@ class ConfigurationService
 
 
     // ──────────────────────────────
-    // Endpoints Serializer
-    // ──────────────────────────────
-
-    public function getSerializerGroups(string $providerName, string $entityClass, string $endpointName): array
-    {
-        return $this->getEndpoint($providerName, $entityClass, $endpointName)['serialization']['groups'] ?? [];
-    }
-
-    public function getSerializerIgnore(string $providerName, string $entityClass, string $endpointName): array
-    {
-        return array_merge(
-            $this->configuration[$providerName]['serialization']['ignore'],
-            $this->getEndpoint($providerName, $entityClass, $endpointName)['serialization']['ignore']
-        );
-    }
-
-    public function getSerializerDatetimeFormat(string $providerName): string
-    {
-        return $this->configuration[$providerName]['serialization']['datetime']['format'] ?? 'Y-m-d H:i:s';
-    }
-
-    public function getSerializerDatetimeTimezone(string $providerName): string
-    {
-        return $this->configuration[$providerName]['serialization']['datetime']['timezone'] ?? 'UTC';
-    }
-
-    public function getSerializerSkipNull(string $providerName): bool
-    {
-        return $this->configuration[$providerName]['serialization']['skip_null'] ?? false;
-    }
-
-    public function getSerializerTransformer(string $providerName, string $entityClass, string $endpointName): string
-    {
-        return $this->getEndpoint($providerName, $entityClass, $endpointName)['serialization']['transformer'] ?? '';
-    }
-
-
-    // ──────────────────────────────
     // Endpoints Transformer
     // ──────────────────────────────
 
     public function getTransformer(string $providerName, string $entityClass, string $endpointName): string
     {
         return $this->getEndpoint($providerName, $entityClass, $endpointName)['transformer'] ?? '';
-    }
-
-
-    // ──────────────────────────────
-    // Endpoints Rate Limit
-    // ──────────────────────────────
-
-    public function getRateLimit(string $providerName, string $entityClass, string $endpointName): string
-    {
-        return $this->getEndpoint($providerName, $entityClass, $endpointName)['rate_limit']['global'] ?? '';
-    }
-
-    public function getRateLimitByRole(string $providerName, string $entityClass, string $endpointName): array
-    {
-        return $this->getEndpoint($providerName, $entityClass, $endpointName)['rate_limit']['by_role'] ?? [];
-    }
-
-    public function getRateLimitByUser(string $providerName, string $entityClass, string $endpointName): array
-    {
-        return $this->getEndpoint($providerName, $entityClass, $endpointName)['rate_limit']['by_user'] ?? [];
     }
 
 

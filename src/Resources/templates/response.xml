@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<response>
+    <app>
+        <name>{app.name}</name>
+        <vendor>{app.vendor}</vendor>
+        <version>{app.version}</version>
+    </app>
+    <status>success</status>
+    <code>200</code>
+    <message>Ressource récupérée avec succèsde XML.</message>
+</response>

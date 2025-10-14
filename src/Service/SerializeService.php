@@ -52,15 +52,15 @@ final class SerializeService
 
         $encoder        = 'json';
         $serializer     = $this->serializer;
-        $class          = $this->configuration->guessCollection();
+        // $class          = $this->configuration->guessCollection();
         $groups         = $this->configuration->getSerializerGroups($provider, $collection, $endpoint);
         $ignore         = $this->configuration->getSerializerIgnore($provider, $collection, $endpoint);
         $datetimeFormat = $this->configuration->getSerializerDatetimeFormat($provider);
-        $timezone       = $this->configuration->getSerializerDatetimeTimezone($provider);
+        $timezone       = $this->configuration->getSerializerTimezone($provider);
         $skipNull       = $this->configuration->getSerializerSkipNull($provider);
         $hasUrlSupport  = $this->configuration->hasUrlSupport($provider);
 
-        if (!($entity instanceof $class)) {
+        if (!($entity instanceof $collection)) {
             return [];
         }
 
