@@ -1,7 +1,7 @@
 <?php 
 namespace OSW3\Api\Service;
 
-use OSW3\Api\Service\ApiService;
+use OSW3\Api\Service\VersionService;
 use OSW3\Api\Service\AppService;
 use Symfony\Component\Yaml\Yaml;
 use OSW3\Api\Service\ClientService;
@@ -20,13 +20,13 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 final class ResponseService 
 {
     public function __construct(
-        private readonly ApiService $api,
         private readonly AppService $app,
         private readonly DebugService $debug,
         private readonly ClientService $client,
         private readonly ServerService $server,
         private readonly HeaderService $headers,
         private readonly KernelInterface $kernel,
+        private readonly VersionService $version,
         private readonly RequestService $request,
         private readonly SecurityService $security,
         private readonly RateLimitService $rateLimit,
@@ -162,20 +162,24 @@ final class ResponseService
 
             // App
             $value = match($expression) {
-                'app.name'    => $this->app->getName(),
-                'app.vendor'  => $this->app->getVendor(),
-                'app.version' => $this->app->getVersion(),
-                default       => $default ?? $value,
+                'app.name'        => $this->app->getName(),
+                'app.vendor'      => $this->app->getVendor(),
+                'app.version'     => $this->app->getVersion(),
+                'app.description' => $this->app->getDescription(),
+                'app.license'     => $this->app->getLicense(),
+                default           => $default ?? $value,
             };
 
             // API
             $value = match($expression) {
-                'api.version'            => $this->api->getFullVersion(),
-                'api.version.number'     => $this->api->getVersionNumber(),
-                'api.version.prefix'     => $this->api->getVersionPrefix(),
-                'api.supported_versions' => $this->api->getAllVersions(),
-                'api.deprecated'         => $this->api->isDeprecated(),
-                default                  => $default ?? $value,
+                'version.label'         => $this->version->getLabel(),
+                'version.number'        => $this->version->getNumber(),
+                'version.prefix'        => $this->version->getPrefix(),
+                'version.all'           => $this->version->getAllVersions(),
+                'version.supported'     => $this->version->getSupportedVersions(),
+                'version.deprecated'    => $this->version->getDeprecatedVersions(),
+                'version.is_deprecated' => $this->version->isDeprecated(),
+                default                 => $default ?? $value,
             };
 
             // Documentation

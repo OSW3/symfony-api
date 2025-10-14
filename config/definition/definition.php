@@ -298,7 +298,7 @@ return static function($definition)
             // ──────────────────────────────
             // Rate Limit
             // ──────────────────────────────
-			->arrayNode('rate_limiting')
+			->arrayNode('rate_limit')
             ->info('.')
             ->addDefaultsIfNotSet()->children()
 

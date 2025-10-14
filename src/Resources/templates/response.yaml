@@ -27,7 +27,17 @@ app.vendor: "{app.vendor}"
 ## @var string
 app.version: "{app.version}"
 
+## App Description
+## Need to define the "description" property in composer.json
+## 
+## @var string
+app.description: "{app.description}"
 
+## App License
+## Need to define the "license" property in composer.json
+##
+## @var string
+app.license: "{app.license}"
 
 
 ## API
@@ -37,29 +47,41 @@ app.version: "{app.version}"
 ## Full version number
 ## 
 ## @var string
-api.version: "{api.version}"
+# version.label: "{version.label}"
 
 ## API Version Number
 ## 
 ## @var int
-api.version.number: "{api.version.number}"
+# version.number: "{version.number}"
 
 ## API Version Prefix
 ## 
 ## @var string
-api.version.prefix: "{api.version.prefix}"
+# version.prefix: "{version.prefix}"
 
 ## API Versions
+## List of all API Version
+## 
+## @var array
+# version.all: "{version.all}"
+
+## API Supported Versions
 ## List of supported API Version
 ## 
 ## @var array
-api.supported_versions: "{api.supported_versions}"
+# version.supported: "{version.supported}"
+
+## API Deprecated Versions
+## List of deprecated API Version
+##
+## @var array
+# version.deprecated: "{version.deprecated}"
 
 ## API Is Deprecated
 ## Indicate if the API version is deprecated
 ## 
 ## @var bool
-api.deprecated: "{api.deprecated}"
+# version.is_deprecated: "{version.is_deprecated}"
 
 
 
@@ -562,7 +584,7 @@ api.deprecated: "{api.deprecated}"
 # meta.cache_ttl: "{meta.cache_ttl}"          # TTL pour cache
 # meta.tags: "{meta.tags}"                    # Tags (tableau)
 # meta.operation_id: "{meta.operation_id}"    # ID pour OpenAPI
-# meta.license: "{meta.license}"              # License info (e.g. MIT)
+# meta.license: "{app.license}"
 # meta.author: "{meta.author}"                # Maintainer / author
 # meta.contact: "{meta.contact}"              # Support or contact email
 # meta.category: "{meta.category}"            # e.g. “Public API”, “Internal”

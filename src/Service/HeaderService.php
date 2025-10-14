@@ -10,10 +10,16 @@ final class HeaderService
     private array $excludes = ['X-Powered-By'];
 
     public function __construct(
-        private readonly ApiService $api,
+        private readonly VersionService $version,
         private readonly AppService $app,
         private readonly ConfigurationService $configuration,
     ){}
+
+
+
+
+    // TODO: Entete si la version de l'api est dépreciée
+
 
 
     public function init(ResponseHeaderBag $headers): static 
@@ -41,7 +47,7 @@ final class HeaderService
     {
         $provider = $this->configuration->guessProvider();
         $vendor   = $this->app->getVendor();
-        $version  = $this->api->getFullVersion();
+        $version  = $this->version->getLabel();
         $pattern  = $this->configuration->getVersionHeaderFormat($provider);
         $pattern  = preg_replace("/{vendor}/", $vendor, $pattern);
         $pattern  = preg_replace("/{version}/", $version, $pattern);

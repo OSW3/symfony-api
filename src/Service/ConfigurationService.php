@@ -113,6 +113,10 @@ class ConfigurationService
         return $this->configuration;
     }
 
+    public function isValidProvider(string $provider): bool
+    {
+        return array_key_exists($provider, $this->getAllProviders());
+    }
 
     // ──────────────────────────────
     // Versioning
@@ -530,12 +534,12 @@ class ConfigurationService
 
     public function isRateLimitEnabled(string $providerName): bool
     {
-        return $this->configuration[$providerName]['rate_limiting']['enable'] ?? false;
+        return $this->configuration[$providerName]['rate_limit']['enable'] ?? false;
     }
 
     public function getRateLimit(string $providerName): int
     {
-        return $this->configuration[$providerName]['rate_limiting']['limit'] ?? 1000;
+        return $this->configuration[$providerName]['rate_limit']['limit'] ?? 1000;
     }
 
     // public function getRateLimit(string $providerName, string $entityClass, string $endpointName): string

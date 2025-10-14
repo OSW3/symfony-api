@@ -10,6 +10,18 @@ final class AppService
         private readonly KernelInterface $kernel,
     ){}
 
+    private function getComposerData(): array
+    {
+        try {
+            $file = Path::join($this->kernel->getProjectDir(), 'composer.json');
+            $data = file_get_contents($file);
+            return json_decode($data, true);
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+
     /**
      * Get the name of the App from composer.json
      * 
@@ -17,11 +29,7 @@ final class AppService
      */
     public function getName(): string 
     {
-        $composerFile = Path::join($this->kernel->getProjectDir(), '/composer.json');
-        $composerJson = file_get_contents($composerFile);
-        $composerData = json_decode($composerJson, true);
-
-        return explode('/', $composerData['name'])[1] ?? 'app';
+        return explode('/', $this->getComposerData()['name'])[1] ?? 'app';
     }
 
     /**
@@ -31,11 +39,7 @@ final class AppService
      */
     public function getVendor(): string 
     {
-        $composerFile = Path::join($this->kernel->getProjectDir(), '/composer.json');
-        $composerJson = file_get_contents($composerFile);
-        $composerData = json_decode($composerJson, true);
-
-        return explode('/', $composerData['name'])[0] ?? 'vendor';
+        return explode('/', $this->getComposerData()['name'])[0] ?? 'vendor';
     }
 
     /**
@@ -45,10 +49,27 @@ final class AppService
      */
     public function getVersion(): string 
     {
-        $composerFile = Path::join($this->kernel->getProjectDir(), '/composer.json');
-        $composerJson = file_get_contents($composerFile);
-        $composerData = json_decode($composerJson, true);
-
-        return $composerData['version'] ?? '0.0.0';
+        return $this->getComposerData()['version'] ?? '0.0.0';
     }
+
+    /**
+     * Get the description of the App from composer.json
+     * 
+     * @return string
+     */
+    public function getDescription(): string
+    {
+        return $this->getComposerData()['description'] ?? '';
+    }
+
+    /**
+     * Get the license of the App from composer.json
+     * 
+     * @return string
+     */
+    public function getLicense(): string
+    {
+        return $this->getComposerData()['license'] ?? '';
+    }
+
 }
