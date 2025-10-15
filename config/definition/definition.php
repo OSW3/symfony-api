@@ -214,13 +214,34 @@ return static function($definition)
             // Response formatting 
             // ──────────────────────────────
 			->arrayNode('response')
-            ->info('.')
+            ->info('Settings related to API response formatting, including templates, default format, caching, and headers.')
             ->addDefaultsIfNotSet()->children()
 
-                ->scalarNode('template')
-                    ->info('Path to the response template file used as a model for formatting the API output (e.g. YAML or JSON structure).')
-                    ->defaultValue('Resources/templates/response.yaml')
-                ->end()
+                ->arrayNode('templates')
+                ->info('Paths to the response template files used as models for formatting the API output for lists and single items.')
+                ->addDefaultsIfNotSet()->children()
+
+                    ->scalarNode('list')
+                        ->info('Path to the response template file used as a model for formatting the API output for lists.')
+                        ->defaultValue('Resources/templates/list.yaml')
+                    ->end()
+
+                    ->scalarNode('item')
+                        ->info('Path to the response template file used as a model for formatting the API output for single items.')
+                        ->defaultValue('Resources/templates/item.yaml')
+                    ->end()
+
+                    ->scalarNode('error')
+                        ->info('Path to the response template file used as a model for formatting error responses.')
+                        ->defaultValue('Resources/templates/error.yaml')
+                    ->end()
+
+                    ->scalarNode('no_content')
+                        ->info('Path to the response template file used as a model for formatting no content responses (e.g. 204 No Content).')
+                        ->defaultValue('Resources/templates/no_content.yaml')
+                    ->end()
+
+                ->end()->end()
 
                 ->enumNode('format')
                     ->info('Default response format if not specified by the client via Accept header or URL extension.')

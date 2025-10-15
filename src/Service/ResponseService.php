@@ -391,7 +391,7 @@ final class ResponseService
     {
         $bundle     = $this->kernel->getBundle('ApiBundle');
         $bundlePath = $bundle->getPath();
-        $path       = $this->configuration->getResponseTemplate($provider);
+        $path       = $this->configuration->getListTemplate($provider);
         $path       = Path::join($bundlePath, $path);
 
         if (!file_exists($path)) {

@@ -433,15 +433,24 @@ class ConfigurationService
     // Response
     // ──────────────────────────────
 
-    /**
-     * Get the response template path for a specific API provider.
-     * 
-     * @param string $providerName Name of the API provider
-     * @return string Path to the response template file
-     */
-    public function getResponseTemplate(string $providerName): string
+    public function getListTemplate(string $providerName): string
     {
-        return $this->configuration[$providerName]['response']['template'] ?? 'Resources/templates/response.yaml';
+        return $this->configuration[$providerName]['response']['templates']['list'] ?? 'Resources/templates/list.yaml';
+    }
+
+    public function getItemTemplate(string $providerName): string
+    {
+        return $this->configuration[$providerName]['response']['templates']['item'] ?? 'Resources/templates/item.yaml';
+    }
+
+    public function getErrorTemplate(string $providerName): string
+    {
+        return $this->configuration[$providerName]['response']['templates']['error'] ?? 'Resources/templates/error.yaml';
+    }
+
+    public function getNoContentTemplate(string $providerName): string
+    {
+        return $this->configuration[$providerName]['response']['templates']['no_content'] ?? 'Resources/templates/no_content.yaml';
     }
 
     /**
