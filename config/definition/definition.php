@@ -73,6 +73,11 @@ return static function($definition)
                     ->defaultValue("application/vnd.{vendor}.{version}+json")
                 ->end()
 
+                ->booleanNode('beta')
+                    ->info('Indicates whether this API version is in beta. If true, clients should be aware that the API may change.')
+                    ->defaultFalse()
+                ->end()
+
                 ->booleanNode('deprecated')
                     ->info('Indicates whether this API version is deprecated. If true, clients should migrate to a newer version.')
                     ->defaultFalse()
@@ -172,6 +177,11 @@ return static function($definition)
                     ->info('Max number of items per page.')
                     ->defaultValue(100)
                     ->min(1)
+                ->end()
+
+                ->booleanNode('allow_limit_override')
+                    ->info('Allow overriding the "limit" parameter via URL (e.g. ?limit=50).')
+                    ->defaultTrue()
                 ->end()
 
 			->end()->end()

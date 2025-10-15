@@ -13,38 +13,61 @@
 ## Need to define the "name" property in composer.json
 ## 
 ## @var string
-app.name: "{app.name}"
+# app.name: "{app.name}"
 
 ## App Vendor
 ## Need to define the "name" property in composer.json
 ## 
 ## @var string
-app.vendor: "{app.vendor}"
+# app.vendor: "{app.vendor}"
 
 ## App Version
 ## Need to define the "version" property in composer.json
 ## 
 ## @var string
-app.version: "{app.version}"
+# app.version: "{app.version}"
 
 ## App Description
 ## Need to define the "description" property in composer.json
 ## 
 ## @var string
-app.description: "{app.description}"
+# app.description: "{app.description}"
 
 ## App License
 ## Need to define the "license" property in composer.json
 ##
 ## @var string
-app.license: "{app.license}"
+# app.license: "{app.license}"
 
 
-## API
+
+
+## Context
 ## --
 
-## API Version
-## Full version number
+## Current Provider name
+## 
+## @var string
+# context.provider: "{context.provider}"
+
+## Current Collection name
+##
+## @var string
+# context.collection: "{context.collection}"
+
+## Current Endpoint name
+##
+## @var string
+# context.endpoint: "{context.endpoint}"
+
+
+
+
+## Versioning
+## --
+
+## Version label
+## e.g. "v1.0", "v2.1-beta"
 ## 
 ## @var string
 # version.label: "{version.label}"
@@ -83,6 +106,13 @@ app.license: "{app.license}"
 ## @var bool
 # version.is_deprecated: "{version.is_deprecated}"
 
+## API Is Beta
+## Indicate if the API version is in beta
+## 
+## @var bool
+# version.is_beta: "{version.is_beta}"
+
+
 
 
 
@@ -119,11 +149,35 @@ app.license: "{app.license}"
 ## @var string
 # status.state: "{status.state}"
 
+## Is Success
+## True if status is 2xx
+##
+## @var bool
+# status.is_success: "{status.is_success}"
+
+## Is Failed
+## True if status is 4xx
+##
+## @var bool
+# status.is_failed: "{status.is_failed}"
+
+## Is Error
+## True if status is 5xx
+##
+## @var bool
+# status.is_error: "{status.is_error}"
+
 
 
 
 ## Request
 ## --
+
+## Request HTTP Method
+## e.g.: GET, POST, etc.
+##
+## @var string
+# request.method: "{request.method}"
 
 ## Request scheme
 ## e.g.: http ou https
@@ -135,7 +189,7 @@ app.license: "{app.license}"
 ## Is HTTPS ?
 ##
 ## @var bool
-# request.secure: "{request.secure}"
+# request.is_secure: "{request.is_secure}"
 
 ## Base URL
 ## The base of the URL
@@ -162,13 +216,7 @@ app.license: "{app.license}"
 ## ?p1=v1
 ##
 ## @var array
-# request.query: "{request.query}"
-
-## Request HTTP Method
-## e.g.: GET, POST, etc.
-##
-## @var string
-# request.method: "{request.method}"
+# request.params: "{request.params}"
 
 ## Request Locale
 ##
@@ -185,12 +233,6 @@ app.license: "{app.license}"
 ##
 ## @var string
 # client.ip: "{client.ip}"
-
-## Client VPN Status
-## "active", "inactive", "unknown"
-## 
-## @var string
-# client.vpn_status: "{client.vpn_status}"
 
 ## Client User Agent
 ##
@@ -227,6 +269,21 @@ app.license: "{app.license}"
 ## @var string
 # client.browser_version: "{client.browser_version}"
 
+## Client Browser Version Major
+##
+## @var string
+# client.browser_version_major: "{client.browser_version_major}"
+
+## Client Browser Version Minor
+##
+## @var string
+# client.browser_version_minor: "{client.browser_version_minor}"
+
+## Client Browser Version Patch
+##
+## @var string
+# client.browser_version_patch: "{client.browser_version_patch}"
+
 ## Client OS
 ##
 ## @var string
@@ -236,6 +293,21 @@ app.license: "{app.license}"
 ##
 ## @var string
 # client.os_version: "{client.os_version}"
+
+## Client OS Version Major
+##
+## @var string
+# client.os_version_major: "{client.os_version_major}"
+
+## Client OS Version Minor
+##
+## @var string
+# client.os_version_minor: "{client.os_version_minor}"
+
+## Client OS Version Patch
+##
+## @var string
+# client.os_version_patch: "{client.os_version_patch}"
 
 ## Client browser engine
 ## Blink, WebKit, Gecko…
@@ -252,6 +324,11 @@ app.license: "{app.license}"
 ##
 ## @var string
 # client.language: "{client.language}"
+
+## Client Fingerprint
+##
+## @var string
+# client.fingerprint: "{client.fingerprint}"
 
 
 
@@ -346,25 +423,30 @@ app.license: "{app.license}"
 ## Pagination
 ## --
 
+## Total of pages
+##
+## @var int
+# pagination.pages: "{pagination.pages}"
+
 ## Current page number
 ##
 ## @var int
 # pagination.page: "{pagination.page}"
-
-## Number of item per page
-##
-## @var int
-# pagination.limit: "{pagination.limit}"
 
 ## Total of items
 ##
 ## @var int
 # pagination.total: "{pagination.total}"
 
-## Total of pages
+## Number of item per page
 ##
 ## @var int
-# pagination.pages: "{pagination.pages}"
+# pagination.limit: "{pagination.limit}"
+
+## Offset of items
+##
+## @var int
+# pagination.offset: "{pagination.offset}"
 
 ## Next pagination URL
 ##
@@ -396,56 +478,76 @@ app.license: "{app.license}"
 ## @var bool
 # pagination.is_last: "{pagination.is_last}"
 
+## Has Previous Page
+##
+## @var bool
+# pagination.has_prev: "{pagination.has_prev}"
+
+## Has Next Page
+##
+## @var bool
+# pagination.has_next: "{pagination.has_next}"
+
 
 
 
 ## User
 ## --
 
+## Is Authenticated
+##
+## @var bool
+user.is_authenticated: "{user.is_authenticated}"
+
 ## User ID
 ##
 ## @var int|string|null
-# user.id: "{user.id}"
+user.id: "{user.id}"
 
 ## User Username
 ##
 ## @var string
-# user.username: "{user.username}"
+user.username: "{user.username}"
 
 ## User Roles
 ##
 ## @var array
-# user.roles: "{user.roles}"
+user.roles: "{user.roles}"
 
 ## User Email
 ##
 ## @var string
-# user.email: "{user.email}"
+user.email: "{user.email}"
+
+## User Token
+##
+## @var string
+user.token: "{user.token}" 
 
 ## Token emission date
 ##
 ## @var string
-# user.token_issued_at: "{user.token_issued_at}" 
+user.token_issued_at: "{user.token_issued_at}" 
 
 ## Token expiration date
 ##
 ## @var string
-# user.token_expires_at: "{user.token_expires_at}"
+user.token_expires_at: "{user.token_expires_at}"
 
 ## User Token Scopes
 ##
 ## @var array
-# user.token_scopes: "{user.token_scopes}"
+user.token_scopes: "{user.token_scopes}"
 
 ## User Permissions
 ##
 ## @var array
-# user.permissions: "{user.permissions}"
+user.permissions: "{user.permissions}"
 
 ## User MFA Enabled
 ##
 ## @var bool
-# user.mfa_enabled: "{user.mfa_enabled}"
+user.mfa_enabled: "{user.mfa_enabled}"
 
 
 
@@ -487,27 +589,6 @@ app.license: "{app.license}"
 ##
 ## @var ?flaot
 # debug.queue_time: "{debug.queue_time}"
-
-
-
-
-## Context
-## --
-
-## Current Provider name
-## 
-## @var string
-# context.provider: "{context.provider}"
-
-## Current Collection name
-##
-## @var string
-# context.collection: "{context.collection}"
-
-## Current Endpoint name
-##
-## @var string
-# context.endpoint: "{context.endpoint}"
 
 
 

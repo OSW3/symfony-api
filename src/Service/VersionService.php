@@ -107,8 +107,23 @@ final class VersionService
 
         $prefix   = $this->configuration->getVersionPrefix($provider);
         $number   = $this->configuration->getVersionNumber($provider);
+        $beta     = $this->configuration->isBeta($provider);
+        
+        return "{$prefix}{$number}" . ($beta ? '-beta' : '');
+    }
 
-        return "{$prefix}{$number}";
+    /**
+     * Check if the API provider is beta
+     * 
+     * @return bool
+     */
+    public function isBeta(?string $provider = null): bool
+    {
+        if (!$provider || !$this->configuration->isValidProvider($provider)) {
+            $provider = $this->getProvider();
+        }
+
+        return $this->configuration->isBeta($provider);
     }
 
     /**

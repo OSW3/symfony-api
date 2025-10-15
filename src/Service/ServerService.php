@@ -3,6 +3,10 @@ namespace OSW3\Api\Service;
 
 final class ServerService 
 {
+    /** Get the server IP address
+     * 
+     * @return string
+     */
     public function getIp(): string 
     {
         if (!empty($_SERVER['SERVER_ADDR'])) {
@@ -22,21 +26,37 @@ final class ServerService
         return '127.0.0.1';
     }
 
+    /** Get the server hostname
+     * 
+     * @return string
+     */
     public function getHostname(): string 
     {
         return gethostname();
     }
 
+    /** Get the application environment (dev, prod, test)
+     * 
+     * @return string
+     */
     public function getEnvironment(): string 
     {
         return $_ENV['APP_ENV'] ?? 'prod';
     }
 
+    /** Get the PHP version
+     * 
+     * @return string
+     */
     public function getPhpVersion(): string 
     {
         return PHP_VERSION;
     }
 
+    /** Get the Symfony version
+     * 
+     * @return string
+     */
     public function getSymfonyVersion(): string 
     {
         return \Symfony\Component\HttpKernel\Kernel::VERSION;
@@ -54,8 +74,8 @@ final class ServerService
     }
 
     /**
-     * Get the server software (e.g. Apache, Nginx, PHP (in PHP/8.4.8 (Development Server)) ...)
-     * -> Used to expose the server software in the API response   
+     * Get the server software name (e.g. Apache, nginx, IIS ...)
+     * -> Used to expose the server software name in the API response
      * 
      * @return string
      */
@@ -69,7 +89,7 @@ final class ServerService
     }
 
     /**
-     * Get the server software version (e.g. 2.4.46, 1.18.0, 8.4.8 ...)
+     * Get the server software version (e.g. Apache/2.4.41, nginx/1.18.0 ...)
      * -> Used to expose the server software version in the API response
      * 
      * @return string
@@ -82,7 +102,7 @@ final class ServerService
     }
 
     /**
-     * Get the server software release (e.g. Development Server in PHP/8.4.8 (Development Server))
+     * Get the server software release (e.g. Apache/2.4.41 (Ubuntu), nginx/1.18.0 (Ubuntu) ...)
      * -> Used to expose the server software release in the API response
      * 
      * @return string
@@ -95,7 +115,7 @@ final class ServerService
     }
 
     /**
-     * Get the server OS (e.g. Darwin, Linux, Windows)
+     * Get the server OS (e.g. Linux, Windows, Darwin ...)
      * -> Used to expose the server OS in the API response
      * 
      * @return string
@@ -106,7 +126,7 @@ final class ServerService
     }
 
     /**
-     * Get the server OS version (e.g. 20.3.0, 10.0.19042)
+     * Get the server OS version (e.g. 5.15.0-1051-azure, 10.0.19042 ...)
      * -> Used to expose the server OS version in the API response
      * 
      * @return string
@@ -117,7 +137,7 @@ final class ServerService
     }
 
     /**
-     * Get the server OS release (e.g. Darwin Kernel Version 20.3.0, Windows NT 10.0.19042)
+     * Get the server OS release (e.g. 10.15.7, 20.04, 21H1 ...)
      * -> Used to expose the server OS release in the API response
      * 
      * @return string
@@ -126,10 +146,9 @@ final class ServerService
     {
         return php_uname('v');
     }
-    
+
     /**
-     * Get the server date (Y-m-d)
-     * -> Used to expose the date in the API response
+     * Get the server date in YYYY-MM-DD format
      * 
      * @return string
      */
@@ -141,8 +160,7 @@ final class ServerService
     }
 
     /**
-     * Get the current server time
-     * -> Used to expose the time in the API response
+     * Get the server time
      * 
      * @return string
      */
@@ -155,7 +173,6 @@ final class ServerService
 
     /**
      * Get the server timezone
-     * -> Used to expose the timezone in the API response
      * 
      * @return string
      */
@@ -165,9 +182,8 @@ final class ServerService
     }
 
     /**
-     * Get the server region
-     * -> Used to expose the region in the API response
-     *
+     * Get the server region based on its IP address
+     * 
      * @return string|null
      */
     public function getRegion(): ?string

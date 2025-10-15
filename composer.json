@@ -21,6 +21,8 @@
         "doctrine/orm": "*",
         "symfony/serializer": "*",
         "symfony/security-core": "*",
-        "symfony/security-bundle": "*"
+        "symfony/security-bundle": "*",
+        "mobiledetect/mobiledetectlib": "*",
+        "ua-parser/uap-php": "*"
     }
 }

@@ -27,8 +27,23 @@ final class RequestService
      */
     public function getRequest(): Request 
     {
+        return $this->getCurrentRequest();
+    }
+    public function getCurrentRequest(): Request 
+    {
         return $this->request;
     }
+
+
+    public function getCurrentRoute(): string 
+    {
+        return $this->request->attributes->get('_route');
+    }
+
+
+    // ──────────────────────────────
+    // HTTP Request
+    // ──────────────────────────────
 
     /**
      * Get the HTTP Method (GET, POST, ...)
@@ -39,6 +54,11 @@ final class RequestService
     {
         return $this->request->getMethod();
     }
+
+
+    // ──────────────────────────────
+    // URI Fragments
+    // ──────────────────────────────
 
     /**
      * Get the request scheme (HTTP, HTTPS)
@@ -64,6 +84,11 @@ final class RequestService
         return str_ends_with("s", $this->getScheme());
     }
 
+    /**
+     * Get the base URL (scheme + host + port + basePath)
+     * 
+     * @return string
+     */
     public function getBase(): string 
     {
         $scheme   = $this->request->getScheme();
@@ -75,6 +100,11 @@ final class RequestService
         return sprintf('%s://%s%s%s', $scheme, $host, $portPart, $basePath);
     }
 
+    /**
+     * Get the request port
+     * 
+     * @return int
+     */
     public function getPort(): int 
     {
         return $this->request->getPort();
@@ -99,6 +129,11 @@ final class RequestService
     {
         return $this->request->getPathInfo();
     }
+
+
+    // ──────────────────────────────
+    // Params
+    // ──────────────────────────────
 
     /**
      * Get all params
@@ -145,6 +180,31 @@ final class RequestService
     }
 
     /**
+     * Check if all required params are present in the request
+     * 
+     * @return bool
+     */
+    public function hasRequiredParams(): bool 
+    {
+        ['provider' => $provider, 'collection' => $collection, 'endpoint' => $endpoint] = $this->configuration->getContext();
+        $required    = $this->configuration->getEndpointRouteRequirements($provider, $collection, $endpoint);
+        $routeParams = $this->request->attributes->get('_route_params', []);
+
+        foreach (array_keys($required) as $param) {
+            if (!array_key_exists($param, $routeParams)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    
+    // ──────────────────────────────
+    // Xxxxx
+    // ──────────────────────────────
+
+    /**
      * Request locale
      * 
      * @return string
@@ -159,34 +219,20 @@ final class RequestService
     // Xxxxx
     // ──────────────────────────────
 
-
-
-
-
-
-
-
-
-
-
-
-
-    public function hasRequiredParams(): bool 
+    public function getHeaders(): array
     {
-        $provider    = $this->configuration->guessProvider();
-        $collection  = $this->configuration->guessCollection();
-        $endpoint    = $this->configuration->guessEndpoint();
-        $required    = $this->configuration->getEndpointRouteRequirements($provider, $collection, $endpoint);
-        $routeParams = $this->request->attributes->get('_route_params', []);
-
-        foreach (array_keys($required) as $param) {
-            if (!array_key_exists($param, $routeParams)) {
-                return false;
-            }
-        }
-
-        return true;
+        return $this->request->headers->all();
     }
+
+    public function getRawContent(): string
+    {
+        return $this->request->getContent();
+    }
+    public function getFormat(): string
+    {
+        return $this->request->getRequestFormat();
+    }
+
 
     public function getEntityClassname(): string|null
     {

@@ -12,10 +12,20 @@ final class ResponseStatusService
      */
     public function setCode(int $code): static 
     {
+        if (!array_key_exists($code, Response::$statusTexts)) {
+            throw new \InvalidArgumentException("Code HTTP invalide : {$code}");
+        }
+
         $this->code = $code;
 
         return $this;
     }
+
+    /**
+     * Code (200, 404, 301, ...)
+     * 
+     * @return int HTTP status code
+     */
     public function getCode(): int 
     {
         return $this->code;
@@ -42,4 +52,35 @@ final class ResponseStatusService
             default                     => 'error',
         };
     }
+
+    /**
+     * Check if the response is a success (2xx)
+     * 
+     * @return bool True if the response is a success, false otherwise
+     */
+    public function isSuccess(): bool
+    {
+        return $this->getState() === 'success';
+    }
+
+    /**
+     * Check if the response is a failure (4xx)
+     * 
+     * @return bool True if the response is a failure, false otherwise
+     */
+    public function isFailed(): bool
+    {
+        return $this->getState() === 'failed';
+    }
+
+    /**
+     * Check if the response is an error (5xx)
+     * 
+     * @return bool True if the response is an error, false otherwise
+     */
+    public function isError(): bool
+    {
+        return $this->getState() === 'error';
+    }
+
 }

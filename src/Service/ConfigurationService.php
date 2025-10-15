@@ -20,14 +20,23 @@ class ConfigurationService
         private readonly ManagerRegistry $doctrine,
         private readonly RequestStack $requestStack,
     ){
+        $this->request = $requestStack->getCurrentRequest();
         $this->configuration = $container->getParameter(Configuration::NAME);
-        $this->request = $this->requestStack->getCurrentRequest();
     }
 
 
     // ──────────────────────────────
     // Context
     // ──────────────────────────────
+
+    public function getContext(): array
+    {
+        return [
+            'provider'   => $this->guessProvider(),
+            'collection' => $this->guessCollection(),
+            'endpoint'   => $this->guessEndpoint(),
+        ];
+    }
 
     /**
      * Guess the provider name by the current route name
@@ -164,6 +173,17 @@ class ConfigurationService
     public function getVersionHeaderFormat(string $providerName): string
     {
         return $this->configuration[$providerName]['version']['header_format'] ?? '';
+    }
+
+    /**
+     * Check if a specific API provider is marked as beta.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return bool True if the provider is beta, false otherwise
+     */
+    public function isBeta(string $providerName): bool
+    {
+        return $this->configuration[$providerName]['version']['beta'] ?? false;
     }
 
     /**
@@ -354,6 +374,20 @@ class ConfigurationService
     public function getPaginationMaxLimit(string $providerName): int
     {
         return $this->configuration[$providerName]['pagination']['max_limit'] ?? 100;
+    }
+
+    /**
+     * Check if overriding the pagination limit via URL parameters is allowed.
+     *
+     * @param string $providerName Name of the API provider
+     * @return bool True if limit override is allowed, false otherwise
+     *
+     * @example
+     * $allowed = $configService->isPaginationLimitOverrideAllowed('my_custom_api_v1');
+     */
+    public function isPaginationLimitOverrideAllowed(string $providerName): bool
+    {
+        return $this->configuration[$providerName]['pagination']['allow_limit_override'] ?? true;
     }
 
 

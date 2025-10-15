@@ -170,7 +170,15 @@ final class ResponseService
                 default           => $default ?? $value,
             };
 
-            // API
+            // Context
+            $value = match($expression) {
+                'context.provider'   => $provider,
+                'context.collection' => $collection,
+                'context.endpoint'   => $endpoint,
+                default              => $default ?? $value,
+            };
+
+            // Version
             $value = match($expression) {
                 'version.label'         => $this->version->getLabel(),
                 'version.number'        => $this->version->getNumber(),
@@ -179,6 +187,7 @@ final class ResponseService
                 'version.supported'     => $this->version->getSupportedVersions(),
                 'version.deprecated'    => $this->version->getDeprecatedVersions(),
                 'version.is_deprecated' => $this->version->isDeprecated(),
+                'version.is_beta'       => $this->version->isBeta(),
                 default                 => $default ?? $value,
             };
 
@@ -190,43 +199,52 @@ final class ResponseService
 
             // Status
             $value = match($expression) {
-                'status.code'  => $this->status->getCode(),
-                'status.text'  => $this->status->getText(),
-                'status.state' => $this->status->getState(),
-                default        => $default ?? $value,
+                'status.code'       => $this->status->getCode(),
+                'status.text'       => $this->status->getText(),
+                'status.state'      => $this->status->getState(),
+                'status.is_success' => $this->status->isSuccess(),
+                'status.is_failed'  => $this->status->isFailed(),
+                'status.is_error'   => $this->status->isError(),
+                default             => $default ?? $value,
             };
 
             // Request
             $value = match($expression) {
-                'request.scheme' => $this->request->getScheme(),
-                'request.secure' => $this->request->isSecure(),
-                'request.base'   => $this->request->getBase(),
-                'request.port'   => $this->request->getPort(),
-                'request.uri'    => $this->request->getUri(),
-                'request.path'   => $this->request->getPath(),
-                'request.query'  => $this->request->getQueryParams(),
-                'request.method' => $this->request->getMethod(),
-                'request.locale' => $this->request->getLocale(),
-                default          => $default ?? $value,
+                'request.method'    => $this->request->getMethod(),
+                'request.scheme'    => $this->request->getScheme(),
+                'request.is_secure' => $this->request->isSecure(),
+                'request.base'      => $this->request->getBase(),
+                'request.port'      => $this->request->getPort(),
+                'request.uri'       => $this->request->getUri(),
+                'request.path'      => $this->request->getPath(),
+                'request.params'    => $this->request->getQueryParams(),
+                'request.locale'    => $this->request->getLocale(),
+                default             => $default ?? $value,
             };
 
             // Client
             $value = match($expression) {
-                'client.ip'              => $this->client->getIp(),
-                'client.vpn_status'      => $this->client->getVpnStatus(),
-                'client.user_agent'      => $this->client->getUserAgent(),
-                'client.device'          => $this->client->getDevice(),
-                'client.is_mobile'       => $this->client->isMobile(),
-                'client.is_tablet'       => $this->client->isTablet(),
-                'client.is_desktop'      => $this->client->isDesktop(),
-                'client.browser'         => $this->client->getBrowser(),
-                'client.browser_version' => $this->client->getBrowserVersion(),
-                'client.os'              => $this->client->getOs(),
-                'client.os_version'      => $this->client->getOsVersion(),
-                'client.engine'          => $this->client->getEngine(),
-                'client.languages'       => $this->client->getLanguages(),
-                'client.language'        => $this->client->getLanguage(),
-                default                  => $default ?? $value,
+                'client.ip'                    => $this->client->getIp(),
+                'client.user_agent'            => $this->client->getUserAgent(),
+                'client.device'                => $this->client->getDevice(),
+                'client.is_mobile'             => $this->client->isMobile(),
+                'client.is_tablet'             => $this->client->isTablet(),
+                'client.is_desktop'            => $this->client->isDesktop(),
+                'client.browser'               => $this->client->getBrowser(),
+                'client.browser_version'       => $this->client->getBrowserVersion(),
+                'client.browser_version_major' => $this->client->getBrowserVersionMajor(),
+                'client.browser_version_minor' => $this->client->getBrowserVersionMinor(),
+                'client.browser_version_patch' => $this->client->getBrowserVersionPatch(),
+                'client.os'                    => $this->client->getOs(),
+                'client.os_version'            => $this->client->getOsVersion(),
+                'client.os_version_major'      => $this->client->getOsVersionMajor(),
+                'client.os_version_minor'      => $this->client->getOsVersionMinor(),
+                'client.os_version_patch'      => $this->client->getOsVersionPatch(),
+                'client.engine'                => $this->client->getEngine(),
+                'client.languages'             => $this->client->getLanguages(),
+                'client.language'              => $this->client->getLanguage(),
+                'client.fingerprint'           => $this->client->getFingerprint(),
+                default                        => $default ?? $value,
             };
 
             // Server
@@ -254,40 +272,37 @@ final class ResponseService
             if ($this->configuration->isPaginationEnabled($provider))
             {
                 $value = match($expression) {
-                    'pagination.page'     => $this->pagination->getPage() ?? 1,
-                    'pagination.limit'    => $this->pagination->getLimit() ?? 25,
-                    'pagination.total'    => $this->pagination->getTotal() ?? 0,
                     'pagination.pages'    => $this->pagination->getTotalPages() ?? 0,
+                    'pagination.page'     => $this->pagination->getPage() ?? 1,
+                    'pagination.total'    => $this->pagination->getTotal() ?? 0,
+                    'pagination.limit'    => $this->pagination->getLimit() ?? 25,
+                    'pagination.offset'   => $this->pagination->getOffset() ?? 0,
                     'pagination.prev'     => $this->pagination->getPrev(),
                     'pagination.next'     => $this->pagination->getNext(),
                     'pagination.first'    => $this->pagination->getFirst(),
                     'pagination.last'     => $this->pagination->getLast(),
                     'pagination.is_first' => $this->pagination->isFirst(),
                     'pagination.is_last'  => $this->pagination->isLast(),
+                    'pagination.has_prev' => $this->pagination->hasPrev(),
+                    'pagination.has_next' => $this->pagination->hasNext(),
                     default               => $default ?? $value,
                 };
             }
 
             // User
             $value = match($expression) {
+                'user.is_authenticated' => $this->security->isAuthenticated(),
                 'user.id'               => $this->security->getId(),
                 'user.username'         => $this->security->getUserName(),
                 'user.roles'            => $this->security->getRoles(),
                 'user.email'            => $this->security->getEmail(),
+                'user.token'            => $this->security->getToken(),
                 'user.token_issued_at'  => $this->security->getTokenIssuedAt(),
                 'user.token_expires_at' => $this->security->getTokenExpiresAt(),
                 'user.token_scopes'     => $this->security->getTokenScopes(),
                 'user.permissions'      => $this->security->getPermissions(),
                 'user.mfa_enabled'      => $this->security->getMfaEnabled(),
                 default                 => $default ?? $value,
-            };
-
-            // Context
-            $value = match($expression) {
-                'context.provider'   => $provider,
-                'context.collection' => $collection,
-                'context.endpoint'   => $endpoint,
-                default              => $default ?? $value,
             };
 
             // Response

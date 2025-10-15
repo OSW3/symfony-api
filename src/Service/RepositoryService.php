@@ -23,7 +23,7 @@ final class RepositoryService
         private readonly ResponseStatusService $responseStatusService,
         private readonly PaginationService $pagination,
     ){
-        $this->request = $this->requestStack->getCurrentRequest();
+        $this->request = $requestStack->getCurrentRequest();
     }
 
     private function getContext(): array 

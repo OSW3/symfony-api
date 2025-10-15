@@ -8,11 +8,23 @@ use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
 final class SecurityService
 {
+    private ?UserInterface $cachedUser = null;
+
     public function __construct(
         private readonly ?AuthorizationCheckerInterface $auth,
         private readonly ConfigurationService $configuration,
         private readonly Security $security,
     ) {}
+
+    /**
+     * Get the current user
+     * 
+     * @return UserInterface|null
+     */
+    public function getUser(): ?UserInterface
+    {
+        return $this->cachedUser ??= $this->security->getUser();
+    }
 
     /**
      * Check if access is granted based on roles defined in configuration
@@ -38,15 +50,15 @@ final class SecurityService
         
         return false;
     }
-
+    
     /**
-     * Get the current user
+     * Check if the current user is authenticated
      * 
-     * @return UserInterface|null
+     * @return bool
      */
-    public function getUser(): ?UserInterface
+    public function isAuthenticated(): bool
     {
-        return $this->security->getUser();
+        return null !== $this->getUser();
     }
 
     /**
@@ -56,7 +68,8 @@ final class SecurityService
      */
     public function getId(): int|string|null
     {
-        return $this->security->getUser()?->{'getId'}();
+        $user = $this->getUser();
+        return $user?->{'getId'}();
     }
 
     /**
@@ -66,7 +79,7 @@ final class SecurityService
      */
     public function getUserName(): ?string
     {
-        return $this->security->getUser()?->{'getUserIdentifier'}();
+        return $this->getUser()?->{'getUserIdentifier'}();
     }
 
     /**
@@ -74,9 +87,20 @@ final class SecurityService
      * 
      * @return string|null
      */
-    public function getRoles(): ?string
+    public function getRoles(): array
     {
-        return $this->security->getUser()?->{'getRoles'}();
+        return $this->getUser()?->{'getRoles'}() ?? [];
+    }
+
+    /**
+     * Check if the current user has a specific role
+     * 
+     * @param string $role
+     * @return bool
+     */
+    public function hasRole(string $role): bool
+    {
+        return in_array($role, $this->getRoles() ?? [], true);
     }
 
     /**
@@ -86,7 +110,7 @@ final class SecurityService
      */
     public function getEmail(): ?string
     {
-        return $this->security->getUser()?->{'getEmail'}();
+        return $this->getUser()?->{'getEmail'}();
     }
 
     /**
@@ -96,7 +120,7 @@ final class SecurityService
      */
     public function getToken(): ?string
     {
-        return $this->security->getUser()?->{'getToken'}();
+        return $this->getUser()?->{'getToken'}();
     }
 
     /**
@@ -106,7 +130,7 @@ final class SecurityService
      */
     public function getTokenIssuedAt(): ?\DateTimeInterface
     {
-        return $this->security->getUser()?->{'getTokenIssuedAt'}();
+        return $this->getUser()?->{'getTokenIssuedAt'}();
     }
 
     /**
@@ -116,7 +140,7 @@ final class SecurityService
      */
     public function getTokenExpiresAt(): ?\DateTimeInterface
     {
-        return $this->security->getUser()?->{'getTokenExpiresAt'}();
+        return $this->getUser()?->{'getTokenExpiresAt'}();
     }
 
     /**
@@ -126,7 +150,7 @@ final class SecurityService
      */
     public function getTokenScopes(): ?array
     {
-        return $this->security->getUser()?->{'getTokenScopes'}();
+        return $this->getUser()?->{'getTokenScopes'}();
     }
 
     /**
@@ -136,7 +160,7 @@ final class SecurityService
      */
     public function getPermissions(): ?array
     {
-        return $this->security->getUser()?->{'getPermissions'}();
+        return $this->getUser()?->{'getPermissions'}();
     }
 
     /**
@@ -146,6 +170,6 @@ final class SecurityService
      */
     public function getMfaEnabled(): ?bool
     {
-        return $this->security->getUser()?->{'isMfaEnabled'}();
+        return $this->getUser()?->{'isMfaEnabled'}();
     }
 }
