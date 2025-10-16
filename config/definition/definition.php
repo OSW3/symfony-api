@@ -407,11 +407,11 @@ return static function($definition)
             // Security
             // ──────────────────────────────
 			->arrayNode('security')
-            ->info('.')
+            ->info('Defines security settings for the API.')
             ->addDefaultsIfNotSet()->children()
 
                 ->arrayNode('entity')
-                ->info('.')
+                ->info('Defines the user entity used for authentication and authorization.')
                 ->addDefaultsIfNotSet()->children()
 
                     ->scalarNode('class')
@@ -419,17 +419,50 @@ return static function($definition)
                         ->defaultNull()
                         ->validate()
                             ->ifTrue(fn($class) => $class !== null && !EntityValidator::isValid($class))
-                            ->thenInvalid('Invalid entity class "%s".', 'entity_class')
+                            ->thenInvalid('Invalid entity class "%s".', 'entity.class')
                         ->end()
                     ->end()
 
                 ->end()->end()
 
+                ->arrayNode('routes')
+                ->info('Defines the security routes settings for the API.')
+                ->addDefaultsIfNotSet()->children()
 
+                    ->scalarNode('collection')
+                        ->info('Name of the collection used in the URL path for registration and login endpoints.')
+                        ->defaultValue('security')
+                    ->end()
+
+                ->end()->end()
 
                 ->arrayNode('register')
-                ->info('.')
+                ->info('Defines the registration settings for the API.')
                 ->addDefaultsIfNotSet()->children()
+
+                    ->booleanNode('enable')
+                        ->info('Enable or disable registration.')
+                        ->defaultFalse()
+                    ->end()
+
+                    ->scalarNode('method')
+                        ->info('HTTP method to use for the registration endpoint.')
+                        ->defaultValue('POST')
+                    ->end()
+
+                    ->scalarNode('path')
+                        ->info('Path for the registration endpoint.')
+                        ->defaultNull()
+                    ->end()
+
+                    ->scalarNode('controller')
+                        ->info('Optional Symfony controller (FQCN::method) to handle registration. If not defined, the default RegisterController will be used.')
+                        ->defaultValue('OSW3\Api\Controller\RegisterController::register')
+                        ->validate()
+                            ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                            ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.', 'register.controller')
+                        ->end()
+                    ->end()
 
                     ->arrayNode('properties')
                         ->info('Maps request properties to entity fields during login.')
@@ -440,11 +473,42 @@ return static function($definition)
 
                 ->end()->end()
 
-
-
                 ->arrayNode('login')
-                ->info('.')
+                ->info('Defines the login settings for the API.')
                 ->addDefaultsIfNotSet()->children()
+
+                    ->booleanNode('enable')
+                        ->info('Enable or disable login.')
+                        ->defaultFalse()
+                    ->end()
+
+                    ->scalarNode('method')
+                        ->info('HTTP method to use for the login endpoint.')
+                        ->defaultValue('POST')
+                    ->end()
+
+                    ->scalarNode('path')
+                        ->info('Path for the registration endpoint.')
+                        ->defaultNull()
+                    ->end()
+
+                    ->scalarNode('controller')
+                        ->info('Optional Symfony controller (FQCN::method) to handle registration. If not defined, the default SecurityController will be used.')
+                        ->defaultValue('OSW3\Api\Controller\SecurityController::login')
+                        ->validate()
+                            ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                            ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.', 'login.controller')
+                        ->end()
+                    ->end()
+
+                    ->scalarNode('controller')
+                        ->info('Optional Symfony controller (FQCN::method) to handle registration. If not defined, the default SecurityController will be used.')
+                        ->defaultValue('OSW3\Api\Controller\SecurityController::login')
+                        ->validate()
+                            ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                            ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.', 'login.controller')
+                        ->end()
+                    ->end()
 
                     ->arrayNode('properties')
                         ->info('Maps request properties to entity fields during login.')

@@ -14,6 +14,7 @@ final class RouteService
         private readonly ConfigurationService $configuration,
         private readonly RequestStack $requestStack,
         private readonly RouterInterface $routerInterface,
+        private readonly VersionService $versionService,
     ){
         $this->request = $requestStack->getCurrentRequest();
     }
@@ -28,38 +29,13 @@ final class RouteService
         // my_custom_api_v1, my_custom_api_v2, ...
         foreach ($providers as $providerName => $provider) {
 
-            // Security routes
-            // --
-
-            // Register user
-            $name = "{$providerName}_register";
-            $path = "api/v1/register";
-            $defaults = [];
-            $defaults['_controller'] = "OSW3\Api\Controller\RegisterController::register";
-            $defaults['_api_action'] = "register";
-            $requirements = [];
-            $options = [];
-            $host = null;
-            $schemes = [];
-            $methods = ['POST'];
-            $condition = '';
-
-            if (!isset($routes[$name]))
-            {
-                $routes[$name] = [
-                    'path'         => $path,
-                    'defaults'     => $defaults,
-                    'requirements' => $requirements,
-                    'options'      => $options,
-                    'host'         => $host,
-                    'schemes'      => $schemes,
-                    'methods'      => $methods,
-                    'condition'    => $condition,
-                ];
+            if ($this->configuration->isSecurityRegistrationEnabled($providerName)) {
+                $this->addRegisterRoute($routes, $providerName);
             }
 
-            
-
+            if ($this->configuration->isSecurityLoginEnabled($providerName)) {
+                $this->addLoginRoute($routes, $providerName);
+            }
 
             foreach ($provider['collections'] ?? [] as $entityOptions) {
                 foreach ($entityOptions['endpoints'] ?? [] as $endpointName => $endpointOption) 
@@ -77,9 +53,7 @@ final class RouteService
                     // Route defaults
                     $defaults = [];
                     $defaults['_controller'] = $endpointOption['route']['controller'] ?? null;
-                    // $defaults['_controller'] = $endpointOption['controller'] ?? 'OSW3\Api\Controller\PlaceholderController::handle';
-                    // $defaults['_controller'] = $endpointOption['controller'] ??  [\OSW3\Api\Controller\PlaceholderController::class, 'handle'];
-
+                    $defaults['_api_endpoint'] = $endpointName;
         
                     // Route requirements
                     $requirements = $endpointOption['route']['requirements'] ?? [];
@@ -102,24 +76,118 @@ final class RouteService
                     // Route conditions
                     $condition = $endpointOption['route']['condition'] ?? '';
         
-                    if (!isset($routes[$name]))
-                    {
-                        $routes[$name] = [
-                            'path'         => $path,
-                            'defaults'     => $defaults,
-                            'requirements' => $requirements,
-                            'options'      => $options,
-                            'host'         => $host,
-                            'schemes'      => $schemes,
-                            'methods'      => $methods,
-                            'condition'    => $condition,
-                        ];
-                    }
+
+                    $this->addRouteToCollection($routes, [
+                        'name'         => $name,
+                        'path'         => $path,
+                        'defaults'     => $defaults,
+                        'requirements' => $requirements,
+                        'options'      => $options,
+                        'host'         => $host,
+                        'schemes'      => $schemes,
+                        'methods'      => $methods,
+                        'condition'    => $condition,
+                    ]);
                 }
             }
         }
 
         return $routes;
+    }
+
+    public function getRouteNameByProvider(string $provider, string $action): string|null 
+    {
+        $pattern    = $this->configuration->getRouteNamePattern($provider);
+        $version    = $this->versionService->getLabel($provider);
+        $collection = $this->configuration->getSecurityCollectionName($provider);
+
+        $route      = $pattern;
+        $route      = preg_replace("/{version}/", $version, $route);
+        $route      = preg_replace("/{action}/", $action, $route);
+        $route      = preg_replace("/{collection}/", $collection, $route);
+
+        return $route;
+    }
+
+    public function getRoutePathByProvider(string $provider, string $action): string|null 
+    {
+        $prefix  = $this->configuration->getRoutePrefix($provider);
+        $prefix  = preg_replace("#/$#", "", $prefix);
+        $version = $this->versionService->getLabel($provider);
+
+        return "{$prefix}/{$version}/{$action}";
+    }
+
+    private function addRegisterRoute(array &$routes, string $provider): void 
+    {
+        $action                    = "register";
+        $name                      = $this->getRouteNameByProvider($provider, $action);
+        $path                      = $this->configuration->getSecurityRegistrationPath($provider) ?? $this->getRoutePathByProvider($provider, $action);
+        $defaults                  = [];
+        $defaults['_controller']   = $this->configuration->getSecurityRegistrationController($provider);
+        $defaults['_api_endpoint'] = $action;
+        // $requirements              = [];
+        // $options                   = [];
+        // $host                      = null;
+        // $schemes                   = [];
+        $methods                   = [$this->configuration->getSecurityRegistrationMethod($provider) ?: 'POST'];
+        // $condition                 = '';
+
+        $this->addRouteToCollection($routes, [
+            'name'         => $name,
+            'path'         => $path,
+            'defaults'     => $defaults,
+            // 'requirements' => $requirements,
+            // 'options'      => $options,
+            // 'host'         => $host,
+            // 'schemes'      => $schemes,
+            'methods'      => $methods,
+            // 'condition'    => $condition,
+        ]);
+    }
+
+    private function addLoginRoute(array &$routes, string $provider): void 
+    {
+        $action                    = "login";
+        $name                      = $this->getRouteNameByProvider($provider, $action);
+        $path                      = $this->configuration->getSecurityLoginPath($provider) ?? $this->getRoutePathByProvider($provider, $action);
+        $defaults                  = [];
+        $defaults['_controller']   = $this->configuration->getSecurityLoginController($provider);
+        $defaults['_api_endpoint'] = $action;
+        // $requirements              = [];
+        // $options                   = [];
+        // $host                      = null;
+        // $schemes                   = [];
+        $methods                   = [$this->configuration->getSecurityLoginMethod($provider) ?: 'POST'];
+        // $condition                 = '';
+
+        $this->addRouteToCollection($routes, [
+            'name'         => $name,
+            'path'         => $path,
+            'defaults'     => $defaults,
+            // 'requirements' => $requirements,
+            // 'options'      => $options,
+            // 'host'         => $host,
+            // 'schemes'      => $schemes,
+            'methods'      => $methods,
+            // 'condition'    => $condition,
+        ]);
+    }
+
+    private function addRouteToCollection(array &$route, array $options = []): void 
+    {
+        if (!isset($route[$options['name']])) {
+            $route[$options['name']] = [
+                'path'         => $options['path'] ?? '',
+                'defaults'     => $options['defaults'] ?? [],
+                'requirements' => $options['requirements'] ?? [],
+                'options'      => $options['options'] ?? [],
+                'host'         => $options['host'] ?? null,
+                'schemes'      => $options['schemes'] ?? [],
+                'methods'      => $options['methods'] ?? [],
+                'condition'    => $options['condition'] ?? '',
+            ];
+        }
     }
 
     /**

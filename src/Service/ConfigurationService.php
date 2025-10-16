@@ -231,13 +231,13 @@ class ConfigurationService
         // 2. Collection-level pattern
         if ($entityClass) {
             $collection = $this->configuration[$providerName]['collections'][$entityClass] ?? null;
-            if ($collection && isset($collection['route']['name'])) {
-                return $collection['route']['name'];
+            if ($collection && isset($collection['route']['pattern'])) {
+                return $collection['route']['pattern'];
             }
         }
 
         // 3. Global default pattern
-        return $this->configuration[$providerName]['routes']['name'] ?? '';
+        return $this->configuration[$providerName]['routes']['pattern'] ?? '';
     }
 
     /**
@@ -580,11 +580,50 @@ class ConfigurationService
         return $this->configuration[$providerName]['security']['entity']['class'] ?? '';
     }
 
+    public function getSecurityCollectionName(string $providerName): string
+    {
+        return $this->configuration[$providerName]['security']['routes']['collection'] ?? '';
+    }
+
+
+    public function isSecurityRegistrationEnabled(string $providerName): bool
+    {
+        return $this->configuration[$providerName]['security']['register']['enable'] ?? false;
+    }
+    public function getSecurityRegistrationMethod(string $providerName): string
+    {
+        return $this->configuration[$providerName]['security']['register']['method'] ?? 'POST';
+    }
+    public function getSecurityRegistrationPath(string $providerName): ?string
+    {
+        return $this->configuration[$providerName]['security']['register']['path'] ?? null;
+    }
+    public function getSecurityRegistrationController(string $providerName): string
+    {
+        return $this->configuration[$providerName]['security']['register']['controller'] ?? 'OSW3\Api\Controller\RegisterController::register';
+    }
     public function getSecurityRegistrationProperties(string $providerName): array
     {
         return $this->configuration[$providerName]['security']['register']['properties'] ?? [];
     }
 
+
+    public function isSecurityLoginEnabled(string $providerName): bool
+    {
+        return $this->configuration[$providerName]['security']['login']['enable'] ?? false;
+    }
+    public function getSecurityLoginMethod(string $providerName): string
+    {
+        return $this->configuration[$providerName]['security']['login']['method'] ?? 'POST';
+    }
+    public function getSecurityLoginPath(string $providerName): ?string
+    {
+        return $this->configuration[$providerName]['security']['login']['path'] ?? null;
+    }
+    public function getSecurityLoginController(string $providerName): ?string
+    {
+        return $this->configuration[$providerName]['security']['login']['controller'] ?? null;
+    }
     public function getSecurityLoginProperties(string $providerName): array
     {
         return $this->configuration[$providerName]['security']['login']['properties'] ?? [];
