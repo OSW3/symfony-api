@@ -1,7 +1,6 @@
 <?php 
 namespace OSW3\Api\Service;
 
-use OSW3\Api\Service\ConfigurationService;
 use OSW3\Api\Exception\AccessDeniedException;
 use Symfony\Component\HttpFoundation\Request;
 use OSW3\Api\Exception\RepositoryCallException;

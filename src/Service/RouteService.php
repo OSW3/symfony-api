@@ -23,11 +23,44 @@ final class RouteService
         $providers = $this->configuration->getAllProviders();
         $routes = [];
 
-        
 
         // Read APIs definitions
         // my_custom_api_v1, my_custom_api_v2, ...
         foreach ($providers as $providerName => $provider) {
+
+            // Security routes
+            // --
+
+            // Register user
+            $name = "{$providerName}_register";
+            $path = "api/v1/register";
+            $defaults = [];
+            $defaults['_controller'] = "OSW3\Api\Controller\RegisterController::register";
+            $defaults['_api_action'] = "register";
+            $requirements = [];
+            $options = [];
+            $host = null;
+            $schemes = [];
+            $methods = ['POST'];
+            $condition = '';
+
+            if (!isset($routes[$name]))
+            {
+                $routes[$name] = [
+                    'path'         => $path,
+                    'defaults'     => $defaults,
+                    'requirements' => $requirements,
+                    'options'      => $options,
+                    'host'         => $host,
+                    'schemes'      => $schemes,
+                    'methods'      => $methods,
+                    'condition'    => $condition,
+                ];
+            }
+
+            
+
+
             foreach ($provider['collections'] ?? [] as $entityOptions) {
                 foreach ($entityOptions['endpoints'] ?? [] as $endpointName => $endpointOption) 
                 {

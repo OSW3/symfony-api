@@ -201,7 +201,7 @@ final class RepositoryService
     private function create(): object|null
     {
         $data       = $this->request->getContent();
-        $data       = json_decode($data);
+        $data       = json_decode($data, true) ?? [];
         $collection = $this->configuration->guessCollection();
         $entity     = new $collection;
 
@@ -222,7 +222,7 @@ final class RepositoryService
         if ($entity = $this->getRepository()->find($id))
         {
             $data = $this->request->getContent();
-            $data = json_decode($data);
+            $data = json_decode($data, true) ?? [];
 
             if (!$this->hydrate($entity, $data))
             {
@@ -258,8 +258,11 @@ final class RepositoryService
     // Hydrator
     // ──────────────────────────────
 
-    private function hydrate($entity, $data): bool
+    private function hydrate($entity,  $data): bool
     {
+        // dump(get_debug_type($data));
+        // dd($data); 
+
         $isValidProperty = true;
 
         $reflectionClass = new \ReflectionClass(get_class($entity));

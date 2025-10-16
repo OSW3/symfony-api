@@ -8,7 +8,12 @@ services:
         resource: '../src/'
         exclude:
             - '../src/DependencyInjection/'
+            - '../src/Resources/'
 
     OSW3\Api\Routing\RouteLoader:
         tags:
             - { name: routing.loader }
+
+    OSW3\Api\Controller\:
+        resource: '../src/Controller'
+        tags: ['controller.service_arguments']

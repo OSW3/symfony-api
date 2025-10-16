@@ -572,6 +572,26 @@ class ConfigurationService
 
 
     // ──────────────────────────────
+    // Security
+    // ──────────────────────────────
+
+    public function getSecurityEntityClass(string $providerName): string
+    {
+        return $this->configuration[$providerName]['security']['entity']['class'] ?? '';
+    }
+
+    public function getSecurityRegistrationProperties(string $providerName): array
+    {
+        return $this->configuration[$providerName]['security']['register']['properties'] ?? [];
+    }
+
+    public function getSecurityLoginProperties(string $providerName): array
+    {
+        return $this->configuration[$providerName]['security']['login']['properties'] ?? [];
+    }
+
+
+    // ──────────────────────────────
     // Rate Limit
     // ──────────────────────────────
 

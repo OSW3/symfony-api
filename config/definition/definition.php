@@ -400,6 +400,63 @@ return static function($definition)
 
                 ->end()
             ->end()
+
+
+
+            // ──────────────────────────────
+            // Security
+            // ──────────────────────────────
+			->arrayNode('security')
+            ->info('.')
+            ->addDefaultsIfNotSet()->children()
+
+                ->arrayNode('entity')
+                ->info('.')
+                ->addDefaultsIfNotSet()->children()
+
+                    ->scalarNode('class')
+                        ->info('Fully qualified class name of the User entity used for authentication and authorization.')
+                        ->defaultNull()
+                        ->validate()
+                            ->ifTrue(fn($class) => $class !== null && !EntityValidator::isValid($class))
+                            ->thenInvalid('Invalid entity class "%s".', 'entity_class')
+                        ->end()
+                    ->end()
+
+                ->end()->end()
+
+
+
+                ->arrayNode('register')
+                ->info('.')
+                ->addDefaultsIfNotSet()->children()
+
+                    ->arrayNode('properties')
+                        ->info('Maps request properties to entity fields during login.')
+                        ->normalizeKeys(false)
+                        ->scalarPrototype()->end()
+                        ->defaultValue(['username' => 'email', 'password' => 'password'])
+                    ->end()
+
+                ->end()->end()
+
+
+
+                ->arrayNode('login')
+                ->info('.')
+                ->addDefaultsIfNotSet()->children()
+
+                    ->arrayNode('properties')
+                        ->info('Maps request properties to entity fields during login.')
+                        ->normalizeKeys(false)
+                        ->scalarPrototype()->end()
+                        ->defaultValue(['username' => 'email', 'password' => 'password'])
+                    ->end()
+
+                ->end()->end()
+
+            ->end()->end()
+
             
             // ──────────────────────────────
             // Collections (Doctrine Entities)
