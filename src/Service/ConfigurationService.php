@@ -178,8 +178,11 @@ class ConfigurationService
         return array_key_exists($entityClass, $this->getCollections($providerName));
     }
 
+
+
+
     // ──────────────────────────────
-    // Endpoints
+    // ENDPOINTS
     // ──────────────────────────────
 
     /**
@@ -724,6 +727,21 @@ class ConfigurationService
     public function getResponseHashingAlgorithm(string $providerName): string
     {
         return $this->configuration[$providerName]['response']['algorithm'] ?? 'md5';
+    }
+
+    // Compression / GZIP
+
+    public function isCompressionEnabled(string $providerName): bool
+    {
+        return $this->configuration[$providerName]['response']['compression']['enable'] ?? false;
+    }
+    public function getCompressionLevel(string $providerName): int
+    {
+        return $this->configuration[$providerName]['response']['compression']['level'] ?? 6;
+    }
+    public function getCompressionFormat(string $providerName): string
+    {
+        return $this->configuration[$providerName]['response']['compression']['format'] ?? 'gzip';
     }
 
 

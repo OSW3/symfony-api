@@ -2,6 +2,8 @@
 namespace OSW3\Api\Subscribers;
 
 use OSW3\Api\Service\ConfigurationService;
+use OSW3\Api\Service\RequestService;
+use OSW3\Api\Service\RouteService;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -20,14 +22,17 @@ use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 final class AuthenticationSubscriber implements EventSubscriberInterface
 {
     public function __construct(
+        private readonly RouteService $routeService,
+        private readonly ?TranslatorInterface $translator,
         private readonly ConfigurationService $configuration,
         private readonly AuthorizationCheckerInterface $auth,
-        private readonly ?TranslatorInterface $translator,
     ){}
 
     public static function getSubscribedEvents(): array
     {
-        return [KernelEvents::REQUEST => ['onRequest', 32]];
+        return [
+            KernelEvents::REQUEST => ['onRequest', 32]
+        ];
     }
 
     public function onRequest(RequestEvent $event): void
@@ -36,7 +41,13 @@ final class AuthenticationSubscriber implements EventSubscriberInterface
             return;
         }
 
-        $context = $this->configuration->getContext();
+        $context = $this->routeService->getContext();
+
+        // if (in_array($event->getRequest()->attributes->get('_api_endpoint'), ['register', 'login'], true)) {
+        if (in_array($context['endpoint'], ['register', 'login'], true)) {
+            return;
+        }
+
         $roles = $this->configuration->getRoles(
             $context['provider'],
             $context['collection'],

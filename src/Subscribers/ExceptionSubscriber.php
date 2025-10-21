@@ -10,6 +10,8 @@ use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Symfony\Component\Security\Core\Exception\AuthenticationException;
+use Lexik\Bundle\JWTAuthenticationBundle\Exception\JWTDecodeFailureException;
 
 /**
  * Handles exception-related tasks during the request lifecycle.
@@ -42,24 +44,37 @@ class ExceptionSubscriber implements EventSubscriberInterface
         }
 
         $exception = $event->getThrowable();
+
         $statusCode = $exception instanceof HttpExceptionInterface
             ? $exception->getStatusCode()
             : Response::HTTP_INTERNAL_SERVER_ERROR;
+
         $statusText = $exception->getMessage() ?: Response::$statusTexts[$statusCode];
 
-        if (!in_array($statusCode, [Response::HTTP_NOT_FOUND, Response::HTTP_FORBIDDEN], true)) {
+        // if (!in_array($statusCode, [Response::HTTP_NOT_FOUND, Response::HTTP_FORBIDDEN], true)) {
+        //     return;
+        // }
+        if ($statusCode < 400 || $statusCode >= 500) {
+        // if ($statusCode < 400) {
             return;
         }
 
+
+        // dd($event->getRequest()->attributes);
         $this->statusService->setCode($statusCode);
 
+        // Prepare data for the response
         $data            = [];
         $data['code']    = $statusCode;
         $data['message'] = $statusText;
+        $this->responseService->setData($data);
 
+        // Prepare the response using templates
         $template        = $this->templateService->getTemplate('error');
-        $responseData    = $this->templateService->parse($template, $data);
-        $response        = $this->responseService->build($responseData);
-        $event->setResponse($response);
+        $content         = $this->templateService->parse($template, $data);
+        $this->responseService->setContent($content);
+
+        // Set the response in the event
+        $event->setResponse($this->responseService->build());
     }
 }

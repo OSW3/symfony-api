@@ -6,19 +6,3 @@ meta:
     request_id: "{meta.operation_id}"
     version: "{app.version}"
     timestamp: "{response.timestamp}"
-
-# {
-#   "status": 500,
-#   "message": "Internal Server Error",
-#   "errors": [
-#     {
-#       "code": "INTERNAL_ERROR",
-#       "title": "Unexpected server error",
-#       "detail": "An unexpected error occurred while processing your request.",
-#       "source": {
-#         "pointer": "/data",
-#         "parameter": null
-#       },
-#       "trace_id": "f7c3a1f8-4b9a-4d81-9a3d-7f6bb62f3b1b"
-#     }
-#   ],

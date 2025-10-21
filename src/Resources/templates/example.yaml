@@ -586,50 +586,63 @@
 ## ISO 8601 date format
 ##
 ## @var string
-response.timestamp: "{response.timestamp}"
+# response.timestamp: "{response.timestamp}"
 
 ## Response Data
 ##
 ## @var array
-response.data: "{response.data}"
+# response.data: "{response.data}"
 
 ## Response data Count
 ##
 ## @var int
-response.count: "{response.count}"
+# response.count: "{response.count}"
 
 ## Response Size in bytes
 ##
 ## @var int
-response.size: "{response.size}"
+# response.size: "{response.size}"
 
 ## Response Hash
 ##
 ## @var string
-response.hash: "{response.hash}"
+# response.hash: "{response.hash}"
 
 ## MD5 Hash of the response data
 ##
 ## @var string
-response.hash_md5: "{response.hash_md5}"
+# response.hash_md5: "{response.hash_md5}"
 
 ## SHA-1 Hash of the response data
 ##
 ## @var string
-response.hash_sha1: "{response.hash_sha1}"
+# response.hash_sha1: "{response.hash_sha1}"
 
 ## SHA-256 Hash of the response data
 ##
 ## @var string
-response.hash_sha256: "{response.hash_sha256}"
+# response.hash_sha256: "{response.hash_sha256}"
 
 ## SHA-512 Hash of the response data
 ##
 ## @var string
-response.hash_sha512: "{response.hash_sha512}"
+# response.hash_sha512: "{response.hash_sha512}"
 
+## Is Response Compressed
+##
+## @var bool
+# response.is_compressed: "{response.is_compressed}"
 
-# response.compressed: "{response.compressed}"    # Compression activée, Boolean if gzip/deflate
+## Compression Format
+##
+## @var string
+# response.compression_format: "{response.compression_format}"
+
+## Compression Level
+##
+## @var int
+# response.compression_level: "{response.compression_level}"
+
 # response.error.code: "{error.code}"                 # Code d'erreur interne
 # response.error.message: "{error.message}"           # Message lisible
 # response.error.details: "{error.details}"           # Détails supplémentaires

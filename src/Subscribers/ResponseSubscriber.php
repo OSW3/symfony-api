@@ -1,11 +1,13 @@
 <?php
 namespace OSW3\Api\Subscribers;
 
+use OSW3\Api\Service\RouteService;
 use OSW3\Api\Service\ConfigurationService;
 use OSW3\Api\Service\ExecutionTimeService;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException;
 
 /**
  * Handles response-related tasks during the request lifecycle.
@@ -18,6 +20,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 class ResponseSubscriber implements EventSubscriberInterface
 {
     public function __construct(
+        private readonly RouteService $routeService,
         private readonly ExecutionTimeService $timer,
         private readonly ConfigurationService $configuration,
     ){}
@@ -32,19 +35,22 @@ class ResponseSubscriber implements EventSubscriberInterface
         if (!$event->isMainRequest()) {
             return;
         }
+
+        $context = $this->routeService->getContext();
         
+        if (in_array($context['endpoint'], ['register', 'login'], true)) {
+            return;
+        }
+
+
+        // dump($event->getResponse()->getStatusCode());
+        // dump($event->getResponse()->getMessage());
         // dd($event->getResponse());
-        // $event->getResponse()->headers->remove('X-Powered-By');
-
-        $context = $this->configuration->getContext();
-
-
-
-        
 
         // dd([
         //     __CLASS__, 
         //     "TSE" => "{$this->timer->getDuration()} {$this->timer->getUnit()}",
+        //     $context,
         //     $event->getResponse()->headers->all(),
         // ]);
         

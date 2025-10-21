@@ -37,6 +37,8 @@ final class TemplateService
         private readonly PaginationService $pagination,
         private readonly ConfigurationService $configuration,
         private readonly DocumentationService $documentation,
+        private readonly ResponseService $responseService,
+        private readonly RouteService $routeService,
         #[Autowire(service: 'service_container')] private readonly ContainerInterface $container,
     ){}
 
@@ -74,8 +76,11 @@ final class TemplateService
     public function resolvePath(string $type): string 
     {
         // Current context
-        $context = $this->configuration->getContext();
+        $currentRoute = $this->routeService->getCurrentRoute();
+        $context      = $currentRoute ? $currentRoute['options']['context'] : [];
+        // $context = $this->configuration->getContext();
         $provider = $context['provider'] ?? null;
+
 
         if (!$provider) {
             throw new \Exception("No provider defined in context");
@@ -123,7 +128,6 @@ final class TemplateService
      * Supports JSON, PHP, XML, and YAML formats.
      * 
      * @param string $path The absolute path to the template file.
-     * @return array The parsed template data.
      * @throws \Exception If the file does not exist or the format is unsupported.
      */
     public function load(string $path) 
@@ -150,10 +154,14 @@ final class TemplateService
         };
     }
 
-    public function parse(array $template, array $data = []): array
+    public function parse(array $template): array
     {
         // Current context
-        $context    = $this->configuration->getContext();
+
+        $currentRoute = $this->routeService->getCurrentRoute();
+        $context      = $currentRoute ? $currentRoute['options']['context'] : [];
+
+        // $context    = $this->configuration->getContext();
         $provider   = $context['provider'] ?? null;
         $collection = $context['collection'] ?? null;
         $endpoint   = $context['endpoint'] ?? null;
@@ -162,7 +170,7 @@ final class TemplateService
 
         // return file_exists($path);
 
-        array_walk_recursive($template, function (&$value, $k) use ($data, $provider, $collection, $endpoint) {
+        array_walk_recursive($template, function (&$value, $k) use ($provider, $collection, $endpoint) {
             
             if (!is_string($value)) return;
 
@@ -185,6 +193,13 @@ final class TemplateService
                 $expression = trim($matches[1]);
                 $default    = isset($matches[2]) ? trim($matches[2]) : null;
             }
+
+            $data = $this->responseService->getData();
+            $algorithm = $this->configuration->getResponseHashingAlgorithm($provider);
+
+
+            // dd($data);
+
 
 
             // App
@@ -296,7 +311,7 @@ final class TemplateService
             };
 
             // Pagination
-            if ($this->configuration->isPaginationEnabled($provider))
+            if ($this->configuration->isPaginationEnabled($provider) && $this->pagination->isEnabled())
             {
                 $value = match($expression) {
                     'pagination.pages'    => $this->pagination->getTotalPages() ?? 0,
@@ -330,19 +345,21 @@ final class TemplateService
             };
 
             // Response
-            $algorithm = $this->configuration->getResponseHashingAlgorithm($provider);
             $value = match($expression) {
-                'response.timestamp'   => gmdate('c'),
-                'response.data'        => $data,
-                'response.count'       => is_countable($data) ? count($data) : 1,
-                'response.size'        => null,
-                'response.hash'        => $this->computeHash($algorithm, $data),
-                'response.hash_md5'    => $this->computeHash('md5', $data),
-                'response.hash_sha1'   => $this->computeHash('sha1', $data),
-                'response.hash_sha256' => $this->computeHash('sha256', $data),
-                'response.hash_sha512' => $this->computeHash('sha512', $data),
-                'response.compressed'  => null,
-                
+                'response.timestamp'          => gmdate('c'),
+                'response.data'               => $data,
+                'response.count'              => $this->responseService->getCount(),
+                'response.size'               => $this->responseService->getSize(),
+                'response.hash'               => $this->responseService->computeHash($algorithm),
+                'response.hash_md5'           => $this->responseService->computeHash('md5'),
+                'response.hash_sha1'          => $this->responseService->computeHash('sha1'),
+                'response.hash_sha256'        => $this->responseService->computeHash('sha256'),
+                'response.hash_sha512'        => $this->responseService->computeHash('sha512'),
+
+                'response.is_compressed'      => $this->responseService->isCompressed(),
+                'response.compression_format' => $this->responseService->getCompressionFormat(),
+                'response.compression_level'  => $this->responseService->getCompressionLevel(),
+
                 'response.etag'          => null,
                 'response.validated'     => null,
                 'response.signature'     => null,
@@ -403,18 +420,6 @@ final class TemplateService
         });
 
         return $template;
-    }
-
-
-
-    // ──────────────────────────────
-    // Hash
-    // ──────────────────────────────
-
-
-    public function computeHash(string $algorithm, mixed $data): string 
-    {
-        return hash($algorithm, json_encode($data));
     }
 
 

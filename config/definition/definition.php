@@ -324,6 +324,30 @@ return static function($definition)
                     ->defaultValue('md5')
                 ->end()
 
+                ->arrayNode('compression')
+                ->info('Configuration for response compression settings.')
+                ->addDefaultsIfNotSet()->children()
+
+                    ->booleanNode('enable')
+                        ->info('Enable or disable response compression.')
+                        ->defaultFalse()
+                    ->end()
+
+                    ->enumNode('format')
+                        ->info('Compression format to use.')
+                        ->defaultValue('gzip')
+                        ->values(['gzip', 'deflate', 'brotli'])
+                    ->end()
+
+                    ->integerNode('level')
+                        ->info('Compression level (0-9) for the selected format.')
+                        ->defaultValue(6)
+                        ->min(0)
+                        ->max(9)
+                    ->end()
+
+                ->end()->end()
+
 			->end()->end()
 
             // ──────────────────────────────
@@ -400,8 +424,6 @@ return static function($definition)
 
                 ->end()
             ->end()
-
-
 
             // ──────────────────────────────
             // Security

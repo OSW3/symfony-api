@@ -31,6 +31,11 @@ class LocaleSubscriber implements EventSubscriberInterface
             return;
         }
 
+        if (in_array($event->getRequest()->attributes->get('_api_endpoint'), ['register', 'login'], true)) {
+            return;
+        }
+
+
         // dump([
         //     __CLASS__, 
         //     '---',

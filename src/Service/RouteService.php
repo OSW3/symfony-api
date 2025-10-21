@@ -37,7 +37,7 @@ final class RouteService
                 $this->addLoginRoute($routes, $providerName);
             }
 
-            foreach ($provider['collections'] ?? [] as $entityOptions) {
+            foreach ($provider['collections'] ?? [] as $entityClass => $entityOptions) {
                 foreach ($entityOptions['endpoints'] ?? [] as $endpointName => $endpointOption) 
                 {
                     // Route Name
@@ -60,6 +60,11 @@ final class RouteService
         
                     // Route options
                     $options = $endpointOption['route']['options'] ?? [];
+                    $options['context'] = [
+                        'provider'   => $providerName,
+                        'collection' => $entityClass,
+                        'endpoint'   => $endpointName,
+                    ];
         
                     // Route host
                     $host = $endpointOption['route']['host'] ?? null;
@@ -118,16 +123,42 @@ final class RouteService
         return "{$prefix}/{$version}/{$action}";
     }
 
+    public function getCurrentRoute(): array|null 
+    {
+        $routeName = $this->request?->attributes->get('_route');
+
+        if (!$routeName) {
+            return null;
+        }
+
+        $exposedRoutes = $this->getExposedRoutes();
+
+        return $exposedRoutes[$routeName] ?? null;
+    }
+
+    public function getContext(): array
+    {
+        $route = $this->getCurrentRoute();
+        $options = $route ? $route['options'] : [];
+
+        return $options['context'] ?? [];
+    }
+
     private function addRegisterRoute(array &$routes, string $provider): void 
     {
-        $action                    = "register";
-        $name                      = $this->getRouteNameByProvider($provider, $action);
-        $path                      = $this->configuration->getRegistrationPath($provider) ?? $this->getRoutePathByProvider($provider, $action);
+        $context = [
+            'provider' => $provider,
+            'endpoint' => "register",
+            'collection' => $this->configuration->getSecurityCollectionName($provider),
+        ];
+
+        $name                      = $this->getRouteNameByProvider($provider, $context['endpoint']);
+        $path                      = $this->configuration->getRegistrationPath($provider) ?? $this->getRoutePathByProvider($provider, $context['endpoint']);
         $defaults                  = [];
         $defaults['_controller']   = $this->configuration->getRegistrationController($provider);
-        $defaults['_api_endpoint'] = $action;
+        $defaults['_api_endpoint'] = $context['endpoint'];
         // $requirements              = [];
-        // $options                   = [];
+        $options                   = ['context' => $context];
         // $host                      = null;
         // $schemes                   = [];
         $methods                   = [$this->configuration->getRegistrationMethod($provider) ?: 'POST'];
@@ -138,7 +169,7 @@ final class RouteService
             'path'         => $path,
             'defaults'     => $defaults,
             // 'requirements' => $requirements,
-            // 'options'      => $options,
+            'options'      => $options,
             // 'host'         => $host,
             // 'schemes'      => $schemes,
             'methods'      => $methods,
@@ -148,14 +179,19 @@ final class RouteService
 
     private function addLoginRoute(array &$routes, string $provider): void 
     {
-        $action                    = "login";
-        $name                      = $this->getRouteNameByProvider($provider, $action);
-        $path                      = $this->configuration->getLoginPath($provider) ?? $this->getRoutePathByProvider($provider, $action);
+        $context = [
+            'provider' => $provider,
+            'endpoint' => "login",
+            'collection' => $this->configuration->getSecurityCollectionName($provider),
+        ];
+
+        $name                      = $this->getRouteNameByProvider($provider, $context['endpoint']);
+        $path                      = $this->configuration->getLoginPath($provider) ?? $this->getRoutePathByProvider($provider, $context['endpoint']);
         $defaults                  = [];
         $defaults['_controller']   = $this->configuration->getLoginController($provider);
-        $defaults['_api_endpoint'] = $action;
+        $defaults['_api_endpoint'] = $context['endpoint'];
         // $requirements              = [];
-        // $options                   = [];
+        $options                   = ['context' => $context];
         // $host                      = null;
         // $schemes                   = [];
         $methods                   = [$this->configuration->getLoginMethod($provider) ?: 'POST'];
@@ -166,7 +202,7 @@ final class RouteService
             'path'         => $path,
             'defaults'     => $defaults,
             // 'requirements' => $requirements,
-            // 'options'      => $options,
+            'options'      => $options,
             // 'host'         => $host,
             // 'schemes'      => $schemes,
             'methods'      => $methods,
@@ -198,17 +234,49 @@ final class RouteService
      */
     public function isRegisteredRoute(string $route): bool 
     {
-        $providers = $this->configuration->getAllProviders();
+        // $providers = $this->configuration->getAllProviders();
+        // $routes = [];
 
-        foreach ($providers as $provider) {
-            foreach ($provider['collections'] ?? [] as $collection) {
-                foreach ($collection['endpoints'] ?? [] as $endpoint) {
-                    if (($endpoint['route']['name'] ?? null) === $route) {
-                        return true;
-                    }
-                }
+        // dump($this->getExposedRoutes());
+
+
+        foreach ($this->getExposedRoutes() as $routeName => $routeOptions) {
+            // $routes[] = $routeName;
+
+            if ($routeName === $route) {
+                return true;
             }
         }
+
+        // foreach ($providers as $provider) {
+
+        //     $routes[] = $provider['security']['routes']['collection'] ?? '';
+
+        //     foreach ($provider['collections'] ?? [] as $collection) {
+        //         foreach ($collection['endpoints'] ?? [] as $endpoint) {
+
+        //             $routes[] = $endpoint['route']['name'] ;
+                    
+        //         }
+        //     }
+        // }
+
+
+        // dd($routes);
+
+
+        // foreach ($providers as $provider) {
+        //     foreach ($provider['collections'] ?? [] as $collection) {
+        //         foreach ($collection['endpoints'] ?? [] as $endpoint) {
+
+        //             dump($endpoint['route']['name'] );
+
+        //             if (($endpoint['route']['name'] ?? null) === $route) {
+        //                 return true;
+        //             }
+        //         }
+        //     }
+        // }
 
         return false;
     }
@@ -221,19 +289,29 @@ final class RouteService
      */
     public function isMethodSupported(string $route): bool 
     {
-        $providers = $this->configuration->getAllProviders();
+        // $providers = $this->configuration->getAllProviders();
         $method    = $this->request->getMethod();
 
-        foreach ($providers as $provider) {
-            foreach ($provider['collections'] ?? [] as $collection) {
-                foreach ($collection['endpoints'] ?? [] as $endpoint) {
-                    if (($endpoint['route']['name'] ?? null) === $route) {
-                        $allowed = $endpoint['route']['methods'] ?? [];
-                        return in_array($method, $allowed, true);
-                    }
-                }
+
+        foreach ($this->getExposedRoutes() as $routeName => $routeOptions) {
+            if ($routeName === $route && in_array($method, $routeOptions['methods'] ?? [], true)) {
+                return true;
             }
         }
+
+
+
+
+        // foreach ($providers as $provider) {
+        //     foreach ($provider['collections'] ?? [] as $collection) {
+        //         foreach ($collection['endpoints'] ?? [] as $endpoint) {
+        //             if (($endpoint['route']['name'] ?? null) === $route) {
+        //                 $allowed = $endpoint['route']['methods'] ?? [];
+        //                 return in_array($method, $allowed, true);
+        //             }
+        //         }
+        //     }
+        // }
 
         return false;
     }

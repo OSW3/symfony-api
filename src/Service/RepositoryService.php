@@ -57,11 +57,12 @@ final class RepositoryService
      */
     public function resolveRepositoryClass(): ?string
     {
-        [
-            'provider'   => $provider,
-            'collection' => $entityClass,
-            'endpoint'   => $endpoint
-        ] = $this->getContext();
+        $context = $this->getContext();
+        $provider = $context['provider'];
+        $entityClass = $context['collection'];
+        $endpoint = $context['endpoint'];
+        // dd($context);
+        
 
         $repositoryClass = $this->configuration->getRepositoryClass($provider, $entityClass, $endpoint);
 
@@ -177,6 +178,7 @@ final class RepositoryService
 
     private function findBy(array $criteria, array $order, ?int $limit, ?int $offset): array
     {
+        $this->pagination->enable();
         $this->responseStatusService->setCode(200);
         return $this->getRepository()->findBy($criteria, $order, $limit, $offset);
     }
@@ -356,62 +358,6 @@ final class RepositoryService
 
 
 
-
-    // public function resolve(): mixed
-    // {
-    //     ['provider' => $provider,'collection' => $collection,'endpoint' => $endpoint] = $this->getContext();
-
-    //     $repository   = $this->configuration->getRepository($provider, $collection, $endpoint);
-    //     $httpMethod   = $this->request->getMethod();
-    //     $customMethod = $this->configuration->getMethod($provider, $collection, $endpoint);
-    //     $criteria     = $this->configuration->getCriteria($provider, $collection, $endpoint);
-    //     $order        = $this->configuration->getOrderBy($provider, $collection, $endpoint);
-    //     $limit        = $this->configuration->getLimit($provider, $collection, $endpoint);
-    //     $offset       = $this->getOffset();
-    //     $id           = $this->request->get('id');
-        
-    //     // Execute Custom repository method
-    //     if ($customMethod && !in_array($customMethod, ['find', 'findAll', 'findBy', 'findOneBy', 'count']) && is_callable($repository, $customMethod)) {
-
-    //         $params = $this->requestService->getParams();
-
-    //         // TODO: check allowed parameters (from route.options ?)
-    //         // $provider   = $this->configuration->guessProvider();
-    //         // $collection = $this->configuration->guessCollection();
-    //         // $endpoint   = $this->configuration->guessEndpoint();
-    //         // $routeOptions = $this->configuration->getEndpointRouteOptions($provider,$collection,$endpoint);
-
-    //         return $repository->$customMethod($params);
-    //         // dump($repository->$customMethod($params));
-    //         // dd("CUSTOM METHOD {$method}");
-    //     }
-
-    //     $data = match ($httpMethod) 
-    //     {
-    //         Request::METHOD_GET    => $this->handleGet($id, $criteria, $order, $limit, $offset),
-    //         Request::METHOD_POST   => $this->create(),
-    //         Request::METHOD_PUT    => $this->update($id),
-    //         Request::METHOD_PATCH  => $this->update($id),
-    //         Request::METHOD_DELETE => $this->delete($id),
-    //         default => throw new \LogicException("Unsupported HTTP method: $customMethod")
-    //     };
-
-    //     return $data;
-    // }
-    // private function handleGet(?int $id, array $criteria, array $order, ?int $limit, ?int $offset)
-    // {
-    //     if ($id && !empty($criteria)) {
-    //         return $this->findOneBy($criteria);
-    //     }
-
-    //     if ($id) {
-    //         return $this->find($id);
-    //     }
-
-    //     return $this->findBy($criteria, $order, $limit, $offset);
-    // }
-
-
     public function execute(): mixed
     {
         ['provider' => $provider, 'collection' => $collection, 'endpoint' => $endpoint] = $this->getContext();
@@ -450,8 +396,14 @@ final class RepositoryService
         $limit    = $this->configuration->getLimit($provider, $collection, $endpoint);
         $offset   = $this->getOffset();
 
+        if ($id) {
+            $criteria = ['id' => $id];
+        }
+
         $this->pagination->setTotal( $this->count($criteria) );
 
+
+        // dd($id, $method, $criteria);
         return match ($method) {
             'find'       => $this->find($id),
             'findOneBy'  => $this->findOneBy($criteria),
@@ -464,4 +416,7 @@ final class RepositoryService
             default      => throw new \LogicException("Méthode non supportée: {$method}"),
         };
     }
+
+    // TODO: is Not found
+    
 }

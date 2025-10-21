@@ -2,14 +2,19 @@
 namespace OSW3\Api\Controller;
 
 use App\Entity\User;
-use Doctrine\ORM\EntityManagerInterface;
-use OSW3\Api\Service\ConfigurationService;
 use OSW3\Api\Service\RouteService;
 use OSW3\Api\Service\VersionService;
+use Doctrine\ORM\EntityManagerInterface;
+use OSW3\Api\Service\ConfigurationService;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use OSW3\Api\Exception\UserAlreadyExistsException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\PropertyAccess\PropertyAccess;
+use OSW3\Api\Exception\InvalidRegistrationDataException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 class RegisterController
@@ -82,7 +87,7 @@ class RegisterController
         $propertyPassword = $properties['password'] ?? 'password';
 
         if (empty($data[$propertyUsername]) || empty($data[$propertyPassword])) {
-            return new JsonResponse(['error' => 'Username and password are required'], 400);
+            throw new InvalidRegistrationDataException();
         }
 
         $username = $data[$propertyUsername];
@@ -95,7 +100,7 @@ class RegisterController
         ]);
 
         if ($existingUser) {
-            return new JsonResponse(['error' => 'User already exists'], 400);
+            throw new UserAlreadyExistsException();
         }
 
 

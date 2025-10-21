@@ -7,6 +7,7 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 final class PaginationService
 {
+    private bool $enabled = false;
     private int $total = 0;
 
     public function __construct(
@@ -14,6 +15,17 @@ final class PaginationService
         private readonly ConfigurationService $configuration,
         private readonly UrlGeneratorInterface $urlGenerator,
     ){}
+
+    public function enable(): static 
+    {
+        $this->enabled = true;
+
+        return $this;
+    }
+    public function isEnabled(): bool 
+    {
+        return $this->enabled;
+    }
 
     /**
      * Get the total number of pages
