@@ -63,14 +63,14 @@ class RegisterController
 
 
         // --- 3. Check if registration is enabled
-        if (!$this->configuration->isSecurityRegistrationEnabled($providerName)) {
+        if (!$this->configuration->isRegistrationEnabled($providerName)) {
             return new JsonResponse(['error' => 'Registration is disabled'], 403);
         }
 
         
         // --- 4. Retrieve the provider configuration
         $entityClass = $this->configuration->getSecurityEntityClass($providerName);
-        $properties  = $this->configuration->getSecurityRegistrationProperties($providerName);
+        $properties  = $this->configuration->getRegistrationProperties($providerName);
 
         if (empty($entityClass)) {
             return new JsonResponse(['error' => 'No security entity defined'], 500);

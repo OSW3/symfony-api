@@ -1,0 +1,682 @@
+## Custom callable
+## --
+
+# callable_method: App\Callable\TestCallable::myCustomData
+# callable_method_static: App\Callable\TestCallable::myCustomStaticData
+
+
+
+## APP
+## --
+
+## App Name
+## Need to define the "name" property in composer.json
+## 
+## @var string
+# app.name: "{app.name}"
+
+## App Vendor
+## Need to define the "name" property in composer.json
+## 
+# ## @var string
+# app.vendor: "{app.vendor}"
+
+## App Version
+## Need to define the "version" property in composer.json
+## 
+## @var string
+# app.version: "{app.version}"
+
+## App Description
+## Need to define the "description" property in composer.json
+## 
+## @var string
+# app.description: "{app.description}"
+
+## App License
+## Need to define the "license" property in composer.json
+##
+## @var string
+# app.license: "{app.license}"
+
+
+
+
+## Context
+## --
+
+## Current Provider name
+## 
+## @var string
+# context.provider: "{context.provider}"
+
+## Current Collection name
+##
+## @var string
+# context.collection: "{context.collection}"
+
+## Current Endpoint name
+##
+## @var string
+# context.endpoint: "{context.endpoint}"
+
+
+
+
+## Versioning
+## --
+
+## Version label
+## e.g. "v1.0", "v2.1-beta"
+## 
+## @var string
+# version.label: "{version.label}"
+
+## API Version Number
+## 
+## @var int
+# version.number: "{version.number}"
+
+## API Version Prefix
+## 
+## @var string
+# version.prefix: "{version.prefix}"
+
+## API Versions
+## List of all API Version
+## 
+## @var array
+# version.all: "{version.all}"
+
+## API Supported Versions
+## List of supported API Version
+## 
+## @var array
+# version.supported: "{version.supported}"
+
+## API Deprecated Versions
+## List of deprecated API Version
+##
+## @var array
+# version.deprecated: "{version.deprecated}"
+
+## API Is Deprecated
+## Indicate if the API version is deprecated
+## 
+## @var bool
+# version.is_deprecated: "{version.is_deprecated}"
+
+## API Is Beta
+## Indicate if the API version is in beta
+## 
+## @var bool
+# version.is_beta: "{version.is_beta}"
+
+
+
+
+
+## Documentation
+## --
+
+## API Documentation URL
+## The URL of the documentation
+## 
+## @var string
+# documentation.url: "{documentation.url}"
+
+
+
+
+## Status
+## --
+
+## Status HTTP Code
+## The HTTP response code
+## 
+## @var int
+# status.code: "{status.code}"
+
+## Status HTTP state message
+## The message associated to the HTTP Code ex. "OK")
+## 
+## @var string
+# status.text: "{status.text}"
+
+## Status state
+## success, failed, error
+## 
+## @var string
+# status.state: "{status.state}"
+
+## Is Success
+## True if status is 2xx
+##
+## @var bool
+# status.is_success: "{status.is_success}"
+
+## Is Failed
+## True if status is 4xx
+##
+## @var bool
+# status.is_failed: "{status.is_failed}"
+
+## Is Error
+## True if status is 5xx
+##
+## @var bool
+# status.is_error: "{status.is_error}"
+
+
+
+
+## Request
+## --
+
+## Request HTTP Method
+## e.g.: GET, POST, etc.
+##
+## @var string
+# request.method: "{request.method}"
+
+## Request scheme
+## e.g.: http ou https
+##
+## @var string
+# request.scheme: "{request.scheme}"
+
+## Is request scheme secured
+## Is HTTPS ?
+##
+## @var bool
+# request.is_secure: "{request.is_secure}"
+
+## Base URL
+## The base of the URL
+## 
+## @var string
+# request.base: "{request.base}"
+
+## Port
+## 
+## @var int
+# request.port: "{request.port}"
+
+## Request URI
+##
+## @var string
+# request.uri: "{request.uri}"
+
+## Request Path
+##
+## @var string
+# request.path: "{request.path}"
+
+## Query params
+## ?p1=v1
+##
+## @var array
+# request.params: "{request.params}"
+
+## Request Locale
+##
+## @var string
+# request.locale: "{request.locale}"
+
+
+
+
+## Client
+## --
+
+## Client IP
+##
+## @var string
+# client.ip: "{client.ip}"
+
+## Client User Agent
+##
+## @var string
+# client.user_agent: "{client.user_agent}"
+
+## Client Device
+##
+## @var string
+# client.device: "{client.device}"
+
+## Client Is Mobile
+##
+## @var bool
+# client.is_mobile: "{client.is_mobile}"
+
+## Client Is Tablet
+##
+## @var bool
+# client.is_tablet: "{client.is_tablet}"
+
+## Client Is Desktop
+##
+## @var bool
+# client.is_desktop: "{client.is_desktop}"
+
+## Client Browser
+##
+## @var string
+# client.browser: "{client.browser}"
+
+## Client Browser Version
+##
+## @var string
+# client.browser_version: "{client.browser_version}"
+
+## Client Browser Version Major
+##
+## @var string
+# client.browser_version_major: "{client.browser_version_major}"
+
+## Client Browser Version Minor
+##
+## @var string
+# client.browser_version_minor: "{client.browser_version_minor}"
+
+## Client Browser Version Patch
+##
+## @var string
+# client.browser_version_patch: "{client.browser_version_patch}"
+
+## Client OS
+##
+## @var string
+# client.os: "{client.os}"
+
+## Client OS Version
+##
+## @var string
+# client.os_version: "{client.os_version}"
+
+## Client OS Version Major
+##
+## @var string
+# client.os_version_major: "{client.os_version_major}"
+
+## Client OS Version Minor
+##
+## @var string
+# client.os_version_minor: "{client.os_version_minor}"
+
+## Client OS Version Patch
+##
+## @var string
+# client.os_version_patch: "{client.os_version_patch}"
+
+## Client browser engine
+## Blink, WebKit, Gecko…
+##
+## @var string
+# client.engine: "{client.engine}"
+
+## Client supported languages
+##
+## @var array
+# client.languages: "{client.languages}"
+
+## Client preferred languages
+##
+## @var string
+# client.language: "{client.language}"
+
+## Client Fingerprint
+##
+## @var string
+# client.fingerprint: "{client.fingerprint}"
+
+
+
+
+## Server
+## --
+
+## Server IP
+##
+## @var string
+# server.ip: "{server.ip}"
+
+## Server Host Name
+##
+## @var string
+# server.host: "{server.host}"
+
+## Server Environment
+## dev, prod, staging
+##
+## @var string
+# server.env: "{server.env}"
+
+## PHP Version
+##
+## @var string
+# server.php_version: "{server.php_version}"
+
+## Symfony Version
+##
+## @var string
+# server.symfony_version: "{server.symfony_version}"
+
+## Server Name
+##
+## @var string
+# server.name: "{server.name}"
+
+## Server Software
+##
+## @var string
+# server.software: "{server.software}"
+
+## Server Software Version
+##
+## @var string
+# server.software_version: "{server.software_version}"
+
+## Server Software Release
+##
+## @var string
+# server.software_release: "{server.software_release}"
+
+## Server OS
+##
+## @var string
+# server.os: "{server.os}"
+
+## Server OS Version
+##
+## @var string
+# server.os_version: "{server.os_version}"
+
+## Server OS Release
+##
+## @var string
+# server.os_release: "{server.os_release}"
+
+## Server Date
+##
+## @var string
+# server.date: "{server.date}"
+
+## Server Time
+##
+## @var string
+# server.time: "{server.time}"
+
+## Server TimeZone
+##
+## @var string
+# server.timezone: "{server.timezone}"
+
+## Server Region
+##
+## @var string
+# server.region: "{server.region}"
+
+
+
+
+## Pagination
+## --
+
+## Total of pages
+##
+## @var int
+# pagination.pages: "{pagination.pages}"
+
+## Current page number
+##
+## @var int
+# pagination.page: "{pagination.page}"
+
+## Total of items
+##
+## @var int
+# pagination.total: "{pagination.total}"
+
+## Number of item per page
+##
+## @var int
+# pagination.limit: "{pagination.limit}"
+
+## Offset of items
+##
+## @var int
+# pagination.offset: "{pagination.offset}"
+
+## Next pagination URL
+##
+## @var string
+# pagination.prev: "{pagination.prev}"
+
+## Previous pagination URL
+##
+## @var string
+# pagination.next: "{pagination.next}"
+
+## Self URL
+##
+## @var string
+# pagination.self: "{pagination.self}"
+
+## First pagination URL
+##
+## @var string
+# pagination.first: "{pagination.first}"
+
+## Last pagination URL
+##
+## @var string
+# pagination.last: "{pagination.last}"
+
+## Is First Page
+##
+## @var bool
+# pagination.is_first: "{pagination.is_first}"
+
+## Is Last Page
+##
+## @var bool
+# pagination.is_last: "{pagination.is_last}"
+
+## Has Previous Page
+##
+## @var bool
+# pagination.has_prev: "{pagination.has_prev}"
+
+## Has Next Page
+##
+## @var bool
+# pagination.has_next: "{pagination.has_next}"
+
+
+
+
+## User
+## --
+
+## Is Authenticated
+##
+## @var bool
+# user.is_authenticated: "{user.is_authenticated}"
+
+## User ID
+##
+## @var int|string|null
+# user.id: "{user.id}"
+
+## User Username
+##
+## @var string
+# user.username: "{user.username}"
+
+## User Roles
+##
+## @var array
+# user.roles: "{user.roles}"
+
+## User Email
+##
+## @var string
+# user.email: "{user.email}"
+
+## User Permissions
+##
+## @var array
+# user.permissions: "{user.permissions}"
+
+## User MFA Enabled
+##
+## @var bool
+# user.mfa_enabled: "{user.mfa_enabled}"
+
+
+
+
+## Debug
+## --
+
+## Get the amount of memory allocated to PHP
+##
+## @var int
+# debug.memory: "{debug.memory}"
+
+## Get the peak of memory allocated by PHP
+##
+## @var int
+# debug.peak_memory: "{debug.peak_memory}"
+
+## Execution Time
+##
+## @var float
+# debug.execution_time: "{debug.execution_time}"
+# debug.execution_time_unit: "{debug.execution_time_unit}"
+
+## Log level
+##
+## @var string
+# debug.log_level: "{debug.log_level}"
+
+## Included files list
+##
+## @var array
+# debug.included_files: "{debug.included_files}"
+
+## Count Included files
+##
+## @var int
+# debug.count_included_files: "{debug.count_included_files}"
+
+## Measure the latency between the reception of the request by the server and its actual processing
+##
+## @var ?flaot
+# debug.queue_time: "{debug.queue_time}"
+
+
+
+
+## Response
+## --
+
+## Response Timestamp
+## ISO 8601 date format
+##
+## @var string
+response.timestamp: "{response.timestamp}"
+
+## Response Data
+##
+## @var array
+response.data: "{response.data}"
+
+## Response data Count
+##
+## @var int
+response.count: "{response.count}"
+
+## Response Size in bytes
+##
+## @var int
+response.size: "{response.size}"
+
+## Response Hash
+##
+## @var string
+response.hash: "{response.hash}"
+
+## MD5 Hash of the response data
+##
+## @var string
+response.hash_md5: "{response.hash_md5}"
+
+## SHA-1 Hash of the response data
+##
+## @var string
+response.hash_sha1: "{response.hash_sha1}"
+
+## SHA-256 Hash of the response data
+##
+## @var string
+response.hash_sha256: "{response.hash_sha256}"
+
+## SHA-512 Hash of the response data
+##
+## @var string
+response.hash_sha512: "{response.hash_sha512}"
+
+
+# response.compressed: "{response.compressed}"    # Compression activée, Boolean if gzip/deflate
+# response.error.code: "{error.code}"                 # Code d'erreur interne
+# response.error.message: "{error.message}"           # Message lisible
+# response.error.details: "{error.details}"           # Détails supplémentaires
+# response.error.doc_url: "{error.doc_url}"           # Lien vers doc
+# response.etag: "{response.etag}"                # ETag pour cache conditionnel
+# response.validated: "{response.validated}"  # : Booléen indiquant si la réponse a passé une validation JSON Schema.
+# response.signature: "{response.signature}"  # : Signature numérique (si tu veux signer les payloads).
+# response.cache_key: "{response.cache_key}"  #  : clé de cache utilisée pour cette réponse.
+# response.cors: "{response.cors}"  #  pour indiquer les politiques CORS (ex. Access-Control-Allow-Origin).
+
+
+
+
+## Metadata
+## --
+
+# meta.description: "{meta.description}"       # Description de l'API
+# meta.deprecated: "{meta.deprecated}"         # Dépréciation spécifique
+# meta.cache_ttl: "{meta.cache_ttl}"          # TTL pour cache
+# meta.tags: "{meta.tags}"                    # Tags (tableau)
+# meta.operation_id: "{meta.operation_id}"    # ID pour OpenAPI
+# meta.license: "{app.license}"
+# meta.author: "{meta.author}"                # Maintainer / author
+# meta.contact: "{meta.contact}"              # Support or contact email
+# meta.category: "{meta.category}"            # e.g. “Public API”, “Internal”
+# meta.visibility: "{meta.visibility}"        # public/private
+# meta.links: "{meta.links}"                  # Array of doc or resource links
+# meta.example_request: "{meta.example_request}" # Optional for doc tools
+# meta.example_response: "{meta.example_response}" # Optional for doc tools
+# meta.version_history: "{meta.version_history}" # Liste des versions précédentes (utile pour les docs).
+# meta.changelog: "{meta.changelog}" # Derniers changements (utile pour les outils de versioning).
+
+
+## Rate Limit
+## --
+
+## Maximum number of requests allowed in the current time window
+##
+## @var int
+# rate_limit.limit: "{rate_limit.limit}"
+
+## Number of requests remaining in the current time window
+##
+## @var int
+# rate_limit.remaining: "{rate_limit.remaining}"
+
+## Time at which the current rate limit window resets in UTC epoch seconds
+##
+## @var int
+# rate_limit.reset: "{rate_limit.reset}"

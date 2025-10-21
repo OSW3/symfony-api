@@ -1,7 +1,6 @@
 <?php 
 namespace OSW3\Api\Service;
 
-use OSW3\Api\Exception\AccessDeniedException;
 use Symfony\Component\HttpFoundation\Request;
 use OSW3\Api\Exception\RepositoryCallException;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -46,11 +45,6 @@ final class SupportService
             throw RepositoryCallException::invalid($repository, $method);
 
         }
-        
-        // Is access granted
-        if (!$this->securityService->accessGranted()) {
-            throw new AccessDeniedException();
-        }
 
         // Has requirements params
         if (!$this->requestService->hasRequiredParams()) {
@@ -61,8 +55,4 @@ final class SupportService
     }
 
 
-    public function hasCustomController(): bool
-    {
-        return $this->request->attributes->get('_controller') != null;
-    }
 }

@@ -121,6 +121,16 @@ final class PaginationService
     }
 
     /**
+     * Get the URL for the current page
+     * 
+     * @return string
+     */
+    public function getSelf(): string
+    {
+        return $this->replacePageInUrl($this->getPage());
+    }
+
+    /**
      * Get the URL for the first page
      * 
      * @return string

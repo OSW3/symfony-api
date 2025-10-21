@@ -5,33 +5,11 @@ use OSW3\Api\Service\RequestService;
 use Symfony\Component\HttpKernel\Profiler\Profiler;
 
 final class DebugService 
-{
-    private string $start;
-    
+{    
     public function __construct(
         private readonly ?Profiler $profiler = null,
         private readonly RequestService $request,
     ){}
-
-
-    // ──────────────────────────────
-    // Execution Time
-    // ──────────────────────────────
-
-    public function setExecutionTimeStart(): static 
-    {
-        $this->start = microtime(true);
-        
-        return $this;
-    }
-
-    public function getExecutionTime(): float 
-    {
-        $start = $this->start;
-        $end = microtime(true);
-        
-        return ($end - $start)  * 1000;
-    }
 
 
     // ──────────────────────────────

@@ -29,11 +29,11 @@ final class RouteService
         // my_custom_api_v1, my_custom_api_v2, ...
         foreach ($providers as $providerName => $provider) {
 
-            if ($this->configuration->isSecurityRegistrationEnabled($providerName)) {
+            if ($this->configuration->isRegistrationEnabled($providerName)) {
                 $this->addRegisterRoute($routes, $providerName);
             }
 
-            if ($this->configuration->isSecurityLoginEnabled($providerName)) {
+            if ($this->configuration->isLoginEnabled($providerName)) {
                 $this->addLoginRoute($routes, $providerName);
             }
 
@@ -122,15 +122,15 @@ final class RouteService
     {
         $action                    = "register";
         $name                      = $this->getRouteNameByProvider($provider, $action);
-        $path                      = $this->configuration->getSecurityRegistrationPath($provider) ?? $this->getRoutePathByProvider($provider, $action);
+        $path                      = $this->configuration->getRegistrationPath($provider) ?? $this->getRoutePathByProvider($provider, $action);
         $defaults                  = [];
-        $defaults['_controller']   = $this->configuration->getSecurityRegistrationController($provider);
+        $defaults['_controller']   = $this->configuration->getRegistrationController($provider);
         $defaults['_api_endpoint'] = $action;
         // $requirements              = [];
         // $options                   = [];
         // $host                      = null;
         // $schemes                   = [];
-        $methods                   = [$this->configuration->getSecurityRegistrationMethod($provider) ?: 'POST'];
+        $methods                   = [$this->configuration->getRegistrationMethod($provider) ?: 'POST'];
         // $condition                 = '';
 
         $this->addRouteToCollection($routes, [
@@ -150,15 +150,15 @@ final class RouteService
     {
         $action                    = "login";
         $name                      = $this->getRouteNameByProvider($provider, $action);
-        $path                      = $this->configuration->getSecurityLoginPath($provider) ?? $this->getRoutePathByProvider($provider, $action);
+        $path                      = $this->configuration->getLoginPath($provider) ?? $this->getRoutePathByProvider($provider, $action);
         $defaults                  = [];
-        $defaults['_controller']   = $this->configuration->getSecurityLoginController($provider);
+        $defaults['_controller']   = $this->configuration->getLoginController($provider);
         $defaults['_api_endpoint'] = $action;
         // $requirements              = [];
         // $options                   = [];
         // $host                      = null;
         // $schemes                   = [];
-        $methods                   = [$this->configuration->getSecurityLoginMethod($provider) ?: 'POST'];
+        $methods                   = [$this->configuration->getLoginMethod($provider) ?: 'POST'];
         // $condition                 = '';
 
         $this->addRouteToCollection($routes, [

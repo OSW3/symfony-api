@@ -31,7 +31,7 @@ final class ClientService
     // User Agent
     // ──────────────────────────────
 
-    public function getUserAgent(?string $fragment=null): string 
+    public function getUserAgent(?string $fragment=null): ?string 
     {
         $ua = (string) $this->request->headers->get('User-Agent');
 
@@ -84,23 +84,23 @@ final class ClientService
     // Browser
     // ──────────────────────────────
 
-    public function getBrowser(): string 
+    public function getBrowser(): ?string
     {
         return $this->getUserAgent('browser_family');
     }
-    public function getBrowserVersion(): string 
+    public function getBrowserVersion(): ?string
     {
         return $this->getUserAgent('browser_version');
     }
-    public function getBrowserVersionMajor(): string 
+    public function getBrowserVersionMajor(): ?string
     {
         return $this->getUserAgent('browser_major');
     }
-    public function getBrowserVersionMinor(): string 
+    public function getBrowserVersionMinor(): ?string
     {
         return $this->getUserAgent('browser_minor');
     }
-    public function getBrowserVersionPatch(): string 
+    public function getBrowserVersionPatch(): ?string
     {
         return $this->getUserAgent('browser_patch');
     }
@@ -110,23 +110,23 @@ final class ClientService
     // OS
     // ──────────────────────────────
 
-    public function getOs(): string 
+    public function getOs(): ?string
     {
         return $this->getUserAgent('os_family');
     }
-    public function getOsVersion(): string 
+    public function getOsVersion(): ?string
     {
         return $this->getUserAgent('os_version');
     }
-    public function getOsVersionMajor(): string 
+    public function getOsVersionMajor(): ?string
     {
         return $this->getUserAgent('os_major');
     }
-    public function getOsVersionMinor(): string 
+    public function getOsVersionMinor(): ?string
     {
         return $this->getUserAgent('os_minor');
     }
-    public function getOsVersionPatch(): string 
+    public function getOsVersionPatch(): ?string
     {
         return $this->getUserAgent('os_patch');
     }
@@ -139,7 +139,7 @@ final class ClientService
     /**
      * (Blink, WebKit, Gecko…).
      */
-    public function getEngine(): string 
+    public function getEngine(): ?string
     {
         $ua = (string) $this->getUserAgent();
 
@@ -174,7 +174,7 @@ final class ClientService
     {
         return $this->request->getLanguages();
     }
-    public function getLanguage(): string 
+    public function getLanguage(): ?string
     {
         return $this->request->getPreferredLanguage();
     }
@@ -184,7 +184,7 @@ final class ClientService
     // Fingerprint
     // ──────────────────────────────
 
-    public function getFingerprint(): string
+    public function getFingerprint(): ?string
     {
         $data = [
             $this->getUserAgent(),

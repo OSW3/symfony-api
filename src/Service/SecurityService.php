@@ -11,7 +11,7 @@ final class SecurityService
     private ?UserInterface $cachedUser = null;
 
     public function __construct(
-        private readonly ?AuthorizationCheckerInterface $auth,
+        // private readonly ?AuthorizationCheckerInterface $auth,
         private readonly ConfigurationService $configuration,
         private readonly Security $security,
     ) {}
@@ -26,31 +26,6 @@ final class SecurityService
         return $this->cachedUser ??= $this->security->getUser();
     }
 
-    /**
-     * Check if access is granted based on roles defined in configuration
-     * 
-     * @return bool
-     */
-    public function accessGranted(): bool
-    {
-        if (null === $this->auth) {
-            return true;
-        }
-
-        $provider   = $this->configuration->guessProvider();
-        $collection = $this->configuration->guessCollection();
-        $endpoint   = $this->configuration->guessEndpoint();
-        $roles      = $this->configuration->getRoles($provider, $collection, $endpoint);
-
-        foreach ($roles as $role) {
-            if ($this->auth->isGranted($role)) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-    
     /**
      * Check if the current user is authenticated
      * 
@@ -114,53 +89,13 @@ final class SecurityService
     }
 
     /**
-     * Get the current user token
-     * 
-     * @return string|null
-     */
-    public function getToken(): ?string
-    {
-        return $this->getUser()?->{'getToken'}();
-    }
-
-    /**
-     * Get the current user token issued at
-     * 
-     * @return \DateTimeInterface|null
-     */
-    public function getTokenIssuedAt(): ?\DateTimeInterface
-    {
-        return $this->getUser()?->{'getTokenIssuedAt'}();
-    }
-
-    /**
-     * Get the current user token expires at
-     * 
-     * @return \DateTimeInterface|null
-     */
-    public function getTokenExpiresAt(): ?\DateTimeInterface
-    {
-        return $this->getUser()?->{'getTokenExpiresAt'}();
-    }
-
-    /**
-     * Get the current user token scopes
-     * 
-     * @return array|null
-     */
-    public function getTokenScopes(): ?array
-    {
-        return $this->getUser()?->{'getTokenScopes'}();
-    }
-
-    /**
      * Get the current user permissions
      * 
      * @return array|null
      */
     public function getPermissions(): ?array
     {
-        return $this->getUser()?->{'getPermissions'}();
+        return []; // $this->getUser()?->{'getPermissions'}();
     }
 
     /**
@@ -170,6 +105,6 @@ final class SecurityService
      */
     public function getMfaEnabled(): ?bool
     {
-        return $this->getUser()?->{'isMfaEnabled'}();
+        return false; //$this->getUser()?->{'isMfaEnabled'}();
     }
 }

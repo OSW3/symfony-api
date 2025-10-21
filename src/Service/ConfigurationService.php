@@ -25,8 +25,9 @@ class ConfigurationService
     }
 
 
+
     // ──────────────────────────────
-    // Context
+    // CONTEXT
     // ──────────────────────────────
 
     public function getContext(): array
@@ -91,8 +92,9 @@ class ConfigurationService
     }
 
 
+
     // ──────────────────────────────
-    // Providers
+    // PROVIDERS
     // ──────────────────────────────
 
     /**
@@ -122,13 +124,129 @@ class ConfigurationService
         return $this->configuration;
     }
 
-    public function isValidProvider(string $provider): bool
+    /**
+     * Check if a specific API provider exists in the configuration.
+     * 
+     * @param string $provider Name of the API provider
+     * @return bool True if the provider exists, false otherwise
+     */
+    public function hasProvider(string $provider): bool
     {
         return array_key_exists($provider, $this->getAllProviders());
     }
 
+
+
     // ──────────────────────────────
-    // Versioning
+    // COLLECTIONS
+    // ──────────────────────────────
+
+    /**
+     * Returns all collections defined for a specific provider.
+     * dump( $this->configuration->getCollections('my_custom_api_v1') );
+     *
+     * @param string $providerName
+     * @return array|null Returns an array of collections if the provider exists, null otherwise.
+     */
+    public function getCollections(string $providerName): array
+    {
+        return $this->configuration[$providerName]['collections'] ?? [];
+    }
+
+    /**
+     * Returns a specific collection configuration.
+     * dump( $this->configuration->getCollection('my_custom_api_v1', 'App\Entity\Book') );
+     *
+     * @param string $providerName
+     * @param string $entityClass Fully qualified class name of the entity (e.g., 'App\Entity\Book')
+     * @return array|null Collection configuration array or null if not found.
+     */
+    public function getCollection(string $providerName, string $entityClass): ?array
+    {
+        return $this->configuration[$providerName]['collections'][$entityClass] ?? null;
+    }
+
+    /**
+     * Check if a specific collection exists for a given provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @param string $entityClass Fully qualified class name of the entity (e.g., 'App\Entity\Book')
+     * @return bool True if the collection exists, false otherwise
+     */
+    public function hasCollection(string $providerName, string $entityClass): bool
+    {
+        return array_key_exists($entityClass, $this->getCollections($providerName));
+    }
+
+    // ──────────────────────────────
+    // Endpoints
+    // ──────────────────────────────
+
+    /**
+     * Returns all endpoints defined for a specific collection within a provider.
+     * dump( $this->configuration->getEndpoints('my_custom_api_v1', 'App\Entity\Book') );
+     *
+     * @param string $providerName
+     * @param string $entityClass Fully qualified class name of the entity (e.g., 'App\Entity\Book')
+     * @return array|null Returns an array of endpoints if the collection exists, null otherwise.
+     */
+    public function getEndpoints(string $providerName, string $entityClass): array
+    {
+        return $this->getCollection($providerName, $entityClass)['endpoints'] ?? [];
+    }
+
+    /**
+     * Returns a specific endpoint configuration.
+     * dump( $this->configuration->getEndpoint('my_custom_api_v1', 'App\Entity\Book', 'index') );
+     *
+     * @param string $providerName
+     * @param string $entityClass Fully qualified class name of the entity (e.g., 'App\Entity\Book')
+     * @param string $endpointName Name of the endpoint (e.g., 'index', 'show')
+     * @return array|null Endpoint configuration array or null if not found.
+     */
+    public function getEndpoint(string $providerName, string $entityClass, string $endpointName): ?array
+    {
+        return $this->getCollection($providerName, $entityClass)['endpoints'][$endpointName] ?? null;
+    }
+
+    /**
+     * Check if a specific endpoint exists for a given collection within a provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @param string $entityClass Fully qualified class name of the entity (e.g., 'App\Entity\Book')
+     * @param string $endpointName Name of the endpoint (e.g., 'index', 'show')
+     * @return bool True if the endpoint exists, false otherwise
+     */
+    public function hasEndpoint(string $providerName, string $entityClass, string $endpointName): bool
+    {
+        return array_key_exists($endpointName, $this->getEndpoints($providerName, $entityClass));
+    }
+
+
+
+
+    // ──────────────────────────────
+    // DOCUMENTATION
+    // ──────────────────────────────
+
+    /**
+     * Check if API documentation is enabled for a specific provider.
+     *
+     * @param string $providerName Name of the API provider
+     * @return bool True if documentation is enabled, false otherwise
+     *
+     * @example
+     * $enabled = $configService->isDocumentationEnabled('my_custom_api_v1'); // returns true or false
+     */
+    public function isDocumentationEnabled(string $providerName): bool
+    {
+        return $this->configuration[$providerName]['documentation']['enable'] ?? false;
+    }
+
+
+
+    // ──────────────────────────────
+    // VERSIONING
     // ──────────────────────────────
 
     /**
@@ -181,7 +299,7 @@ class ConfigurationService
      * @param string $providerName Name of the API provider
      * @return bool True if the provider is beta, false otherwise
      */
-    public function isBeta(string $providerName): bool
+    public function isVersionBeta(string $providerName): bool
     {
         return $this->configuration[$providerName]['version']['beta'] ?? false;
     }
@@ -192,14 +310,16 @@ class ConfigurationService
      * @param string $providerName Name of the API provider
      * @return bool True if the provider is deprecated, false otherwise
      */
-    public function isDeprecated(string $providerName): bool
+    public function isVersionDeprecated(string $providerName): bool
     {
         return $this->configuration[$providerName]['version']['deprecated'] ?? false;
     }
 
 
+
     // ──────────────────────────────
-    // Route (global, collection, endpoint)
+    // ROUTE
+    // global, collection, endpoint
     // ──────────────────────────────
     
     /**
@@ -278,19 +398,20 @@ class ConfigurationService
         return $this->configuration[$providerName]['routes']['prefix'] ?? '';
     }
 
-    public function getHosts(string $providerName): array
+    public function getRouteHosts(string $providerName): array
     {
         return $this->configuration[$providerName]['routes']['hosts'] ?? [];
     }
 
-    public function getSchemes(string $providerName): array
+    public function getRouteSchemes(string $providerName): array
     {
         return $this->configuration[$providerName]['routes']['schemes'] ?? [];
     }
 
 
+
     // ──────────────────────────────
-    // Search 
+    // SEARCH 
     // ──────────────────────────────
 
     public function isSearchEnabled(string $providerName, ?string $entityClass = null): bool
@@ -308,20 +429,16 @@ class ConfigurationService
         return $this->configuration[$providerName]['collections'][$entityClass]['search']['fields'] ?? [];
     }
 
+
     
     // ──────────────────────────────
-    // Debug 
+    // DEBUG & TRACING
     // ──────────────────────────────
 
     public function isDebugEnabled(string $providerName): bool
     {
         return $this->configuration[$providerName]['debug']['enable'] ?? false;
     }
-
-    
-    // ──────────────────────────────
-    // Tracing 
-    // ──────────────────────────────
 
     public function isTracingEnabled(string $providerName): bool
     {
@@ -334,8 +451,9 @@ class ConfigurationService
     }
 
 
+
     // ──────────────────────────────
-    // Pagination
+    // PAGINATION
     // ──────────────────────────────
 
     /**
@@ -391,8 +509,9 @@ class ConfigurationService
     }
 
 
+
     // ──────────────────────────────
-    // URL response settings
+    // URL SUPPORT
     // ──────────────────────────────
 
     /**
@@ -429,25 +548,50 @@ class ConfigurationService
     }
 
 
+
     // ──────────────────────────────
-    // Response
+    // TEMPLATES
     // ──────────────────────────────
 
+    /**
+     * Get the template path for list responses for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string Path to the list response template
+     */
     public function getListTemplate(string $providerName): string
     {
         return $this->configuration[$providerName]['response']['templates']['list'] ?? 'Resources/templates/list.yaml';
     }
 
+    /**
+     * Get the template path for item responses for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string Path to the item response template
+     */
     public function getItemTemplate(string $providerName): string
     {
         return $this->configuration[$providerName]['response']['templates']['item'] ?? 'Resources/templates/item.yaml';
     }
 
+    /**
+     * Get the template path for error responses for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string Path to the error response template
+     */
     public function getErrorTemplate(string $providerName): string
     {
         return $this->configuration[$providerName]['response']['templates']['error'] ?? 'Resources/templates/error.yaml';
     }
 
+    /**
+     * Get the template path for no content (204) responses for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string Path to the no content response template
+     */
     public function getNoContentTemplate(string $providerName): string
     {
         return $this->configuration[$providerName]['response']['templates']['no_content'] ?? 'Resources/templates/no_content.yaml';
@@ -464,6 +608,14 @@ class ConfigurationService
         return $this->configuration[$providerName]['response']['format'] ?? 'json';
     }
 
+
+
+    // ──────────────────────────────
+    // RESPONSES
+    // ──────────────────────────────
+
+    // Headers
+
     /**
      * Get custom HTTP headers to include in all API responses for a specific provider.
      *
@@ -474,6 +626,8 @@ class ConfigurationService
     {
         return $this->configuration[$providerName]['response']['headers'] ?? [];
     }
+
+    // Response cache control
 
     /**
      * Construct the Cache-Control header value based on configuration settings.
@@ -487,7 +641,7 @@ class ConfigurationService
      */
     public function getResponseCacheControl(string $providerName): string
     {
-        $isPublic       = $this->getResponseCacheControlIsPublic($providerName);
+        $isPublic       = $this->isResponseCachePublic($providerName);
         $noStore        = $this->getResponseCacheControlNoStore($providerName);
         $mustRevalidate = $this->getResponseCacheControlMustRevalidate($providerName);
         $maxAge         = $this->getResponseCacheControlMaxAge($providerName);
@@ -509,7 +663,7 @@ class ConfigurationService
      * @param string $providerName Name of the API provider
      * @return string Hashing algorithm (e.g., 'md5', 'sha256')
      */
-    public function getResponseCacheControlIsPublic(string $providerName): bool
+    public function isResponseCachePublic(string $providerName): bool
     {
         return $this->configuration[$providerName]['response']['cache_control']['public'] ?? false;
     }
@@ -556,6 +710,8 @@ class ConfigurationService
         return $this->configuration[$providerName]['response']['cache_control']['max_age'] ?? 0;
     }
 
+    // Hashing
+
     /**
      * Get the hashing algorithm used for generating response hashes.
      *
@@ -565,73 +721,157 @@ class ConfigurationService
      * @example
      * $algorithm = $configService->getResponseHashAlgorithm('my_custom_api_v1'); // returns 'md5'
      */
-    public function getResponseHashAlgorithm(string $providerName): string
+    public function getResponseHashingAlgorithm(string $providerName): string
     {
         return $this->configuration[$providerName]['response']['algorithm'] ?? 'md5';
     }
 
 
+
     // ──────────────────────────────
-    // Security
+    // SECURITY
     // ──────────────────────────────
 
+    /**
+     * Get the fully qualified class name of the security entity for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string Fully qualified class name of the security entity
+     */
     public function getSecurityEntityClass(string $providerName): string
     {
         return $this->configuration[$providerName]['security']['entity']['class'] ?? '';
     }
 
+    /**
+     * Get the name of the security collection for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string Name of the security collection
+     */
     public function getSecurityCollectionName(string $providerName): string
     {
         return $this->configuration[$providerName]['security']['routes']['collection'] ?? '';
     }
 
+    // Registration
 
-    public function isSecurityRegistrationEnabled(string $providerName): bool
+    /**
+     * Check if user registration is enabled for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return bool True if registration is enabled, false otherwise
+     */
+    public function isRegistrationEnabled(string $providerName): bool
     {
         return $this->configuration[$providerName]['security']['register']['enable'] ?? false;
     }
-    public function getSecurityRegistrationMethod(string $providerName): string
+
+    /**
+     * Get the HTTP method used for user registration for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string HTTP method (e.g., 'POST', 'PUT')
+     */
+    public function getRegistrationMethod(string $providerName): string
     {
         return $this->configuration[$providerName]['security']['register']['method'] ?? 'POST';
     }
-    public function getSecurityRegistrationPath(string $providerName): ?string
+
+    /**
+     * Get the URL path for user registration for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string|null URL path for registration, or null if not defined
+     */
+    public function getRegistrationPath(string $providerName): ?string
     {
         return $this->configuration[$providerName]['security']['register']['path'] ?? null;
     }
-    public function getSecurityRegistrationController(string $providerName): string
+
+    /**
+     * Get the controller responsible for handling user registration for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string Fully qualified class name of the registration controller
+     */
+    public function getRegistrationController(string $providerName): string
     {
         return $this->configuration[$providerName]['security']['register']['controller'] ?? 'OSW3\Api\Controller\RegisterController::register';
     }
-    public function getSecurityRegistrationProperties(string $providerName): array
+
+    /**
+     * Get the properties required for user registration for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return array Array of registration properties
+     */
+    public function getRegistrationProperties(string $providerName): array
     {
         return $this->configuration[$providerName]['security']['register']['properties'] ?? [];
     }
 
+    // Login
 
-    public function isSecurityLoginEnabled(string $providerName): bool
+    /**
+     * Check if user login is enabled for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return bool True if login is enabled, false otherwise
+     */
+    public function isLoginEnabled(string $providerName): bool
     {
         return $this->configuration[$providerName]['security']['login']['enable'] ?? false;
     }
-    public function getSecurityLoginMethod(string $providerName): string
+
+    /**
+     * Get the HTTP method used for user login for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string HTTP method (e.g., 'POST', 'PUT')
+     */
+    public function getLoginMethod(string $providerName): string
     {
         return $this->configuration[$providerName]['security']['login']['method'] ?? 'POST';
     }
-    public function getSecurityLoginPath(string $providerName): ?string
+
+    /**
+     * Get the URL path for user login for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string|null URL path for login, or null if not defined
+     */
+    public function getLoginPath(string $providerName): ?string
     {
         return $this->configuration[$providerName]['security']['login']['path'] ?? null;
     }
-    public function getSecurityLoginController(string $providerName): ?string
+
+    /**
+     * Get the controller responsible for handling user login for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string Fully qualified class name of the login controller
+     */
+    public function getLoginController(string $providerName): ?string
     {
-        return $this->configuration[$providerName]['security']['login']['controller'] ?? null;
+        return $this->configuration[$providerName]['security']['login']['controller'] ?? 'OSW3\Api\Controller\SecurityController::login';
     }
-    public function getSecurityLoginProperties(string $providerName): array
+
+    /**
+     * Get the properties required for user login for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return array Array of login properties
+     */
+    public function getLoginProperties(string $providerName): array
     {
         return $this->configuration[$providerName]['security']['login']['properties'] ?? [];
     }
 
 
+
     // ──────────────────────────────
-    // Rate Limit
+    // RATE LIMITING
     // ──────────────────────────────
 
     public function isRateLimitEnabled(string $providerName): bool
@@ -658,6 +898,8 @@ class ConfigurationService
     // {
     //     return $this->getEndpoint($providerName, $entityClass, $endpointName)['rate_limit']['by_user'] ?? [];
     // }
+
+
 
     // ──────────────────────────────
     // Serialization
@@ -715,70 +957,6 @@ class ConfigurationService
     {
         return $this->getEndpoint($providerName, $entityClass, $endpointName)['serialization']['transformer'] ?? '';
     }
-
-
-    // ──────────────────────────────
-    // Documentation
-    // ──────────────────────────────
-
-    /**
-     * Check if API documentation is enabled for a specific provider.
-     *
-     * @param string $providerName Name of the API provider
-     * @return bool True if documentation is enabled, false otherwise
-     *
-     * @example
-     * $enabled = $configService->isDocumentationEnabled('my_custom_api_v1'); // returns true or false
-     */
-    public function isDocumentationEnabled(string $providerName): bool
-    {
-        return $this->configuration[$providerName]['documentation']['enable'] ?? false;
-    }
-
-
-    // ──────────────────────────────
-    // Collections
-    // ──────────────────────────────
-
-    /**
-     * Returns all collections defined for a specific provider.
-     * dump( $this->configuration->getCollections('my_custom_api_v1') );
-     *
-     * @param string $providerName
-     * @return array|null Returns an array of collections if the provider exists, null otherwise.
-     */
-    public function getCollections(string $providerName): array
-    {
-        return $this->configuration[$providerName]['collections'] ?? [];
-    }
-
-    /**
-     * Returns a specific collection configuration.
-     * dump( $this->configuration->getCollection('my_custom_api_v1', 'App\Entity\Book') );
-     *
-     * @param string $providerName
-     * @param string $entityClass Fully qualified class name of the entity (e.g., 'App\Entity\Book')
-     * @return array|null Collection configuration array or null if not found.
-     */
-    public function getCollection(string $providerName, string $entityClass): ?array
-    {
-        return $this->configuration[$providerName]['collections'][$entityClass] ?? null;
-    }
-
-    // ──────────────────────────────
-    // Endpoints
-    // ──────────────────────────────
-
-    public function getEndpoints(string $providerName, string $entityClass): array
-    {
-        return $this->getCollection($providerName, $entityClass)['endpoints'] ?? [];
-    }
-
-    public function getEndpoint(string $providerName, string $entityClass, string $endpointName): ?array
-    {
-        return $this->getCollection($providerName, $entityClass)['endpoints'][$endpointName] ?? null;
-    }
-
 
     
     // ──────────────────────────────
