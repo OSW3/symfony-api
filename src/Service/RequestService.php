@@ -187,7 +187,7 @@ final class RequestService
     public function hasRequiredParams(): bool 
     {
         ['provider' => $provider, 'collection' => $collection, 'endpoint' => $endpoint] = $this->configuration->getContext();
-        $required    = $this->configuration->getEndpointRouteRequirements($provider, $collection, $endpoint);
+        $required    = $this->configuration->getRouteRequirements($provider, $collection, $endpoint);
         $routeParams = $this->request->attributes->get('_route_params', []);
 
         foreach (array_keys($required) as $param) {
@@ -236,7 +236,7 @@ final class RequestService
 
     public function getEntityClassname(): string|null
     {
-        // $providers = $this->configuration->getAllProviders();
+        // $providers = $this->configuration->getProviders();
         // $current = $this->requestStack->getCurrentRequest()->get('_route');
 
         // foreach ($providers as $provider) 
@@ -260,7 +260,7 @@ final class RequestService
      */
     public function getRepositoryMethod(): string|null 
     {
-        // $providers = $this->configuration->getAllProviders();
+        // $providers = $this->configuration->getProviders();
         // $current = $this->requestStack->getCurrentRequest()->get('_route');
 
         // foreach ($providers as $provider) 
@@ -279,7 +279,7 @@ final class RequestService
        
     public function getRepositoryCriteria(): array
     {
-        // $providers = $this->configuration->getAllProviders();
+        // $providers = $this->configuration->getProviders();
         // $current = $this->requestStack->getCurrentRequest()->get('_route');
 
         // foreach ($providers as $provider) 

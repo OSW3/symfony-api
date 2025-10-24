@@ -6,6 +6,7 @@ use Doctrine\Persistence\ManagerRegistry;
 use OSW3\Api\Service\ConfigurationService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\PropertyAccess\PropertyAccess;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 
 final class RepositoryService
@@ -29,9 +30,9 @@ final class RepositoryService
     private function getContext(): array 
     {
         return [
-            'provider'   => $this->configuration->guessProvider(),
-            'collection' => $this->configuration->guessCollection(),
-            'endpoint'   => $this->configuration->guessEndpoint(),
+            'provider'   => $this->configuration->getContext('provider'),
+            'collection' => $this->configuration->getContext('collection'),
+            'endpoint'   => $this->configuration->getContext('endpoint'),
         ];
     }
     
@@ -191,8 +192,15 @@ final class RepositoryService
 
     private function findOneBy(array $criteria): object|null
     {
+        if (!$result = $this->getRepository()->findOneBy($criteria))
+        {
+            $this->responseStatusService->setCode(404);
+            return null;
+        }
+
+
         $this->responseStatusService->setCode(200);
-        return $this->getRepository()->findOneBy($criteria);
+        return $result;
     }
 
     private function count(array $criteria): int
@@ -204,8 +212,13 @@ final class RepositoryService
     {
         $data       = $this->request->getContent();
         $data       = json_decode($data, true) ?? [];
-        $collection = $this->configuration->guessCollection();
+        $collection = $this->configuration->getContext('collection');
         $entity     = new $collection;
+
+
+        // $this->hydrate($entity, $data);
+        // dd($entity);
+
 
         if (!$this->hydrate($entity, $data))
         {
@@ -260,100 +273,40 @@ final class RepositoryService
     // Hydrator
     // ──────────────────────────────
 
-    private function hydrate($entity,  $data): bool
+    private function hydrate(object $entity, array $data): bool
     {
-        // dump(get_debug_type($data));
-        // dd($data); 
+        $accessor = PropertyAccess::createPropertyAccessor();
+        $metadata = $this->entityManager->getClassMetadata($entity::class);
 
-        $isValidProperty = true;
+        foreach ($data as $property => $value) {
+            // Has Doctrine relation ?
+            if ($metadata->hasAssociation($property)) {
+                $targetEntity = $metadata->getAssociationTargetClass($property);
 
-        $reflectionClass = new \ReflectionClass(get_class($entity));
-        foreach ($data as $property => $value)
-        {
-            if ( $this->getAssociationEntity($entity, $property) )
-            {
-                if ($associatedEntity = $this->getAssociationEntity($entity, $property))
-                {
-                    if (is_array($value))
-                    {
-                        foreach ($value as $id)
-                        {
-                            $value = $this->getEntity($associatedEntity,$id);
-                            $isValidProperty = $this->adder($reflectionClass, $entity, $property, $value);
-
-                            if (!$isValidProperty) break;
+                if (is_array($value)) {
+                    // Relations ManyToMany
+                    foreach ($value as $id) {
+                        $related = $this->entityManager->getReference($targetEntity, $id);
+                        $adder = 'add' . ucfirst(rtrim($property, 's'));
+                        if (method_exists($entity, $adder)) {
+                            $entity->$adder($related);
                         }
                     }
-                    else {
-                        $value = $this->getEntity($associatedEntity,$value);
-                        $isValidProperty = $this->setter($reflectionClass, $entity, $property, $value);
-                    }
+                } else {
+                    // Relations ManyToOne, OneToOne
+                    $related = $this->entityManager->getReference($targetEntity, $value);
+                    $accessor->setValue($entity, $property, $related);
                 }
+            } 
+            // Simple property
+            else {
+                $accessor->setValue($entity, $property, $value);
             }
-            else 
-            {
-                $isValidProperty = $this->setter($reflectionClass, $entity, $property, $value);
-            }
-
-            if (!$isValidProperty) break;
         }
 
-        return $isValidProperty;
-    }
-    private function getAssociationEntity($entity, $property): string|false
-    {
-        $metadata = $this->entityManager->getClassMetadata(get_class($entity));
-
-        return $metadata->hasAssociation($property) ? $metadata->getAssociationMapping($property)['targetEntity'] : false;
-    }
-    private function setter($reflection, $entity, $property, $value): bool
-    {
-        $method = 'set' . $this->utilsService->camelize($property);
-
-        if (!$reflection->hasMethod($method))
-        {
-            return false;
-        }
-
-        $entity->$method($value);
-        return true;
-        
-    }
-    private function adder($reflection, $entity, $property, $value): bool
-    {
-        $property = $this->singularize($property);
-        $method = 'add' . $this->utilsService->camelize($property);
-        if (!$reflection->hasMethod($method)) 
-        {
-            return false;
-        }
-
-        $entity->$method($value);
         return true;
     }
-    /**
-     * Find the associated entity
-     *
-     * @param [type] $entity
-     * @param [type] $id
-     * @return void
-     */
-    private function getEntity($entity, $id)
-    {
-        return $this->entityManager->getRepository($entity)->find($id);
-    }
-    private function singularize(string $word): string
-    {
-        if (preg_match('/(.*[^aeiou])ies$/', $word, $matches)) {
-            return $matches[1] . 'y';
-        } elseif (preg_match('/(.*)(ses|xes|zes|ches|shes)$/', $word, $matches)) {
-            return $matches[1]; 
-        } elseif (preg_match('/(.*)s$/', $word, $matches)) {
-            return $matches[1]; 
-        } else {
-            return $word;
-        }
-    }
+
 
 
 
@@ -403,7 +356,6 @@ final class RepositoryService
         $this->pagination->setTotal( $this->count($criteria) );
 
 
-        // dd($id, $method, $criteria);
         return match ($method) {
             'find'       => $this->find($id),
             'findOneBy'  => $this->findOneBy($criteria),
@@ -418,5 +370,5 @@ final class RepositoryService
     }
 
     // TODO: is Not found
-    
+
 }

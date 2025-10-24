@@ -45,7 +45,7 @@ final class HeaderService
 
     public function addApiVersion(): static 
     {
-        $provider = $this->configuration->guessProvider();
+        $provider = $this->configuration->getContext('provider');
         $vendor   = $this->app->getVendor();
         $version  = $this->version->getLabel();
         $pattern  = $this->configuration->getVersionHeaderFormat($provider);
@@ -60,7 +60,7 @@ final class HeaderService
 
     public function addCacheControl(): static 
     {
-        $provider = $this->configuration->guessProvider();
+        $provider = $this->configuration->getContext('provider');
         $this->headers->set('Cache-Control', $this->configuration->getResponseCacheControl($provider) ?? null);
 
         return $this;

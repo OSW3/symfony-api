@@ -1,16 +1,16 @@
 <?php 
 namespace OSW3\Api\Resolver;
 
-final class EndpointRouteNameResolver
+final class EndpointRoutePathResolver
 {
     public static function default(array &$providers): array 
     {
         foreach ($providers as &$provider) {
             foreach ($provider['collections'] as &$collection) {
                 foreach ($collection['endpoints'] as &$endpoint)  {
-                    if (empty(trim($endpoint['route']['name'])))
+                    if (empty(trim($endpoint['route']['path'])))
                     {
-                        $endpoint['route']['name'] = $collection['route']['pattern'];
+                        $endpoint['route']['path'] = "{$collection['route']['prefix']}/{$collection['name']}";
                     }
                 }
             }
@@ -29,11 +29,9 @@ final class EndpointRouteNameResolver
                     $fullVersion = "{$versionPrefix}{$versionNumber}";
 
                     // Generate Endpoint Route Name
-                    $className = (new \ReflectionClass($collectionName))->getShortName();
-                    $className = strtolower($className);
-                    $endpoint['route']['name'] = preg_replace("/{version}/", $fullVersion, $endpoint['route']['name']);
-                    $endpoint['route']['name'] = preg_replace("/{action}/", $endpointName, $endpoint['route']['name']);
-                    $endpoint['route']['name'] = preg_replace("/{collection}/", $className, $endpoint['route']['name']);
+                    $endpoint['route']['path'] = preg_replace("/{version}/", $fullVersion, $endpoint['route']['path']);
+                    $endpoint['route']['path'] = preg_replace("/{action}/", $endpointName, $endpoint['route']['path']);
+                    $endpoint['route']['path'] = preg_replace("/{collection}/", $collection['name'], $endpoint['route']['path']);
                 }
             }
         }

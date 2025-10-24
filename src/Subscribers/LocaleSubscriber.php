@@ -22,7 +22,9 @@ class LocaleSubscriber implements EventSubscriberInterface
     
     public static function getSubscribedEvents(): array
     {
-        return [KernelEvents::REQUEST => ['onRequest', 30]];
+        return [
+            // KernelEvents::REQUEST => ['onRequest', 30]
+        ];
     }
 
     public function onRequest(RequestEvent $event): void

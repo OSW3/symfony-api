@@ -8,9 +8,13 @@ final class CollectionSearchStatusResolver
         foreach ($providers as &$provider) {
             foreach ($provider['collections'] as &$collection) {
 
-                if (!isset($collection['search']['enabled']) || !is_bool($collection['search']['enabled'])) 
-                {
-                    $collection['search']['enabled'] = $provider['search'];
+                // dd($collection['search']['enabled'], $provider['search']['enabled']);
+                if (
+                    !isset($collection['search']['enabled']) || 
+                    !is_bool($collection['search']['enabled']) ||
+                    ($provider['search']['enabled'] === false && $collection['search']['enabled'] !== $provider['search']['enabled'])
+                ){
+                    $collection['search']['enabled'] = $provider['search']['enabled'];
                 }
             }
         }
@@ -18,19 +22,4 @@ final class CollectionSearchStatusResolver
         return $providers;
     }
 
-    // public static function resolve(array &$providers): array 
-    // {
-    //     foreach ($providers as &$provider) {
-    //         foreach ($provider['collections'] as &$collection) {
-
-    //             $versionNumber = $provider['version']['number'];
-    //             $versionPrefix = $provider['version']['prefix'];
-    //             $fullVersion = "{$versionPrefix}{$versionNumber}";
-
-    //             $collection['route']['prefix'] = preg_replace("/{version}/", $fullVersion, $collection['route']['prefix']);
-    //         }
-    //     }
-
-    //     return $providers;
-    // }
 }

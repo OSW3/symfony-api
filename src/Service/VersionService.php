@@ -14,7 +14,7 @@ final class VersionService
      */
     private function getProvider(): string
     {
-        return $this->configuration->guessProvider();
+        return $this->configuration->getContext('provider');
     }
 
     /**
@@ -40,7 +40,7 @@ final class VersionService
     public function getAllVersions(): array 
     {
         $versions = [];
-        $providers = $this->configuration->getAllProviders();
+        $providers = $this->configuration->getProviders();
 
         foreach($providers as $provider => $options) 
         {
@@ -58,7 +58,7 @@ final class VersionService
     public function getSupportedVersions(): array 
     {
         $versions = [];
-        $providers = $this->configuration->getAllProviders();
+        $providers = $this->configuration->getProviders();
 
         foreach($providers as $provider => $options) 
         {
@@ -80,7 +80,7 @@ final class VersionService
     public function getDeprecatedVersions(): array 
     {
         $versions = [];
-        $providers = $this->configuration->getAllProviders();
+        $providers = $this->configuration->getProviders();
 
         foreach($providers as $provider => $options) 
         {

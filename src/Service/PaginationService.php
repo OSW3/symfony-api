@@ -82,7 +82,7 @@ final class PaginationService
      */
     public function getLimit(): int 
     {
-        $provider = $this->configuration->guessProvider();
+        $provider = $this->configuration->getContext('provider');
         $default  = $this->configuration->getPaginationLimit($provider);
 
         if ($this->configuration->isPaginationLimitOverrideAllowed($provider)) {

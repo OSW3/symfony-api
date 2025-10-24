@@ -20,9 +20,9 @@ final class SerializeService
     private function getContext(): array 
     {
         return [
-            'provider'   => $this->configuration->guessProvider(),
-            'collection' => $this->configuration->guessCollection(),
-            'endpoint'   => $this->configuration->guessEndpoint(),
+            'provider'   => $this->configuration->getContext('provider'),
+            'collection' => $this->configuration->getContext('collection'),
+            'endpoint'   => $this->configuration->getContext('endpoint'),
         ];
     }
 
@@ -52,7 +52,7 @@ final class SerializeService
 
         $encoder        = 'json';
         $serializer     = $this->serializer;
-        // $class          = $this->configuration->guessCollection();
+        // $class          = $this->configuration->getContext('collection');
         $groups         = $this->configuration->getSerializerGroups($provider, $collection, $endpoint);
         $ignore         = $this->configuration->getSerializerIgnore($provider, $collection, $endpoint);
         $datetimeFormat = $this->configuration->getSerializerDatetimeFormat($provider);

@@ -150,6 +150,17 @@ final class ResponseService
         return $response;
     }
 
+    public function buildCsvResponse(array $data, int $statusCode = 200): Response 
+    {
+        // CSV response building logic would go here
+        $response = new Response();
+        $response->headers->set('Content-Type', 'text/csv');
+        // Convert $data to CSV format and set as content
+        $response->setContent(''); // Placeholder
+        $response->setStatusCode($statusCode);
+        return $response;
+    }
+
 
     public function build(): Response
     {
@@ -166,6 +177,7 @@ final class ResponseService
         // --
 
         $response = match ($this->configuration->getResponseFormat($provider)) {
+            'csv'   => $this->buildCsvResponse($content, $statusCode),
             'json'  => $this->buildJsonResponse($content, $statusCode),
             'xml'   => $this->buildXmlResponse($content, $statusCode),
             'yaml'  => $this->buildYamlResponse($content, $statusCode),

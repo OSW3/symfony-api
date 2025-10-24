@@ -7,11 +7,25 @@ use OSW3\Api\Validator\TransformerValidator;
 use OSW3\Api\Resolver\CollectionNameResolver;
 use OSW3\Api\Resolver\ApiVersionNumberResolver;
 use OSW3\Api\Resolver\EndpointRouteNameResolver;
-use OSW3\Api\Resolver\CollectionPaginationResolver;
+use OSW3\Api\Resolver\EndpointRoutePathResolver;
+use OSW3\Api\Resolver\EndpointUrlSupportResolver;
+use OSW3\Api\Resolver\EndpointUrlAbsoluteResolver;
+use OSW3\Api\Resolver\EndpointUrlPropertyResolver;
+use OSW3\Api\Resolver\EndpointRouteMethodsResolver;
+use OSW3\Api\Resolver\EndpointRouteOptionsResolver;
 use OSW3\Api\Resolver\CollectionRoutePrefixResolver;
 use OSW3\Api\Resolver\ApiVersionHeaderFormatResolver;
 use OSW3\Api\Resolver\CollectionRoutePatternResolver;
 use OSW3\Api\Resolver\CollectionSearchStatusResolver;
+use OSW3\Api\Resolver\EndpointPaginationLimitResolver;
+use OSW3\Api\Resolver\CollectionPaginationLimitResolver;
+use OSW3\Api\Resolver\EndpointPaginationEnabledResolver;
+use OSW3\Api\Resolver\EndpointRouteRequirementsResolver;
+use OSW3\Api\Resolver\EndpointPaginationMaxLimitResolver;
+use OSW3\Api\Resolver\CollectionPaginationEnabledResolver;
+use OSW3\Api\Resolver\CollectionPaginationMaxLimitResolver;
+use OSW3\Api\Resolver\EndpointPaginationAllowLimitOverrideResolver;
+use OSW3\Api\Resolver\CollectionPaginationAllowLimitOverrideResolver;
 
 return static function($definition)
 {
@@ -30,185 +44,235 @@ return static function($definition)
             // Documentation
             // ──────────────────────────────
 			->arrayNode('documentation')
-            ->info('API documentation configuration')
-            ->addDefaultsIfNotSet()->children()
+                ->info('API documentation configuration')
+                ->addDefaultsIfNotSet()->children()
 
-                ->booleanNode('enable')
-                    ->info('Enable or disable the documentation for this API provider.')
-                    ->defaultFalse()
+                    ->booleanNode('enable')
+                        ->info('Enable or disable the documentation for this API provider.')
+                        ->defaultFalse()
+                    ->end()
+
+                    ->scalarNode('prefix')
+                        ->info('Path prefix')
+                        ->defaultValue('_documentation')
+                    ->end()
+
                 ->end()
-
-                ->scalarNode('prefix')
-                    ->info('Path prefix')
-                    ->defaultValue('_documentation')
-                ->end()
-
-            ->end()->end()
+            ->end()
 
             // ──────────────────────────────
             // Versioning
             // ──────────────────────────────
 			->arrayNode('version')
-            ->info('API version configuration')
-            ->addDefaultsIfNotSet()->children()
+                ->info('API version configuration')
+                ->addDefaultsIfNotSet()->children()
 
-                ->scalarNode('number')
-                    ->info('Version number (null = auto-assigned)')
-                    ->defaultNull()
-                ->end()
+                    ->scalarNode('number')
+                        ->info('Version number (null = auto-assigned)')
+                        ->defaultNull()
+                    ->end()
 
-                ->scalarNode('prefix')
-                    ->info('Version prefix (e.g. "v")')
-                    ->defaultValue('v')
-                ->end()
+                    ->scalarNode('prefix')
+                        ->info('Version prefix (e.g. "v")')
+                        ->defaultValue('v')
+                        ->treatNullLike('v')
+                    ->end()
 
-                ->enumNode('location')
-                    ->info('How the version is exposed: in URL path, HTTP header, query parameter, or subdomain.')
-                    ->values(['path', 'header', 'param', 'subdomain'])
-                    ->defaultValue('path')
-                ->end()
+                    ->enumNode('location')
+                        ->info('How the version is exposed: in URL path, HTTP header, query parameter, or subdomain.')
+                        ->values(['path', 'header', 'param', 'subdomain'])
+                        ->defaultValue('path')
+                        ->treatNullLike('path')
+                    ->end()
 
-                ->scalarNode('header_format')
-                    ->info('Defines the MIME type format used for API versioning via HTTP headers. Placeholders {vendor} and {version} will be replaced dynamically.')
-                    ->defaultValue("application/vnd.{vendor}.{version}+json")
-                ->end()
+                    ->scalarNode('header_format')
+                        ->info('Defines the MIME type format used for API versioning via HTTP headers. Placeholders {vendor} and {version} will be replaced dynamically.')
+                        ->defaultValue("application/vnd.{vendor}.{version}+json")
+                        ->treatNullLike('application/vnd.{vendor}.{version}+json')
+                    ->end()
 
-                ->booleanNode('beta')
-                    ->info('Indicates whether this API version is in beta. If true, clients should be aware that the API may change.')
-                    ->defaultFalse()
-                ->end()
+                    ->booleanNode('beta')
+                        ->info('Indicates whether this API version is in beta. If true, clients should be aware that the API may change.')
+                        ->defaultFalse()
+                        ->treatNullLike(false)
+                    ->end()
 
-                ->booleanNode('deprecated')
-                    ->info('Indicates whether this API version is deprecated. If true, clients should migrate to a newer version.')
-                    ->defaultFalse()
+                    ->booleanNode('deprecated')
+                        ->info('Indicates whether this API version is deprecated. If true, clients should migrate to a newer version.')
+                        ->defaultFalse()
+                        ->treatNullLike(false)
+                    ->end()
+                    
                 ->end()
-                
-            ->end()->end()
+            ->end()
             
             // ──────────────────────────────
-            // Global route settings
+            // Routes
             // ──────────────────────────────
 			->arrayNode('routes')
-            ->info('Default route naming and URL prefix for this API provider.')
-            ->addDefaultsIfNotSet()->children()
+                ->info('Default route naming and URL prefix for this API provider.')
+                ->addDefaultsIfNotSet()->children()
 
-                ->scalarNode('pattern')
-                    ->info('Pattern for route names. Available placeholders: {version}, {collection}, {action}.')
-                    ->defaultValue('api:{version}:{collection}:{action}')
+                    ->scalarNode('pattern')
+                        ->info('Pattern for route names. Available placeholders: {version}, {collection}, {action}.')
+                        ->defaultValue('api:{version}:{collection}:{action}')
+                        ->treatNullLike('api:{version}:{collection}:{action}')
+                    ->end()
+
+                    ->scalarNode('prefix')
+                        ->info('Default URL prefix for all routes in this API version.')
+                        ->defaultValue('/api/')
+                        ->treatNullLike('/api/')
+                    ->end()
+
+                    ->arrayNode('hosts')
+                        ->info('.')
+                        ->normalizeKeys(false)
+                        ->scalarPrototype()->end()
+                        ->defaultValue([])
+                    ->end()
+
+                    ->arrayNode('schemes')
+                        ->info('.')
+                        ->normalizeKeys(false)
+                        ->scalarPrototype()->end()
+                        ->defaultValue([])
+                    ->end()
+                    
                 ->end()
-
-                ->scalarNode('prefix')
-                    ->info('Default URL prefix for all routes in this API version.')
-                    ->defaultValue('/api/')
-                ->end()
-
-                ->arrayNode('hosts')
-                    ->info('.')
-                    // ->defaultValue([])
-                ->end()
-
-                ->arrayNode('schemes')
-                    ->info('.')
-                    // ->defaultValue([])
-                ->end()
-                
-            ->end()->end()
-
-            // ──────────────────────────────
-            // Search configuration
-            // ──────────────────────────────
-            ->booleanNode('search')
-                ->info('Enable or disable search globally for all collections.')
-                ->defaultFalse()
             ->end()
-
-            // ──────────────────────────────
-            // Debug
-            // ──────────────────────────────
-			->arrayNode('debug')
-            ->info('.')
-            ->addDefaultsIfNotSet()->children()
-
-				->booleanNode('enable')
-                    ->info('Enable or disable debug.')
-                    ->defaultTrue()
-                ->end()
-
-			->end()->end()
-
-            // ──────────────────────────────
-            // Debug
-            // ──────────────────────────────
-			->arrayNode('tracing')
-            ->info('.')
-            ->addDefaultsIfNotSet()->children()
-
-				->booleanNode('enable')
-                    ->info('Enable or disable tracing.')
-                    ->defaultTrue()
-                ->end()
-
-				->booleanNode('request')
-                    ->info('Enable or disable request_id.')
-                    ->defaultTrue()
-                ->end()
-
-			->end()->end()
 
             // ──────────────────────────────
             // Pagination defaults
             // ──────────────────────────────
 			->arrayNode('pagination')
-            ->info('Default pagination behaviour for all collections.')
-            ->addDefaultsIfNotSet()->children()
+                ->info('Default pagination behavior for all collections.')
+                ->addDefaultsIfNotSet()->children()
 
-				->booleanNode('enable')
-                    ->info('Enable or disable pagination globally.')
-                    ->defaultTrue()
+                    ->booleanNode('enabled')
+                        ->info('Enable or disable pagination for all collections.')
+                        ->defaultTrue()
+                        ->treatNullLike(true)
+                    ->end()
+
+                    ->integerNode('limit')
+                        ->info('Limit the number of items returned per page.')
+                        ->defaultValue(10)
+                        ->treatNullLike(10)
+                        ->min(1)
+                    ->end()
+
+                    ->integerNode('max_limit')
+                        ->info('Maximum number of items returned per page.')
+                        ->defaultValue(100)
+                        ->treatNullLike(100)
+                        ->min(1)
+                    ->end()
+
+                    ->booleanNode('allow_limit_override')
+                        ->info('Allow overriding the "limit" parameter via URL (e.g. ?limit=50).')
+                        ->defaultTrue()
+                        ->treatNullLike(true)
+                    ->end()
+
                 ->end()
-
-				->integerNode('limit')
-                    ->info('Default number of items per page.')
-                    ->defaultValue(10)
-                    ->min(1)
-                ->end()
-
-				->integerNode('max_limit')
-                    ->info('Max number of items per page.')
-                    ->defaultValue(100)
-                    ->min(1)
-                ->end()
-
-                ->booleanNode('allow_limit_override')
-                    ->info('Allow overriding the "limit" parameter via URL (e.g. ?limit=50).')
-                    ->defaultTrue()
-                ->end()
-
-			->end()->end()
+            ->end()
 
             // ──────────────────────────────
-            // URL response settings
+            // Search
+            // ──────────────────────────────
+			->arrayNode('search')
+                ->info('Global search configuration for all collections.')
+                ->addDefaultsIfNotSet()->children()
+
+                    ->booleanNode('enabled')
+                        ->info('Enable or disable search globally for all collections.')
+                        ->defaultFalse()
+                        ->treatNullLike(false)
+                    ->end()
+
+			    ->end()
+            ->end()
+
+            // ──────────────────────────────
+            // URL support
             // ──────────────────────────────
 			->arrayNode('url')
-            ->info('Control if URLs are included in responses and how they are generated.')
-            ->addDefaultsIfNotSet()->children()
+                ->info('URL Support (in response) for this API provider.')
+                ->addDefaultsIfNotSet()->children()
 
-				->booleanNode('support')
-                    ->info('Whether to include URL elements in API responses.')
-                    ->defaultTrue()
+                    ->booleanNode('support')
+                        ->info('Whether to include URL elements in API responses.')
+                        ->defaultTrue()
+                        ->treatNullLike(true)
+                    ->end()
+
+                    ->booleanNode('absolute')
+                        ->info('Generate absolute URLs if true, relative otherwise')
+                        ->defaultTrue()
+                        ->treatNullLike(true)
+                    ->end()
+
+                    ->scalarNode('property')
+                        ->info('The name of the URL property in response.')
+                        ->defaultValue('url')
+                    ->end()
+
                 ->end()
+            ->end()
 
-				->booleanNode('absolute')
-                    ->info('Generate absolute URLs if true, relative otherwise')
-                    ->defaultTrue()
+            // ──────────────────────────────
+            // Rate Limit
+            // ──────────────────────────────
+			->arrayNode('rate_limit')
+                ->info('Configuration for API rate limiting.')
+                ->addDefaultsIfNotSet()->children()
+
+                    ->booleanNode('enabled')
+                        ->info('Enable or disable rate limiting for this API provider.')
+                        ->defaultFalse()
+                    ->end()
+
+                    ->scalarNode('window')
+                        ->info('Time window for rate limiting (e.g. "1 hour", "15 minutes").')
+                        ->defaultValue('100/hour')
+                    ->end()
+
+                    ->arrayNode('by_role')
+                        ->info('Specific rate limits based on user roles.')
+                        ->normalizeKeys(false)
+                        ->scalarPrototype()->end()
+                        ->defaultValue([])
+                    ->end()
+
+                    ->arrayNode('by_user')
+                        ->info('Specific rate limits for individual users identified by user ID or username.')
+                        ->normalizeKeys(false)
+                        ->scalarPrototype()->end()
+                        ->defaultValue([])
+                    ->end()
+
+                    ->arrayNode('by_ip')
+                        ->info('Specific rate limits based on client IP addresses.')
+                        ->normalizeKeys(false)
+                        ->scalarPrototype()->end()
+                        ->defaultValue([])
+                    ->end()
+
+                    ->arrayNode('by_application')
+                        ->info('Specific rate limits for different application keys or API clients.')
+                        ->normalizeKeys(false)
+                        ->scalarPrototype()->end()
+                        ->defaultValue([])
+                    ->end()
+
+                    ->booleanNode('include_headers')
+                        ->info('Whether to include rate limit headers in responses.')
+                        ->defaultTrue()
+                    ->end()
+
                 ->end()
-
-                ->scalarNode('property')
-                    ->info('The name of the URL property in response.')
-                    ->defaultValue('url')
-                ->end()
-
-			->end()->end()
+            ->end()
 
             // ──────────────────────────────
             // Response formatting 
@@ -349,41 +413,6 @@ return static function($definition)
                 ->end()->end()
 
 			->end()->end()
-
-            // ──────────────────────────────
-            // Rate Limit
-            // ──────────────────────────────
-			->arrayNode('rate_limit')
-            ->info('.')
-            ->addDefaultsIfNotSet()->children()
-
-                ->booleanNode('enable')
-                    ->info('Enable or disable rate limiting for this API provider.')
-                    ->defaultFalse()
-                ->end()
-
-                ->scalarNode('limit')
-                    ->info('Maximum number of requests allowed in the defined period.')
-                    ->defaultValue('1000')
-                ->end()
-
-                ->enumNode('scope')
-                    ->info('Defines the scope of the rate limit: by IP address, authenticated user, or application. "ip" limits per client IP, "user" limits per logged-in user, "app" limits per API key or application.')
-                    ->defaultValue('user')
-                    ->values(['ip', 'user', 'app'])
-                ->end()
-
-                ->scalarNode('period')
-                    ->info('Time period for the rate limit (e.g. "hour", "minute", "day").')
-                    ->defaultValue('day')
-                ->end()
-
-                ->booleanNode('include_headers')
-                    ->info('Whether to include rate limit headers in responses.')
-                    ->defaultTrue()
-                ->end()
-
-            ->end()->end()
 
             // ──────────────────────────────
             // Serialization
@@ -536,15 +565,40 @@ return static function($definition)
 
             ->end()->end()
 
+            // ──────────────────────────────
+            // Debug
+            // ──────────────────────────────
+			->arrayNode('debug')
+                ->info('Debug configuration')
+                ->addDefaultsIfNotSet()->children()
+
+                    ->booleanNode('enable')
+                        ->info('Enable or disable debug.')
+                        ->defaultTrue()
+                    ->end()
+
+                // 	->booleanNode('enable')
+                //         ->info('Enable or disable tracing.')
+                //         ->defaultTrue()
+                //     ->end()
+
+                // 	->booleanNode('request')
+                //         ->info('Enable or disable request_id.')
+                //         ->defaultTrue()
+                //     ->end()
+
+			    ->end()
+            ->end()
+
             
             // ──────────────────────────────
             // Collections (Doctrine Entities)
             // ──────────────────────────────
 			->arrayNode('collections')
-            ->info('List of Doctrine entity classes to expose as REST collections.')
-            ->useAttributeAsKey('entity')  
+                ->info('List of Doctrine entity classes to expose as REST collections.')
+                ->useAttributeAsKey('entity')
                 ->arrayPrototype()
-                ->ignoreExtraKeys(false)
+                // ->ignoreExtraKeys(false)
                     ->children()
 
                         // ──────────────────────────────
@@ -556,7 +610,7 @@ return static function($definition)
                         ->end()
 
                         // ──────────────────────────────
-                        // Per-collection route overrides
+                        // Route
                         // ──────────────────────────────
                         ->arrayNode('route')
                             ->info('Override default route name or URL prefix for this specific collection.')
@@ -571,12 +625,26 @@ return static function($definition)
                                     ->info('Custom URL prefix. Falls back to global `routes.prefix` if null.')
                                     ->defaultNull()
                                 ->end()
+
+                                ->arrayNode('hosts')
+                                    ->info('Configure specific hosts for the collection routes.')
+                                    ->normalizeKeys(false)
+                                    ->scalarPrototype()->end()
+                                    ->defaultValue([])
+                                ->end()
+
+                                ->arrayNode('schemes')
+                                    ->info('Configure specific schemes (http, https) for the collection routes.')
+                                    ->normalizeKeys(false)
+                                    ->scalarPrototype()->end()
+                                    ->defaultValue([])
+                                ->end()
                             
                             ->end()
                         ->end()
 
                         // ──────────────────────────────
-                        // Per-collection search override
+                        // Search
                         // ──────────────────────────────
                         ->arrayNode('search')
                             ->info('Search configuration for this collection. Allows enabling search and specifying searchable fields.')
@@ -598,46 +666,161 @@ return static function($definition)
                         ->end()
 
                         // ──────────────────────────────
-                        // Per-collection pagination override
+                        // Pagination
                         // ──────────────────────────────
-                        ->scalarNode('pagination')
-                            ->info('Override pagination items per page for this collection.')
-                            ->defaultNull()
+                        ->arrayNode('pagination')
+                            ->info('Default pagination behavior for a specific collection.')
+                            ->addDefaultsIfNotSet()->children()
+
+                                ->booleanNode('enabled')
+                                    ->info('Enable or disable pagination for this collection.')
+                                    ->defaultTrue()
+                                    ->treatNullLike(true)
+                                ->end()
+
+                                ->integerNode('limit')
+                                    ->info('Limit the number of items per page for this collection.')
+                                    ->defaultValue(10)
+                                    ->treatNullLike(-1)
+                                ->end()
+
+                                ->integerNode('max_limit')
+                                    ->info('Max number of items per page for this collection.')
+                                    ->defaultValue(100)
+                                    ->treatNullLike(-1)
+                                ->end()
+
+                                ->booleanNode('allow_limit_override')
+                                    ->info('Allow overriding the "limit" parameter via URL (e.g. ?limit=50) for this collection.')
+                                    ->defaultTrue()
+                                    ->treatNullLike(true)
+                                ->end()
+
+                            ->end()
+                        ->end()
+
+                        // ──────────────────────────────
+                        // URL support
+                        // ──────────────────────────────
+                        ->arrayNode('url')
+                            ->info('URL Support (in response) for this collection.')
+                            ->addDefaultsIfNotSet()->children()
+
+                                ->booleanNode('support')
+                                    ->info('Whether to include URL elements in API responses.')
+                                    ->defaultNull()
+                                ->end()
+
+                                ->booleanNode('absolute')
+                                    ->info('Generate absolute URLs if true, relative otherwise')
+                                    ->defaultNull()
+                                ->end()
+
+                                ->scalarNode('property')
+                                    ->info('The name of the URL property in response.')
+                                    ->defaultNull()
+                                ->end()
+
+                            ->end()
+                        ->end()
+
+                        // ──────────────────────────────
+                        // Rate Limit
+                        // ──────────────────────────────
+                        ->arrayNode('rate_limit')
+                            ->info('Configuration for API rate limiting.')
+                            ->addDefaultsIfNotSet()->children()
+
+                                ->booleanNode('enabled')
+                                    ->info('Enable or disable rate limiting for this API provider.')
+                                    ->defaultFalse()
+                                ->end()
+
+                                ->scalarNode('window')
+                                    ->info('Time window for rate limiting (e.g. "1 hour", "15 minutes").')
+                                    ->defaultValue('100/hour')
+                                ->end()
+
+                                ->arrayNode('by_role')
+                                    ->info('Specific rate limits based on user roles.')
+                                    ->normalizeKeys(false)
+                                    ->scalarPrototype()->end()
+                                    ->defaultValue([])
+                                ->end()
+
+                                ->arrayNode('by_user')
+                                    ->info('Specific rate limits for individual users identified by user ID or username.')
+                                    ->normalizeKeys(false)
+                                    ->scalarPrototype()->end()
+                                    ->defaultValue([])
+                                ->end()
+
+                                ->arrayNode('by_ip')
+                                    ->info('Specific rate limits based on client IP addresses.')
+                                    ->normalizeKeys(false)
+                                    ->scalarPrototype()->end()
+                                    ->defaultValue([])
+                                ->end()
+
+                                ->arrayNode('by_application')
+                                    ->info('Specific rate limits for different application keys or API clients.')
+                                    ->normalizeKeys(false)
+                                    ->scalarPrototype()->end()
+                                    ->defaultValue([])
+                                ->end()
+
+                                ->booleanNode('include_headers')
+                                    ->info('Whether to include rate limit headers in responses.')
+                                    ->defaultTrue()
+                                ->end()
+
+                            ->end()
                         ->end()
 
                         // ──────────────────────────────
                         // REST endpoints
                         // ──────────────────────────────
                         ->arrayNode('endpoints')
-                        ->info('Configure the endpoints available for this collection. Default: index, create, read, update, delete.')
-                        ->useAttributeAsKey('endpoint')  
+                            ->info('Configure the endpoints available for this collection. Default: index, create, read, update, delete.')
+                            ->useAttributeAsKey('endpoint')  
                             ->requiresAtLeastOneElement()
                             ->arrayPrototype()
-                            ->ignoreExtraKeys(false)
+                            // ->ignoreExtraKeys(false)
                                 ->children()
+
+                                    ->booleanNode('enabled')
+                                        ->info('Enable or disable this endpoint.')
+                                        ->defaultTrue()
+                                    ->end()
 
                                     // ──────────────────────────────
                                     // Route config
                                     // ──────────────────────────────
                                     ->arrayNode('route')
-                                    ->info('Defines the HTTP configuration for the endpoint: route name, path, HTTP methods, controller, constraints, and routing options.')
-                                        ->isRequired()
+                                        ->info('Defines the HTTP configuration for the endpoint: route name, path, HTTP methods, controller, constraints, and routing options.')
+                                        // ->isRequired()
+                                        ->addDefaultsIfNotSet()
                                         ->children()
+
+                                            ->scalarNode('pattern')
+                                                ->info('Custom route name pattern. Falls back to global `routes.name` if null.')
+                                                ->defaultNull()
+                                            ->end()
 
                                             ->scalarNode('name')
                                                 ->info('Route name. If not defined, it will be generated automatically based on the collection and endpoint name.')
                                                 ->defaultNull()
                                             ->end()
 
-                                            // ->scalarNode('path')
-                                            //     ->info('Optional custom path for this endpoint.')
-                                            //     ->defaultNull()
-                                            // ->end()
+                                            ->scalarNode('path')
+                                                ->info('Optional custom path for this endpoint.')
+                                                ->defaultNull()
+                                            ->end()
 
                                             ->arrayNode('methods')
                                                 ->info('Allowed HTTP methods. Must be explicitly defined to avoid accidental exposure.')
-                                                ->requiresAtLeastOneElement()
-                                                ->isRequired()
+                                                // ->requiresAtLeastOneElement()
+                                                // ->isRequired()
                                                 ->scalarPrototype()->end()
                                             ->end()
 
@@ -654,12 +837,14 @@ return static function($definition)
                                                 ->info('Regex constraints for dynamic route parameters. Keys are parameter names, values are regular expressions that must be matched. For example: {id} must be digits, {slug} must be lowercase letters and dashes.')
                                                 ->normalizeKeys(false)
                                                 ->scalarPrototype()->end()
+                                                ->defaultValue([])
                                             ->end()
 
                                             ->arrayNode('options')
                                                 ->info('Advanced route options used by the Symfony router. Common keys include "utf8" (true to support UTF-8 paths), "compiler_class" (custom RouteCompiler), or any custom metadata for route generation and matching.')
                                                 ->normalizeKeys(false)
                                                 ->scalarPrototype()->end()
+                                                ->defaultValue([])
                                             ->end()
 
                                             ->scalarNode('condition')
@@ -667,17 +852,116 @@ return static function($definition)
                                                 ->defaultNull()
                                             ->end()
 
-                                            // TODO: Scheme
-                                            // TODO: Host
+                                            ->arrayNode('hosts')
+                                                ->info('Configure specific hosts for the endpoint routes.')
+                                                ->normalizeKeys(false)
+                                                ->scalarPrototype()->end()
+                                                ->defaultValue([])
+                                            ->end()
+
+                                            ->arrayNode('schemes')
+                                                ->info('Configure specific schemes (http, https) for the endpoint routes.')
+                                                ->normalizeKeys(false)
+                                                ->scalarPrototype()->end()
+                                                ->defaultValue([])
+                                            ->end()
 
                                         ->end()
                                     ->end()
 
                                     // ──────────────────────────────
+                                    // Pagination config
+                                    // ──────────────────────────────
+                                    ->arrayNode('pagination')
+                                        ->info('Pagination settings for a specific endpoint.')
+                                        ->addDefaultsIfNotSet()->children()
+
+                                            ->booleanNode('enabled')
+                                                ->info('Enable or disable pagination for this endpoint.')
+                                                ->defaultTrue()
+                                                ->treatNullLike(true)
+                                            ->end()
+
+                                            ->integerNode('limit')
+                                                ->info('Limit the number of items per page for this endpoint.')
+                                                ->defaultValue(10)
+                                                ->treatNullLike(-1)
+                                            ->end()
+
+                                            ->integerNode('max_limit')
+                                                ->info('Max number of items per page for this endpoint.')
+                                                ->defaultValue(100)
+                                                ->treatNullLike(-1)
+                                            ->end()
+
+                                            ->booleanNode('allow_limit_override')
+                                                ->info('Allow overriding the "limit" parameter via URL (e.g. ?limit=50) for this endpoint.')
+                                                ->defaultTrue()
+                                                ->treatNullLike(true)
+                                            ->end()
+
+                                        ->end()
+                                    ->end()
+
+                                    // ──────────────────────────────
+                                    // Rate Limit
+                                    // ──────────────────────────────
+                                    ->arrayNode('rate_limit')
+                                        ->info('Configuration for API rate limiting.')
+                                        ->addDefaultsIfNotSet()->children()
+
+                                            ->booleanNode('enabled')
+                                                ->info('Enable or disable rate limiting for this API provider.')
+                                                ->defaultFalse()
+                                            ->end()
+
+                                            ->scalarNode('window')
+                                                ->info('Time window for rate limiting (e.g., "1 minute", "1 hour").')
+                                                ->defaultValue('100/hour')
+                                            ->end()
+
+                                            ->arrayNode('by_role')
+                                                ->info('Specific rate limits based on user roles.')
+                                                ->normalizeKeys(false)
+                                                ->scalarPrototype()->end()
+                                                ->defaultValue([])
+                                            ->end()
+
+                                            ->arrayNode('by_user')
+                                                ->info('Specific rate limits for individual users identified by user ID or username.')
+                                                ->normalizeKeys(false)
+                                                ->scalarPrototype()->end()
+                                                ->defaultValue([])
+                                            ->end()
+
+                                            ->arrayNode('by_ip')
+                                                ->info('Specific rate limits based on client IP addresses.')
+                                                ->normalizeKeys(false)
+                                                ->scalarPrototype()->end()
+                                                ->defaultValue([])
+                                            ->end()
+
+                                            ->arrayNode('by_application')
+                                                ->info('Specific rate limits for different application keys or API clients.')
+                                                ->normalizeKeys(false)
+                                                ->scalarPrototype()->end()
+                                                ->defaultValue([])
+                                            ->end()
+
+                                            ->booleanNode('include_headers')
+                                                ->info('Whether to include rate limit headers in responses.')
+                                                ->defaultTrue()
+                                            ->end()
+
+                                        ->end()
+                                    ->end()
+
+                                    
+                                    // ──────────────────────────────
                                     // Repository config
                                     // ──────────────────────────────
                                     ->arrayNode('repository')
-                                    ->info('Specifies how data is retrieved: repository method to call, query criteria, ordering, limits, and loading strategy.')
+                                        ->info('Specifies how data is retrieved: repository method to call, query criteria, ordering, limits, and loading strategy.')
                                         // ->isRequired()
                                         ->addDefaultsIfNotSet()
                                         ->children()
@@ -738,23 +1022,8 @@ return static function($definition)
                                                 ->defaultNull()
                                             ->end()
 
-                                            ->scalarNode('summary')
-                                                ->info('A brief one-line summary for OpenAPI documentation. Useful when "description" is longer.')
-                                                ->defaultNull()
-                                            ->end()
-
-                                            ->booleanNode('deprecated')
-                                                ->info('Marks the endpoint as deprecated. Tools like Swagger will highlight this.')
-                                                ->defaultFalse()
-                                            ->end()
-
-                                            ->integerNode('cache_ttl')
-                                                ->info('Optional cache lifetime in seconds for responses. Can be used for HTTP cache headers or reverse proxy hints.')
-                                                ->defaultNull()
-                                            ->end()
-
-                                            // ->scalarNode('rate_limit')
-                                            //     ->info('Optional rate limit policy for this endpoint, e.g., "100/hour". Purely informative here unless implemented elsewhere.')
+                                            // ->scalarNode('summary')
+                                            //     ->info('A brief one-line summary for OpenAPI documentation. Useful when "description" is longer.')
                                             //     ->defaultNull()
                                             // ->end()
 
@@ -763,7 +1032,7 @@ return static function($definition)
                                                 ->defaultFalse()
                                             ->end()
 
-                                            ->scalarNode('tags')
+                                            ->scalarNode('tags') // TODO: arrayNode ?
                                                 ->info('Optional tags to group endpoints in documentation tools like Swagger UI. Accepts a comma-separated string or array.')
                                                 ->defaultNull()
                                             ->end()
@@ -935,35 +1204,6 @@ return static function($definition)
                                         ->end()
                                     ->end()
 
-                                    // ──────────────────────────────
-                                    // Rate limiting advanced (per role/user)
-                                    // ──────────────────────────────
-                                    ->arrayNode('rate_limit')
-                                        ->addDefaultsIfNotSet()
-                                        ->children()
-
-                                            ->scalarNode('global')
-                                                ->info('Default global rate limit for endpoint.')
-                                                ->defaultNull()
-                                            ->end()
-                                        
-                                            ->arrayNode('by_role')
-                                                ->info('Rate limit per role, e.g. ROLE_ADMIN: 500/hour')
-                                                ->normalizeKeys(false)
-                                                ->scalarPrototype()->end()
-                                                ->defaultValue([])
-                                            ->end()
-                                        
-                                            ->arrayNode('by_user')
-                                                ->info('Optional per-user rate limiting rules.')
-                                                ->normalizeKeys(false)
-                                                ->scalarPrototype()->end()
-                                                ->defaultValue([])
-                                            ->end()
-
-                                        ->end()
-                                    ->end()
-
                                 ->end()
                             ->end()
                         ->end()
@@ -990,7 +1230,6 @@ return static function($definition)
         ->always(function($providers) {
             
 
-            // ApiVendorResolver::resolve($providers);
 
             // 1. Generate missing versions
             ApiVersionNumberResolver::resolve($providers);
@@ -1001,31 +1240,66 @@ return static function($definition)
             // Collections (Doctrine Entities)
             // ──────────────────────────────
 
-            // Resolve the name of the collection App\\Entity\\Book → books
+            // Name
             CollectionNameResolver::resolve($providers);
 
-            // Resolve default collection route name
+            // Route
             CollectionRoutePatternResolver::default($providers);
-
-            // Resolve collection route path prefix
             CollectionRoutePrefixResolver::default($providers);
             CollectionRoutePrefixResolver::resolve($providers);
 
-            // Resolve collection search
+            // Search
             CollectionSearchStatusResolver::default($providers);
 
-            // Resolve collection pagination (per page)
-            CollectionPaginationResolver::default($providers);
+            // Pagination
+            CollectionPaginationEnabledResolver::default($providers);
+            CollectionPaginationLimitResolver::default($providers);
+            CollectionPaginationMaxLimitResolver::default($providers);
+            CollectionPaginationAllowLimitOverrideResolver::default($providers);
 
-            
+            // Rate Limit
+            // CollectionRateLimitEnabledResolver::default($providers);
+            // CollectionRateLimitWindowResolver::default($providers);
+            // CollectionRateLimitByRoleResolver::default($providers);
+            // CollectionRateLimitByUserResolver::default($providers);
+            // CollectionRateLimitByIpResolver::default($providers);
+            // CollectionRateLimitByApplicationResolver::default($providers);
+            // CollectionRateLimitIncludeHeadersResolver::default($providers);
+
             // ──────────────────────────────
             // REST endpoints
             // ──────────────────────────────
 
+            // EndpointEnabledResolver::default($providers);
+
+            // Route
             EndpointRouteNameResolver::default($providers);
             EndpointRouteNameResolver::resolve($providers);
+            EndpointRoutePathResolver::default($providers);
+            EndpointRoutePathResolver::resolve($providers);
+            EndpointRouteMethodsResolver::resolve($providers);
+            EndpointRouteRequirementsResolver::resolve($providers);
+            EndpointRouteOptionsResolver::resolve($providers);
 
+            // Pagination
+            EndpointPaginationEnabledResolver::default($providers);
+            EndpointPaginationLimitResolver::default($providers);
+            EndpointPaginationMaxLimitResolver::default($providers);
+            EndpointPaginationAllowLimitOverrideResolver::default($providers);
 
+            // URL Support
+            EndpointUrlSupportResolver::default($providers);
+            EndpointUrlAbsoluteResolver::default($providers);
+            EndpointUrlPropertyResolver::default($providers);
+
+            // Rate Limit
+            // EndpointRateLimitEnabledResolver::default($providers);
+            // EndpointRateLimitWindowResolver::default($providers);
+            // EndpointRateLimitByRoleResolver::default($providers);
+            // EndpointRateLimitByUserResolver::default($providers);
+            // EndpointRateLimitByIpResolver::default($providers);
+            // EndpointRateLimitByApplicationResolver::default($providers);
+            // EndpointRateLimitIncludeHeadersResolver::default($providers);
 
 
             foreach ($providers as $providerName => &$provider) {

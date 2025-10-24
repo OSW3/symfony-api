@@ -1,16 +1,18 @@
 <?php 
 namespace OSW3\Api\Resolver;
 
-final class CollectionPaginationResolver
+final class CollectionPaginationEnabledResolver
 {
     public static function default(array &$providers): array 
     {
         foreach ($providers as &$provider) {
             foreach ($provider['collections'] as &$collection) {
-                if (!isset($collection['pagination']) || $collection['pagination'] === null) 
+
+                if (!isset($collection['pagination']['enabled']) || $collection['pagination']['enabled'] === null) 
                 {
-                    $collection['pagination'] = $provider['pagination']['limit'];
+                    $collection['pagination']['enabled'] = $provider['pagination']['enabled'];
                 }
+                
             }
         }
 

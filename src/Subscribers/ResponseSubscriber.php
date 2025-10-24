@@ -57,14 +57,14 @@ class ResponseSubscriber implements EventSubscriberInterface
         // dump([
         //     "CONTEXT",
         //     "context" => $context,
-        //     "providers" => $this->configuration->getAllProviders(),
+        //     "providers" => $this->configuration->getProviders(),
         //     "provider" => $this->configuration->getProvider($context['provider']),
         // ]);
         
         // dump([
         //     "PROVIDERS",
         //     "context"      => $context,
-        //     "providers"    => $this->configuration->getAllProviders(),
+        //     "providers"    => $this->configuration->getProviders(),
         //     "provider"     => $this->configuration->getProvider($context['provider']),
         //     "has_provider" => $this->configuration->hasProvider($context['provider']),
         // ]);

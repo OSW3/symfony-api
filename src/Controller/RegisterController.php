@@ -59,7 +59,7 @@ class RegisterController
 
 
         // --- 2. Retrieve the provider name from the route
-        $providers = $this->configuration->getAllProviders();
+        $providers = $this->configuration->getProviders();
         $providerName = $this->findMatchingProvider($providers, $route, $action);
 
         if ($providerName === null) {

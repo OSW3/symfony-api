@@ -1,6 +1,7 @@
 <?php 
 namespace OSW3\Api\Subscribers;
 
+use OSW3\Api\Service\ConfigurationService;
 use OSW3\Api\Service\SupportService;
 use OSW3\Api\Service\ResponseService;
 use OSW3\Api\Service\TemplateService;
@@ -28,6 +29,8 @@ class RequestSubscriber implements EventSubscriberInterface
         private readonly TemplateService $templateService,
         private readonly SerializeService $serializeService,
         private readonly RepositoryService $repositoryService,
+        
+        private readonly ConfigurationService $configurationService,
     ){}
 
     public static function getSubscribedEvents(): array
@@ -37,6 +40,21 @@ class RequestSubscriber implements EventSubscriberInterface
     
     public function onRequest(RequestEvent $event): void 
     {
+        $provider = $this->configurationService->getContext('provider');
+        $collection = $this->configurationService->getContext('collection');
+        $endpoint = $this->configurationService->getContext('endpoint');
+
+
+        dump( $this->configurationService->getRateLimit($provider) );
+        dump( $this->configurationService->getRateLimit($provider, $collection) );
+        dd( $this->configurationService->getRateLimit($provider, $collection, $endpoint) );
+
+        // dump( $this->configurationService->getRoute($provider) );
+        // dump( $this->configurationService->getRoute($provider, $collection) );
+        // dd( $this->configurationService->getRoute($provider, $collection, $endpoint) );
+
+
+
         if (!$event->isMainRequest()) {
             return;
         }

@@ -157,18 +157,10 @@ final class TemplateService
     public function parse(array $template): array
     {
         // Current context
-
-        $currentRoute = $this->routeService->getCurrentRoute();
-        $context      = $currentRoute ? $currentRoute['options']['context'] : [];
-
-        // $context    = $this->configuration->getContext();
+        $context    = $this->routeService->getContext();
         $provider   = $context['provider'] ?? null;
         $collection = $context['collection'] ?? null;
         $endpoint   = $context['endpoint'] ?? null;
-
-        // ['provider' => $provider,'collection' => $collection,'endpoint' => $endpoint] = $this->getContext();
-
-        // return file_exists($path);
 
         array_walk_recursive($template, function (&$value, $k) use ($provider, $collection, $endpoint) {
             
@@ -196,10 +188,6 @@ final class TemplateService
 
             $data = $this->responseService->getData();
             $algorithm = $this->configuration->getResponseHashingAlgorithm($provider);
-
-
-            // dd($data);
-
 
 
             // App

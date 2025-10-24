@@ -21,7 +21,7 @@ final class RouteService
 
     public function getExposedRoutes(): array
     {
-        $providers = $this->configuration->getAllProviders();
+        $providers = $this->configuration->getProviders();
         $routes = [];
 
 
@@ -29,24 +29,42 @@ final class RouteService
         // my_custom_api_v1, my_custom_api_v2, ...
         foreach ($providers as $providerName => $provider) {
 
+            // Add registration route if enabled
+            // -- 
+
             if ($this->configuration->isRegistrationEnabled($providerName)) {
                 $this->addRegisterRoute($routes, $providerName);
             }
+
+
+            // Add authentication route if enabled
+            // -- 
 
             if ($this->configuration->isLoginEnabled($providerName)) {
                 $this->addLoginRoute($routes, $providerName);
             }
 
+
+            // Add collection routes if enabled
+            // --
+
             foreach ($provider['collections'] ?? [] as $entityClass => $entityOptions) {
                 foreach ($entityOptions['endpoints'] ?? [] as $endpointName => $endpointOption) 
                 {
+                    if (!$endpointOption['enabled']) {
+                        continue;
+                    }
+
                     // Route Name
                     $name = $endpointOption['route']['name'];
 
                     // Route path
-                    $prefix     = preg_replace("#/$#", "", $entityOptions['route']['prefix']);
-                    $collection = $entityOptions['name'];
-                    $path       = "{$prefix}/{$collection}";
+                    // $prefix     = preg_replace("#/$#", "", $entityOptions['route']['prefix']);
+                    // $collection = $entityOptions['name'];
+                    // $path       = "{$prefix}/{$collection}";
+                    $path       = $endpointOption['route']['path'];
+
+                    // dd( $prefix, $entityOptions['route']['prefix'], $collection, $endpointOption['route']['path'] );
                     foreach ($endpointOption['route']['options'] ?? [] as $opt) $path .= "/{{$opt}}";
 
 
@@ -234,7 +252,7 @@ final class RouteService
      */
     public function isRegisteredRoute(string $route): bool 
     {
-        // $providers = $this->configuration->getAllProviders();
+        // $providers = $this->configuration->getProviders();
         // $routes = [];
 
         // dump($this->getExposedRoutes());
@@ -289,7 +307,7 @@ final class RouteService
      */
     public function isMethodSupported(string $route): bool 
     {
-        // $providers = $this->configuration->getAllProviders();
+        // $providers = $this->configuration->getProviders();
         $method    = $this->request->getMethod();
 
 
