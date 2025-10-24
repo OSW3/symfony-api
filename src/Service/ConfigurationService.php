@@ -107,6 +107,38 @@ class ConfigurationService
         $providers = $this->getProviders();
         return array_key_exists($provider, $providers);
     }
+    
+    /**
+     * Check if a specific API provider is enabled.
+     * 
+     * @param string $provider Name of the API provider
+     * @return bool True if the provider is enabled, false otherwise
+     */
+    public function isProviderEnabled(string $provider): bool
+    {
+        if (! $this->hasProvider($provider)) {
+            return false;
+        }
+
+        $providerConfig = $this->getProvider($provider);
+        return $providerConfig['enabled'] ?? false;
+    }
+
+    /**
+     * Check if a specific API provider is deprecated.
+     * 
+     * @param string $provider Name of the API provider
+     * @return bool True if the provider is deprecated, false otherwise
+     */
+    public function isProviderDeprecated(string $provider): bool
+    {
+        if (! $this->hasProvider($provider)) {
+            return false;
+        }
+
+        $providerConfig = $this->getProvider($provider);
+        return $providerConfig['deprecated'] ?? false;
+    }
 
 
 
@@ -168,6 +200,48 @@ class ConfigurationService
         return $collectionConfig['name'] ?? null;
     }
 
+    /**
+     * Check if a specific collection is enabled.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string $collection Name of the collection
+     * @return bool True if the collection is enabled, false otherwise
+     */
+    public function isCollectionEnabled(string $provider, string $collection): bool
+    {
+        if (! $this->hasProvider($provider)) {
+            return false;
+        }
+
+        if (! $this->hasCollection($provider, $collection)) {
+            return false;
+        }
+
+        $collectionConfig = $this->getCollection($provider, $collection);
+        return $collectionConfig['enabled'] ?? $this->isProviderEnabled($provider);
+    }
+
+    /**
+     * Check if a specific collection is deprecated.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string $collection Name of the collection
+     * @return bool True if the collection is deprecated, false otherwise
+     */
+    public function isCollectionDeprecated(string $provider, string $collection): bool
+    {
+        if (! $this->hasProvider($provider)) {
+            return false;
+        }
+
+        if (! $this->hasCollection($provider, $collection)) {
+            return false;
+        }
+        
+        $collectionConfig = $this->getCollection($provider, $collection);
+        return $collectionConfig['deprecated'] ?? false;
+    }
+
 
 
     // ──────────────────────────────
@@ -215,6 +289,58 @@ class ConfigurationService
     {
         $endpoints = $this->getEndpoints($provider, $collection);
         return array_key_exists($endpoint, $endpoints);
+    }
+
+    /**
+     * Check if a specific endpoint is enabled.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string $collection Name of the collection
+     * @param string $endpoint Name of the endpoint
+     * @return bool True if the endpoint is enabled, false otherwise
+     */
+    public function isEndpointEnabled(string $provider, string $collection, string $endpoint): bool
+    {
+        if (! $this->hasProvider($provider)) {
+            return false;
+        }
+
+        if (! $this->hasCollection($provider, $collection)) {
+            return false;
+        }
+        
+        if (! $this->hasEndpoint($provider, $collection, $endpoint)) {
+            return false;
+        }
+
+        $endpointConfig = $this->getEndpoint($provider, $collection, $endpoint);
+        return $endpointConfig['enabled'] ?? $this->isCollectionEnabled($provider, $collection);
+    }
+
+    /**
+     * Check if a specific endpoint is deprecated.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string $collection Name of the collection
+     * @param string $endpoint Name of the endpoint
+     * @return bool True if the endpoint is deprecated, false otherwise
+     */
+    public function isEndpointDeprecated(string $provider, string $collection, string $endpoint): bool
+    {
+        if (! $this->hasProvider($provider)) {
+            return false;
+        }
+
+        if (! $this->hasCollection($provider, $collection)) {
+            return false;
+        }
+        
+        if (! $this->hasEndpoint($provider, $collection, $endpoint)) {
+            return false;
+        }
+
+        $endpointConfig = $this->getEndpoint($provider, $collection, $endpoint);
+        return $endpointConfig['deprecated'] ?? false;
     }
 
 
@@ -496,6 +622,14 @@ class ConfigurationService
         return $providerOptions['routes']['hosts'] ?? [];
     }
 
+    /**
+     * Get the route schemes with optional fallback at endpoint, collection or provider level.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return array Route schemes
+     */
     public function getRouteSchemes(string $provider, ?string $collection = null, ?string $endpoint = null): array
     {
         if (! $this->hasProvider($provider)) {
@@ -976,6 +1110,14 @@ class ConfigurationService
     // RATE LIMITING
     // ──────────────────────────────
 
+    /**
+     * Get the rate limit configuration with optional fallback at endpoint, collection or provider level.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return array Rate limit configuration array
+     */
     public function getRateLimit(string $provider, ?string $collection = null, ?string $endpoint = null): array
     {
         if (! $this->hasProvider($provider)) {
@@ -1003,58 +1145,214 @@ class ConfigurationService
         return $providerOptions['rate_limit'] ?? [];
     }
 
-    // public function isRateLimitEnabled(string $providerName): bool
-    // {
-    //     return $this->configuration[$providerName]['rate_limit']['enable'] ?? false;
-    // }
-
-    // public function getRateLimit(string $providerName): int
-    // {
-    //     return $this->configuration[$providerName]['rate_limit']['limit'] ?? 1000;
-    // }
-
-    // public function getRateLimit(string $providerName, string $entityClass, string $endpointName): string
-    // {
-    //     return $this->getEndpoint($providerName, $entityClass, $endpointName)['rate_limit']['global'] ?? '';
-    // }
-
-    // public function getRateLimitByRole(string $providerName, string $entityClass, string $endpointName): array
-    // {
-    //     return $this->getEndpoint($providerName, $entityClass, $endpointName)['rate_limit']['by_role'] ?? [];
-    // }
-
-    // public function getRateLimitByUser(string $providerName, string $entityClass, string $endpointName): array
-    // {
-    //     return $this->getEndpoint($providerName, $entityClass, $endpointName)['rate_limit']['by_user'] ?? [];
-    // }
-
-
-
-
-
-
-
-
-
-
-    
-    // ──────────────────────────────
-    // DEBUG & TRACING
-    // ──────────────────────────────
-
-    public function isDebugEnabled(string $providerName): bool
+    /**
+     * Check if rate limiting is enabled with optional fallback at endpoint, collection or provider level.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return bool True if rate limiting is enabled, false otherwise
+     */
+    public function isRateLimitEnabled(string $provider, ?string $collection = null, ?string $endpoint = null): bool
     {
-        return $this->configuration[$providerName]['debug']['enable'] ?? false;
+        if (! $this->hasProvider($provider)) {
+            return false;
+        }
+
+        // 1. Endpoint-specific rate limit enable
+        if ($collection && $endpoint) {
+            $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
+            if ($endpointOptions && isset($endpointOptions['rate_limit']['enabled'])) {
+                return $endpointOptions['rate_limit']['enabled'];
+            }
+        }
+
+        // 2. Collection-level rate limit enable
+        if ($collection) {
+            $collectionOptions = $this->getCollection($provider, $collection);
+            if ($collectionOptions && isset($collectionOptions['rate_limit']['enabled'])) {
+                return $collectionOptions['rate_limit']['enabled'];
+            }
+        }
+
+        // 3. Global default rate limit enable
+        $providerOptions = $this->getProvider($provider);
+        return $providerOptions['rate_limit']['enabled'] ?? false;
     }
 
-    public function isTracingEnabled(string $providerName): bool
+    /**
+     * Get the rate limit value with optional fallback at endpoint, collection or provider level.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return string Rate limit value (e.g., '100/hour')
+     */
+    public function getRateLimitValue(string $provider, ?string $collection = null, ?string $endpoint = null): string
     {
-        return $this->configuration[$providerName]['tracing']['enable'] ?? false;
+        if (! $this->hasProvider($provider)) {
+            return '100/hour';
+        }
+
+        // 1. Endpoint-specific rate limit
+        if ($collection && $endpoint) {
+            $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
+            if ($endpointOptions && isset($endpointOptions['rate_limit']['limit'])) {
+                return $endpointOptions['rate_limit']['limit'];
+            }
+        }
+
+        // 2. Collection-level rate limit
+        if ($collection) {
+            $collectionOptions = $this->getCollection($provider, $collection);
+            if ($collectionOptions && isset($collectionOptions['rate_limit']['limit'])) {
+                return $collectionOptions['rate_limit']['limit'];
+            }
+        }
+
+        // 3. Global default rate limit
+        $providerOptions = $this->getProvider($provider);
+        return $providerOptions['rate_limit']['limit'] ?? '100/hour';
     }
 
-    public function isTracingIdRequestEnabled(string $providerName): bool
+    /**
+     * Get the rate limit configuration by role with optional fallback at endpoint, collection or provider level.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return array Rate limit configuration by role
+     */
+    public function getRateLimitByRole(string $provider, ?string $collection = null, ?string $endpoint = null): array
     {
-        return $this->configuration[$providerName]['tracing']['request'] ?? false;
+        if (! $this->hasProvider($provider)) {
+            return [];
+        }
+
+        // 1. Endpoint-specific rate limit by_role
+        if ($collection && $endpoint) {
+            $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
+            if ($endpointOptions && isset($endpointOptions['rate_limit']['by_role'])) {
+                return $endpointOptions['rate_limit']['by_role'];
+            }
+        }
+
+        // 2. Collection-level rate limit by_role
+        if ($collection) {
+            $collectionOptions = $this->getCollection($provider, $collection);
+            if ($collectionOptions && isset($collectionOptions['rate_limit']['by_role'])) {
+                return $collectionOptions['rate_limit']['by_role'];
+            }
+        }
+
+        // 3. Global default rate limit by_role
+        $providerOptions = $this->getProvider($provider);
+        return $providerOptions['rate_limit']['by_role'] ?? [];
+    }
+
+    /**
+     * Get the rate limit configuration by role with optional fallback at endpoint, collection or provider level.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return array Rate limit configuration by role
+     */
+    public function getRateLimitByUser(string $provider, ?string $collection = null, ?string $endpoint = null): array
+    {
+        if (! $this->hasProvider($provider)) {
+            return [];
+        }
+
+        // 1. Endpoint-specific rate limit by_user
+        if ($collection && $endpoint) {
+            $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
+            if ($endpointOptions && isset($endpointOptions['rate_limit']['by_user'])) {
+                return $endpointOptions['rate_limit']['by_user'];
+            }
+        }
+
+        // 2. Collection-level rate limit by_user
+        if ($collection) {
+            $collectionOptions = $this->getCollection($provider, $collection);
+            if ($collectionOptions && isset($collectionOptions['rate_limit']['by_user'])) {
+                return $collectionOptions['rate_limit']['by_user'];
+            }
+        }
+
+        // 3. Global default rate limit by_user
+        $providerOptions = $this->getProvider($provider);
+        return $providerOptions['rate_limit']['by_user'] ?? [];
+    }
+
+    /**
+     * Get the rate limit configuration by user with optional fallback at endpoint, collection or provider level.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return array Rate limit configuration by user
+     */
+    public function getRateLimitByIp(string $provider, ?string $collection = null, ?string $endpoint = null): array
+    {
+        if (! $this->hasProvider($provider)) {
+            return [];
+        }
+
+        // 1. Endpoint-specific rate limit by_ip
+        if ($collection && $endpoint) {
+            $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
+            if ($endpointOptions && isset($endpointOptions['rate_limit']['by_ip'])) {
+                return $endpointOptions['rate_limit']['by_ip'];
+            }
+        }
+
+        // 2. Collection-level rate limit by_ip
+        if ($collection) {
+            $collectionOptions = $this->getCollection($provider, $collection);
+            if ($collectionOptions && isset($collectionOptions['rate_limit']['by_ip'])) {
+                return $collectionOptions['rate_limit']['by_ip'];
+            }
+        }
+
+        // 3. Global default rate limit by_ip
+        $providerOptions = $this->getProvider($provider);
+        return $providerOptions['rate_limit']['by_ip'] ?? [];
+    }
+
+    /**
+     * Get the rate limit configuration by application with optional fallback at endpoint, collection or provider level.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return array Rate limit configuration by application
+     */
+    public function getRateLimitByApp(string $provider, ?string $collection = null, ?string $endpoint = null): array
+    {
+        if (! $this->hasProvider($provider)) {
+            return [];
+        }
+
+        // 1. Endpoint-specific rate limit by_application
+        if ($collection && $endpoint) {
+            $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
+            if ($endpointOptions && isset($endpointOptions['rate_limit']['by_application'])) {
+                return $endpointOptions['rate_limit']['by_application'];
+            }
+        }
+
+        // 2. Collection-level rate limit by_application
+        if ($collection) {
+            $collectionOptions = $this->getCollection($provider, $collection);
+            if ($collectionOptions && isset($collectionOptions['rate_limit']['by_application'])) {
+                return $collectionOptions['rate_limit']['by_application'];
+            }
+        }
+
+        // 3. Global default rate limit by_application
+        $providerOptions = $this->getProvider($provider);
+        return $providerOptions['rate_limit']['by_application'] ?? [];
     }
 
 
@@ -1062,6 +1360,35 @@ class ConfigurationService
     // ──────────────────────────────
     // TEMPLATES
     // ──────────────────────────────
+
+    public function getTemplates(string $provider, ?string $collection = null, ?string $endpoint = null): array
+    {
+        if (! $this->hasProvider($provider)) {
+            return [];
+        }
+
+        // 1. Endpoint-specific templates
+        if ($collection && $endpoint) {
+            $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
+            if ($endpointOptions && isset($endpointOptions['templates'])) {
+                return $endpointOptions['templates'];
+            }
+        }
+
+        // 2. Collection-level templates
+        if ($collection) {
+            $collectionOptions = $this->getCollection($provider, $collection);
+            if ($collectionOptions && isset($collectionOptions['templates'])) {
+                return $collectionOptions['templates'];
+            }
+        }
+
+        // 3. Global default templates
+        $providerOptions = $this->getProvider($provider);
+        return $providerOptions['templates'] ?? [];
+    }
+
+    
 
     /**
      * Get the template path for list responses for a specific API provider.
@@ -1116,6 +1443,36 @@ class ConfigurationService
     public function getResponseFormat(string $providerName): string
     {
         return $this->configuration[$providerName]['response']['format'] ?? 'json';
+    }
+
+
+
+
+
+
+
+
+
+
+
+    
+    // ──────────────────────────────
+    // DEBUG & TRACING
+    // ──────────────────────────────
+
+    public function isDebugEnabled(string $providerName): bool
+    {
+        return $this->configuration[$providerName]['debug']['enable'] ?? false;
+    }
+
+    public function isTracingEnabled(string $providerName): bool
+    {
+        return $this->configuration[$providerName]['tracing']['enable'] ?? false;
+    }
+
+    public function isTracingIdRequestEnabled(string $providerName): bool
+    {
+        return $this->configuration[$providerName]['tracing']['request'] ?? false;
     }
 
 

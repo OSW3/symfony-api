@@ -8,22 +8,40 @@ use OSW3\Api\Resolver\CollectionNameResolver;
 use OSW3\Api\Resolver\ApiVersionNumberResolver;
 use OSW3\Api\Resolver\EndpointRouteNameResolver;
 use OSW3\Api\Resolver\EndpointRoutePathResolver;
+use OSW3\Api\Resolver\EndpointTemplatesResolver;
+use OSW3\Api\Resolver\ProviderIsEnabledResolver;
 use OSW3\Api\Resolver\EndpointUrlSupportResolver;
+use OSW3\Api\Resolver\CollectionIsEnabledResolver;
+use OSW3\Api\Resolver\CollectionTemplatesResolver;
 use OSW3\Api\Resolver\EndpointUrlAbsoluteResolver;
 use OSW3\Api\Resolver\EndpointUrlPropertyResolver;
 use OSW3\Api\Resolver\EndpointRouteMethodsResolver;
 use OSW3\Api\Resolver\EndpointRouteOptionsResolver;
 use OSW3\Api\Resolver\CollectionRoutePrefixResolver;
+use OSW3\Api\Resolver\EndpointRateLimitByIpResolver;
 use OSW3\Api\Resolver\ApiVersionHeaderFormatResolver;
 use OSW3\Api\Resolver\CollectionRoutePatternResolver;
 use OSW3\Api\Resolver\CollectionSearchStatusResolver;
+use OSW3\Api\Resolver\EndpointRateLimitLimitResolver;
+use OSW3\Api\Resolver\CollectionRateLimitByIpResolver;
 use OSW3\Api\Resolver\EndpointPaginationLimitResolver;
+use OSW3\Api\Resolver\EndpointRateLimitByRoleResolver;
+use OSW3\Api\Resolver\EndpointRateLimitByUserResolver;
+use OSW3\Api\Resolver\CollectionRateLimitLimitResolver;
+use OSW3\Api\Resolver\EndpointRateLimitEnabledResolver;
 use OSW3\Api\Resolver\CollectionPaginationLimitResolver;
+use OSW3\Api\Resolver\CollectionRateLimitByRoleResolver;
+use OSW3\Api\Resolver\CollectionRateLimitByUserResolver;
 use OSW3\Api\Resolver\EndpointPaginationEnabledResolver;
 use OSW3\Api\Resolver\EndpointRouteRequirementsResolver;
+use OSW3\Api\Resolver\CollectionRateLimitEnabledResolver;
 use OSW3\Api\Resolver\EndpointPaginationMaxLimitResolver;
 use OSW3\Api\Resolver\CollectionPaginationEnabledResolver;
 use OSW3\Api\Resolver\CollectionPaginationMaxLimitResolver;
+use OSW3\Api\Resolver\EndpointRateLimitByApplicationResolver;
+use OSW3\Api\Resolver\EndpointRateLimitIncludeHeadersResolver;
+use OSW3\Api\Resolver\CollectionRateLimitByApplicationResolver;
+use OSW3\Api\Resolver\CollectionRateLimitIncludeHeadersResolver;
 use OSW3\Api\Resolver\EndpointPaginationAllowLimitOverrideResolver;
 use OSW3\Api\Resolver\CollectionPaginationAllowLimitOverrideResolver;
 
@@ -39,6 +57,24 @@ return static function($definition)
         ->arrayPrototype()
         ->info('Each key is an API provider. Typically used to group routes, versions and settings.')
         ->children()
+
+            // ──────────────────────────────
+            // Enabled
+            // ──────────────────────────────
+            ->booleanNode('enabled')
+                ->info('Enable or disable this provider.')
+                ->defaultTrue()
+                ->treatNullLike(true)
+            ->end()
+
+            // ──────────────────────────────
+            // Deprecated
+            // ──────────────────────────────
+            ->booleanNode('deprecated')
+                ->info('Whether this provider is deprecated.')
+                ->defaultFalse()
+                ->treatNullLike(false)
+            ->end()
 
             // ──────────────────────────────
             // Documentation
@@ -179,7 +215,7 @@ return static function($definition)
             ->end()
 
             // ──────────────────────────────
-            // Search
+            // Search support
             // ──────────────────────────────
 			->arrayNode('search')
                 ->info('Global search configuration for all collections.')
@@ -233,9 +269,10 @@ return static function($definition)
                         ->defaultFalse()
                     ->end()
 
-                    ->scalarNode('window')
-                        ->info('Time window for rate limiting (e.g. "1 hour", "15 minutes").')
+                    ->scalarNode('limit')
+                        ->info('Maximum number of requests allowed in the specified time window.')
                         ->defaultValue('100/hour')
+                        ->treatNullLike('100/hour')
                     ->end()
 
                     ->arrayNode('by_role')
@@ -275,37 +312,49 @@ return static function($definition)
             ->end()
 
             // ──────────────────────────────
-            // Response formatting 
+            // Template
             // ──────────────────────────────
-			->arrayNode('response')
-            ->info('Settings related to API response formatting, including templates, default format, caching, and headers.')
-            ->addDefaultsIfNotSet()->children()
-
-                ->arrayNode('templates')
+            ->arrayNode('templates')
                 ->info('Paths to the response template files used as models for formatting the API output for lists and single items.')
                 ->addDefaultsIfNotSet()->children()
 
                     ->scalarNode('list')
                         ->info('Path to the response template file used as a model for formatting the API output for lists.')
                         ->defaultValue('Resources/templates/list.yaml')
+                        ->treatNullLike('Resources/templates/list.yaml')
                     ->end()
 
                     ->scalarNode('item')
                         ->info('Path to the response template file used as a model for formatting the API output for single items.')
                         ->defaultValue('Resources/templates/item.yaml')
+                        ->treatNullLike('Resources/templates/item.yaml')
                     ->end()
 
                     ->scalarNode('error')
                         ->info('Path to the response template file used as a model for formatting error responses.')
                         ->defaultValue('Resources/templates/error.yaml')
+                        ->treatNullLike('Resources/templates/error.yaml')
                     ->end()
 
-                    ->scalarNode('no_content')
-                        ->info('Path to the response template file used as a model for formatting no content responses (e.g. 204 No Content).')
-                        ->defaultValue('Resources/templates/no_content.yaml')
+                    ->scalarNode('not_found')
+                        ->info('Path to the response template file used as a model for formatting not found responses (e.g. 404 Not Found).')
+                        ->defaultValue('Resources/templates/not_found.yaml')
+                        ->treatNullLike('Resources/templates/not_found.yaml')
                     ->end()
 
-                ->end()->end()
+                ->end()
+            ->end()
+
+
+
+
+            // ──────────────────────────────
+            // Response formatting 
+            // ──────────────────────────────
+			->arrayNode('response')
+            ->info('Settings related to API response formatting, including templates, default format, caching, and headers.')
+            ->addDefaultsIfNotSet()->children()
+
 
                 ->enumNode('format')
                     ->info('Default response format if not specified by the client via Accept header or URL extension.')
@@ -602,6 +651,25 @@ return static function($definition)
                     ->children()
 
                         // ──────────────────────────────
+                        // Enabled
+                        // ──────────────────────────────
+                        ->booleanNode('enabled')
+                            ->info('Enable or disable this provider.')
+                            ->defaultNull()
+                            // ->defaultTrue()
+                            // ->treatNullLike(null)
+                        ->end()
+
+                        // ──────────────────────────────
+                        // Deprecated
+                        // ──────────────────────────────
+                        ->booleanNode('deprecated')
+                            ->info('Whether this collection is deprecated.')
+                            ->defaultFalse()
+                            ->treatNullLike(false)
+                        ->end()
+
+                        // ──────────────────────────────
                         // Collection name
                         // ──────────────────────────────
                         ->scalarNode('name')
@@ -736,16 +804,16 @@ return static function($definition)
                                     ->defaultFalse()
                                 ->end()
 
-                                ->scalarNode('window')
-                                    ->info('Time window for rate limiting (e.g. "1 hour", "15 minutes").')
+                                ->scalarNode('limit')
+                                    ->info('Maximum number of requests allowed in the specified time window.')
                                     ->defaultValue('100/hour')
                                 ->end()
 
                                 ->arrayNode('by_role')
                                     ->info('Specific rate limits based on user roles.')
                                     ->normalizeKeys(false)
-                                    ->scalarPrototype()->end()
-                                    ->defaultValue([])
+                                    // ->scalarPrototype()->end()
+                                    // ->defaultValue([])
                                 ->end()
 
                                 ->arrayNode('by_user')
@@ -778,6 +846,37 @@ return static function($definition)
                         ->end()
 
                         // ──────────────────────────────
+                        // Template
+                        // ──────────────────────────────
+                        ->arrayNode('templates')
+                            ->info('Paths to the response template files used as models for formatting the API output for lists and single items.')
+                            ->addDefaultsIfNotSet()->children()
+
+                                ->scalarNode('list')
+                                    ->info('Path to the response template file used as a model for formatting the API output for lists.')
+                                    ->defaultNull()
+                                ->end()
+
+                                ->scalarNode('item')
+                                    ->info('Path to the response template file used as a model for formatting the API output for single items.')
+                                    ->defaultNull()
+                                ->end()
+
+                                ->scalarNode('error')
+                                    ->info('Path to the response template file used as a model for formatting error responses.')
+                                    ->defaultNull()
+                                ->end()
+
+                                ->scalarNode('not_found')
+                                    ->info('Path to the response template file used as a model for formatting not found responses (e.g. 404 Not Found).')
+                                    ->defaultNull()
+                                ->end()
+
+                            ->end()
+                        ->end()
+
+
+                        // ──────────────────────────────
                         // REST endpoints
                         // ──────────────────────────────
                         ->arrayNode('endpoints')
@@ -788,9 +887,23 @@ return static function($definition)
                             // ->ignoreExtraKeys(false)
                                 ->children()
 
+                                    // ──────────────────────────────
+                                    // Enabled
+                                    // ──────────────────────────────
                                     ->booleanNode('enabled')
                                         ->info('Enable or disable this endpoint.')
-                                        ->defaultTrue()
+                                        ->defaultNull()
+                                        // ->defaultTrue()
+                                        // ->treatNullLike(true)
+                                    ->end()
+
+                                    // ──────────────────────────────
+                                    // Deprecated
+                                    // ──────────────────────────────
+                                    ->booleanNode('deprecated')
+                                        ->info('Whether this endpoint is deprecated.')
+                                        ->defaultFalse()
+                                        ->treatNullLike(false)
                                     ->end()
 
                                     // ──────────────────────────────
@@ -915,8 +1028,8 @@ return static function($definition)
                                                 ->defaultFalse()
                                             ->end()
 
-                                            ->scalarNode('window')
-                                                ->info('Time window for rate limiting (e.g., "1 minute", "1 hour").')
+                                            ->scalarNode('limit')
+                                                ->info('Maximum number of requests allowed in the specified time window.')
                                                 ->defaultValue('100/hour')
                                             ->end()
 
@@ -956,7 +1069,37 @@ return static function($definition)
                                         ->end()
                                     ->end()
 
-                                    
+                                    // ──────────────────────────────
+                                    // Template
+                                    // ──────────────────────────────
+                                    ->arrayNode('templates')
+                                        ->info('Paths to the response template files used as models for formatting the API output for lists and single items.')
+                                        ->addDefaultsIfNotSet()->children()
+
+                                            ->scalarNode('list')
+                                                ->info('Path to the response template file used as a model for formatting the API output for lists.')
+                                                ->defaultNull()
+                                            ->end()
+
+                                            ->scalarNode('item')
+                                                ->info('Path to the response template file used as a model for formatting the API output for single items.')
+                                                ->defaultNull()
+                                            ->end()
+
+                                            ->scalarNode('error')
+                                                ->info('Path to the response template file used as a model for formatting error responses.')
+                                                ->defaultNull()
+                                            ->end()
+
+                                            ->scalarNode('not_found')
+                                                ->info('Path to the response template file used as a model for formatting not found responses (e.g. 404 Not Found).')
+                                                ->defaultNull()
+                                            ->end()
+
+                                        ->end()
+                                    ->end()
+
+
                                     // ──────────────────────────────
                                     // Repository config
                                     // ──────────────────────────────
@@ -1229,8 +1372,9 @@ return static function($definition)
     ->validate()
         ->always(function($providers) {
             
-
-
+            // Enabled
+            // ProviderIsEnabledResolver::default($providers);
+            
             // 1. Generate missing versions
             ApiVersionNumberResolver::resolve($providers);
             ApiVersionHeaderFormatResolver::resolve($providers);
@@ -1239,6 +1383,9 @@ return static function($definition)
             // ──────────────────────────────
             // Collections (Doctrine Entities)
             // ──────────────────────────────
+
+            // Enabled
+            CollectionIsEnabledResolver::default($providers);
 
             // Name
             CollectionNameResolver::resolve($providers);
@@ -1258,18 +1405,23 @@ return static function($definition)
             CollectionPaginationAllowLimitOverrideResolver::default($providers);
 
             // Rate Limit
-            // CollectionRateLimitEnabledResolver::default($providers);
-            // CollectionRateLimitWindowResolver::default($providers);
-            // CollectionRateLimitByRoleResolver::default($providers);
-            // CollectionRateLimitByUserResolver::default($providers);
-            // CollectionRateLimitByIpResolver::default($providers);
-            // CollectionRateLimitByApplicationResolver::default($providers);
-            // CollectionRateLimitIncludeHeadersResolver::default($providers);
+            CollectionRateLimitEnabledResolver::default($providers);
+            CollectionRateLimitLimitResolver::default($providers);
+            CollectionRateLimitByRoleResolver::default($providers);
+            CollectionRateLimitByUserResolver::default($providers);
+            CollectionRateLimitByIpResolver::default($providers);
+            CollectionRateLimitByApplicationResolver::default($providers);
+            CollectionRateLimitIncludeHeadersResolver::default($providers);
+
+            // Templates
+            CollectionTemplatesResolver::default($providers);
+
 
             // ──────────────────────────────
             // REST endpoints
             // ──────────────────────────────
 
+            // Enabled
             // EndpointEnabledResolver::default($providers);
 
             // Route
@@ -1293,93 +1445,17 @@ return static function($definition)
             EndpointUrlPropertyResolver::default($providers);
 
             // Rate Limit
-            // EndpointRateLimitEnabledResolver::default($providers);
-            // EndpointRateLimitWindowResolver::default($providers);
-            // EndpointRateLimitByRoleResolver::default($providers);
-            // EndpointRateLimitByUserResolver::default($providers);
-            // EndpointRateLimitByIpResolver::default($providers);
-            // EndpointRateLimitByApplicationResolver::default($providers);
-            // EndpointRateLimitIncludeHeadersResolver::default($providers);
+            EndpointRateLimitEnabledResolver::default($providers);
+            EndpointRateLimitLimitResolver::default($providers);
+            EndpointRateLimitByRoleResolver::default($providers);
+            EndpointRateLimitByUserResolver::default($providers);
+            EndpointRateLimitByIpResolver::default($providers);
+            EndpointRateLimitByApplicationResolver::default($providers);
+            EndpointRateLimitIncludeHeadersResolver::default($providers);
 
+            // Templates
+            EndpointTemplatesResolver::default($providers);
 
-            foreach ($providers as $providerName => &$provider) {
-                foreach ($provider['collections'] as $collectionName => &$collection) {
-                    foreach ($collection['endpoints'] as $endpointName => &$endpoint) {
-
-                        // EndpointRouteNameResolver::default($collection, $endpoint);
-                        // EndpointRouteNameResolver::resolve($provider, $endpoint, $endpointName, $collectionName);
-                        
-
-
-
-                        // ──────────────────────────────
-                        // Repository config
-                        // ──────────────────────────────
-
-                        // Route name
-                        // if (empty(trim($endpoint['repository']['service'])))
-                        // {
-                        //     $endpoint['repository']['service'] = null;
-                        // }
-
-                        // ──────────────────────────────
-                        // Metadata config
-                        // ──────────────────────────────
-
-                        // ──────────────────────────────
-                        // Access control
-                        // ──────────────────────────────
-
-
-
-                    //     // Endpoint route requirements
-                    //     if (!isset($endpoint['requirements'])) 
-                    //     {
-                    //         $endpoint['requirements'] = [];
-                    //     }
-                        
-                        // Endpoint route defaults params values
-                        // if (!isset($endpoint['defaults'])) 
-                        // {
-                        //     $endpoint['defaults'] = [];
-                        // }
-                        
-                        // Endpoint route options
-                    //     if (!isset($endpoint['options'])) 
-                    //     {
-                    //         $endpoint['options'] = [];
-                    //     }
-                        
-                    //     // Endpoint route conditions
-                    //     if (!isset($endpoint['conditions'])) 
-                    //     {
-                    //         $endpoint['conditions'] = '';
-                    //     }
-                        
-                    //     // Endpoint route host
-                    //     if (!isset($endpoint['host'])) 
-                    //     {
-                    //         $endpoint['host'] = '';
-                    //     }
-                        
-                    //     // Endpoint route schemes
-                    //     if (!isset($endpoint['schemes'])) 
-                    //     {
-                    //         $endpoint['schemes'] = [];
-                    //     }
-
-                    //     if (empty($endpoint['granted'])) 
-                    //     {
-                    //         $endpoint['granted'] = ['PUBLIC_ACCESS'];
-                    //     }
-                    //     if (!isset($endpoint['controller'])) 
-                    //     {
-                    //         $endpoint['controller'] = null;
-                    //     }
-
-                    }
-                }
-            }
 
             return $providers;
         })

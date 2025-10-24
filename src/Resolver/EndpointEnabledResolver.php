@@ -9,11 +9,14 @@ final class EndpointEnabledResolver
             foreach ($provider['collections'] as $collectionName => &$collection) {
                 foreach ($collection['endpoints'] as $endpointName => &$endpoint)  {
 
-
-                    // dump($endpoint['enabled']);
-                    // if (!isset($endpoint['enabled'])) {
-                    //     $endpoint['enabled'] = true;
-                    // }
+                    if (!$collection['enabled']) {
+                        $endpoint['enabled'] = false;
+                        continue;
+                    }
+                    
+                    if (!isset($endpoint['enabled']) || $endpoint['enabled'] === null) {
+                        $endpoint['enabled'] = $collection['enabled'];
+                    }
 
                 }
             }

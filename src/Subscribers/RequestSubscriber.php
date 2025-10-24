@@ -45,9 +45,9 @@ class RequestSubscriber implements EventSubscriberInterface
         $endpoint = $this->configurationService->getContext('endpoint');
 
 
-        dump( $this->configurationService->getRateLimit($provider) );
-        dump( $this->configurationService->getRateLimit($provider, $collection) );
-        dd( $this->configurationService->getRateLimit($provider, $collection, $endpoint) );
+        dump( $this->configurationService->getTemplates($provider) );
+        dump( $this->configurationService->getTemplates($provider, $collection) );
+        dd( $this->configurationService->getTemplates($provider, $collection, $endpoint) );
 
         // dump( $this->configurationService->getRoute($provider) );
         // dump( $this->configurationService->getRoute($provider, $collection) );
