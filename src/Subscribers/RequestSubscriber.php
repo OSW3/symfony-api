@@ -45,9 +45,11 @@ class RequestSubscriber implements EventSubscriberInterface
         $endpoint = $this->configurationService->getContext('endpoint');
 
 
-        dump( $this->configurationService->getTemplates($provider) );
-        dump( $this->configurationService->getTemplates($provider, $collection) );
-        dd( $this->configurationService->getTemplates($provider, $collection, $endpoint) );
+        dump( $this->configurationService->getResponse($provider) );
+        dump( $this->configurationService->getResponseFormat($provider) );
+        dump( $this->configurationService->getResponseAllowFormatOverrides($provider) );
+        dump( $this->configurationService->isResponseChecksumEnabled($provider) );
+        dd( $this->configurationService->getResponseChecksumAlgorithm($provider) );
 
         // dump( $this->configurationService->getRoute($provider) );
         // dump( $this->configurationService->getRoute($provider, $collection) );

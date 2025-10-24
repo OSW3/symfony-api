@@ -9,7 +9,6 @@ use OSW3\Api\Resolver\ApiVersionNumberResolver;
 use OSW3\Api\Resolver\EndpointRouteNameResolver;
 use OSW3\Api\Resolver\EndpointRoutePathResolver;
 use OSW3\Api\Resolver\EndpointTemplatesResolver;
-use OSW3\Api\Resolver\ProviderIsEnabledResolver;
 use OSW3\Api\Resolver\EndpointUrlSupportResolver;
 use OSW3\Api\Resolver\CollectionIsEnabledResolver;
 use OSW3\Api\Resolver\CollectionTemplatesResolver;
@@ -345,123 +344,149 @@ return static function($definition)
                 ->end()
             ->end()
 
-
-
-
             // ──────────────────────────────
-            // Response formatting 
+            // Response 
             // ──────────────────────────────
 			->arrayNode('response')
-            ->info('Settings related to API response formatting, including templates, default format, caching, and headers.')
-            ->addDefaultsIfNotSet()->children()
-
-
-                ->enumNode('format')
-                    ->info('Default response format if not specified by the client via Accept header or URL extension.')
-                    ->values(['json', 'xml', 'yaml'])
-                    ->defaultValue('json')
-                ->end()
-
-                ->arrayNode('cache_control')
-                ->info('Defines HTTP caching behavior for API responses, including Cache-Control directives and related headers.')
+                ->info('Settings related to API response formatting, including templates, default format, caching, and headers.')
                 ->addDefaultsIfNotSet()->children()
-
-                    ->booleanNode('public')
-                        ->info('If true, sets Cache-Control to "public", allowing shared caches. If false, sets to "private".')
-                        ->defaultTrue()
-                    ->end()
-
-                    ->booleanNode('no_store')
-                        ->info('If true, adds "no-store" to Cache-Control.')
-                        ->defaultFalse()
-                    ->end()
-
-                    ->booleanNode('must_revalidate')
-                        ->info('If true, adds "must-revalidate" to Cache-Control.')
-                        ->defaultTrue()
-                    ->end()
-
-                    ->integerNode('max_age')
-                        ->info('Max age in seconds (0 = no cache).')
-                        ->defaultValue(3600)
-                    ->end()
-
-                ->end()->end()
-
-                ->arrayNode('headers')
-                ->info('.')
-                ->addDefaultsIfNotSet()->children()
-
-                    ->arrayNode('expose')
-                        ->info('List of headers to expose via CORS.')
-                        ->scalarPrototype()->end()
-                        ->defaultValue(['Content-Type', 'Authorization', 'X-Requested-With', 'API-Version', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'])
-                    ->end()
-
-                    ->arrayNode('allow')
-                        ->info('List of headers allowed in CORS requests.')
-                        ->scalarPrototype()->end()
-                        ->defaultValue(['Content-Type', 'Authorization', 'X-Requested-With', 'API-Version'])
-                    ->end()
-
-                    ->arrayNode('vary')
-                        ->info('List of headers to include in the Vary response header.')
-                        ->scalarPrototype()->end()
-                        ->defaultValue(['Accept', 'API-Version'])  
-                    ->end()
-
-                    ->arrayNode('cache_control')
-                        ->info('Default Cache-Control directives to include in responses.')
-                        ->scalarPrototype()->end()
-                        ->defaultValue(['no-cache', 'no-store', 'must-revalidate']) 
-                    ->end()
-
-                    ->arrayNode('custom')
-                        ->info('Custom headers to always include in responses. Key is header name, value is header value.')
-                        ->normalizeKeys(false)
-                        ->scalarPrototype()->end()
-                        ->defaultValue(['X-Powered-By' => 'OSW3 Api'])
-                    ->end() 
-
-                    ->arrayNode('remove')
-                        ->info('List of headers to remove from responses.')
-                        ->scalarPrototype()->end()
-                        ->defaultValue(['X-Powered-By'])
-                    ->end()
-
-                ->end()->end()
-
-                ->enumNode('algorithm')
-                    ->info('Hash algorithm to use for response hashing. Options include "md5", "sha1", "sha256", etc.')
-                    ->values(['md5', 'sha1', 'sha256', 'sha512'])
-                    ->defaultValue('md5')
-                ->end()
-
-                ->arrayNode('compression')
-                ->info('Configuration for response compression settings.')
-                ->addDefaultsIfNotSet()->children()
-
-                    ->booleanNode('enable')
-                        ->info('Enable or disable response compression.')
-                        ->defaultFalse()
-                    ->end()
 
                     ->enumNode('format')
-                        ->info('Compression format to use.')
-                        ->defaultValue('gzip')
-                        ->values(['gzip', 'deflate', 'brotli'])
+                        ->info('Default response format if not specified by the client via Accept header or URL extension.')
+                        ->values(['json', 'xml', 'yaml'])
+                        ->defaultValue('json')
+                        ->treatNullLike('json')
                     ->end()
 
-                    ->integerNode('level')
-                        ->info('Compression level (0-9) for the selected format.')
-                        ->defaultValue(6)
-                        ->min(0)
-                        ->max(9)
+                    ->booleanNode('allow_format_override')
+                        ->info('If true, allows clients to override the response format using a URL parameter (e.g. ?format=xml).')
+                        ->defaultFalse()
+                        ->treatNullLike(false)
                     ->end()
 
-                ->end()->end()
+                    ->arrayNode('checksum')
+                        ->info('Configuration for response checksum/hash settings.')
+                        ->addDefaultsIfNotSet()->children()
 
-			->end()->end()
+                            ->booleanNode('enabled')
+                                ->info('If true, enables response checksum/hash verification.')
+                                ->defaultTrue()
+                                ->treatNullLike(true)
+                            ->end()
+
+                            ->enumNode('algorithm')
+                                ->info('Hash algorithm to use for response hashing. Options include "md5", "sha1", "sha256", etc.')
+                                ->values(['md5', 'sha1', 'sha256', 'sha512'])
+                                ->defaultValue('sha256')
+                                ->treatNullLike('sha256')
+                            ->end()
+
+                        ->end()
+                    ->end()
+
+
+
+                    ->arrayNode('cache_control')
+                    ->info('Defines HTTP caching behavior for API responses, including Cache-Control directives and related headers.')
+                    ->addDefaultsIfNotSet()->children()
+
+                        ->booleanNode('public')
+                            ->info('If true, sets Cache-Control to "public", allowing shared caches. If false, sets to "private".')
+                            ->defaultTrue()
+                        ->end()
+
+                        ->booleanNode('no_store')
+                            ->info('If true, adds "no-store" to Cache-Control.')
+                            ->defaultFalse()
+                        ->end()
+
+                        ->booleanNode('must_revalidate')
+                            ->info('If true, adds "must-revalidate" to Cache-Control.')
+                            ->defaultTrue()
+                        ->end()
+
+                        ->integerNode('max_age')
+                            ->info('Max age in seconds (0 = no cache).')
+                            ->defaultValue(3600)
+                        ->end()
+
+                    ->end()->end()
+
+                    ->arrayNode('headers')
+                    ->info('.')
+                    ->addDefaultsIfNotSet()->children()
+
+                        ->arrayNode('expose')
+                            ->info('List of headers to expose via CORS.')
+                            ->scalarPrototype()->end()
+                            ->defaultValue(['Content-Type', 'Authorization', 'X-Requested-With', 'API-Version', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'])
+                        ->end()
+
+                        ->arrayNode('allow')
+                            ->info('List of headers allowed in CORS requests.')
+                            ->scalarPrototype()->end()
+                            ->defaultValue(['Content-Type', 'Authorization', 'X-Requested-With', 'API-Version'])
+                        ->end()
+
+                        ->arrayNode('vary')
+                            ->info('List of headers to include in the Vary response header.')
+                            ->scalarPrototype()->end()
+                            ->defaultValue(['Accept', 'API-Version'])  
+                        ->end()
+
+                        ->arrayNode('cache_control')
+                            ->info('Default Cache-Control directives to include in responses.')
+                            ->scalarPrototype()->end()
+                            ->defaultValue(['no-cache', 'no-store', 'must-revalidate']) 
+                        ->end()
+
+                        ->arrayNode('custom')
+                            ->info('Custom headers to always include in responses. Key is header name, value is header value.')
+                            ->normalizeKeys(false)
+                            ->scalarPrototype()->end()
+                            ->defaultValue(['X-Powered-By' => 'OSW3 Api'])
+                        ->end() 
+
+                        ->arrayNode('remove')
+                            ->info('List of headers to remove from responses.')
+                            ->scalarPrototype()->end()
+                            ->defaultValue(['X-Powered-By'])
+                        ->end()
+
+                    ->end()->end()
+
+                    ->enumNode('algorithm')
+                        ->info('Hash algorithm to use for response hashing. Options include "md5", "sha1", "sha256", etc.')
+                        ->values(['md5', 'sha1', 'sha256', 'sha512'])
+                        ->defaultValue('md5')
+                    ->end()
+
+                    ->arrayNode('compression')
+                    ->info('Configuration for response compression settings.')
+                    ->addDefaultsIfNotSet()->children()
+
+                        ->booleanNode('enable')
+                            ->info('Enable or disable response compression.')
+                            ->defaultFalse()
+                        ->end()
+
+                        ->enumNode('format')
+                            ->info('Compression format to use.')
+                            ->defaultValue('gzip')
+                            ->values(['gzip', 'deflate', 'brotli'])
+                        ->end()
+
+                        ->integerNode('level')
+                            ->info('Compression level (0-9) for the selected format.')
+                            ->defaultValue(6)
+                            ->min(0)
+                            ->max(9)
+                        ->end()
+
+                    ->end()->end()
+
+                ->end()
+            ->end()
 
             // ──────────────────────────────
             // Serialization
@@ -1098,6 +1123,9 @@ return static function($definition)
 
                                         ->end()
                                     ->end()
+
+
+
 
 
                                     // ──────────────────────────────

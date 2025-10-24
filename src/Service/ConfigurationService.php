@@ -1361,6 +1361,14 @@ class ConfigurationService
     // TEMPLATES
     // ──────────────────────────────
 
+    /**
+     * Get the templates configuration with optional fallback at endpoint, collection or provider level.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return array Templates configuration array
+     */
     public function getTemplates(string $provider, ?string $collection = null, ?string $endpoint = null): array
     {
         if (! $this->hasProvider($provider)) {
@@ -1388,61 +1396,236 @@ class ConfigurationService
         return $providerOptions['templates'] ?? [];
     }
 
-    
-
     /**
-     * Get the template path for list responses for a specific API provider.
+     * Get the list template for a specific provider, collection, and endpoint.
+     * Falls back to collection-level or provider-level templates if not found.
      * 
-     * @param string $providerName Name of the API provider
-     * @return string Path to the list response template
+     * @param string $provider Name of the API provider
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return string List template
      */
-    public function getListTemplate(string $providerName): string
+    public function getListTemplate(string $provider, ?string $collection = null, ?string $endpoint = null): string
     {
-        return $this->configuration[$providerName]['response']['templates']['list'] ?? 'Resources/templates/list.yaml';
+        if (! $this->hasProvider($provider)) {
+            return '';
+        }
+
+        // 1. Endpoint-specific templates
+        if ($collection && $endpoint) {
+            $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
+            if ($endpointOptions && isset($endpointOptions['templates']['list'])) {
+                return $endpointOptions['templates']['list'];
+            }
+        }
+
+        // 2. Collection-level templates
+        if ($collection) {
+            $collectionOptions = $this->getCollection($provider, $collection);
+            if ($collectionOptions && isset($collectionOptions['templates']['list'])) {
+                return $collectionOptions['templates']['list'];
+            }
+        }
+
+        // 3. Global default templates
+        $providerOptions = $this->getProvider($provider);
+        return $providerOptions['templates']['list'] ?? '';
     }
 
     /**
-     * Get the template path for item responses for a specific API provider.
+     * Get the not found template for a specific provider, collection, and endpoint.
+     * Falls back to collection-level or provider-level templates if not found.
      * 
-     * @param string $providerName Name of the API provider
-     * @return string Path to the item response template
+     * @param string $provider Name of the API provider
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return string Not found template
      */
-    public function getItemTemplate(string $providerName): string
+    public function getItemTemplate(string $provider, ?string $collection = null, ?string $endpoint = null): string
     {
-        return $this->configuration[$providerName]['response']['templates']['item'] ?? 'Resources/templates/item.yaml';
+        if (! $this->hasProvider($provider)) {
+            return '';
+        }
+
+        // 1. Endpoint-specific templates
+        if ($collection && $endpoint) {
+            $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
+            if ($endpointOptions && isset($endpointOptions['templates']['item'])) {
+                return $endpointOptions['templates']['item'];
+            }
+        }
+
+        // 2. Collection-level templates
+        if ($collection) {
+            $collectionOptions = $this->getCollection($provider, $collection);
+            if ($collectionOptions && isset($collectionOptions['templates']['item'])) {
+                return $collectionOptions['templates']['item'];
+            }
+        }
+
+        // 3. Global default templates
+        $providerOptions = $this->getProvider($provider);
+        return $providerOptions['templates']['item'] ?? '';
     }
 
     /**
-     * Get the template path for error responses for a specific API provider.
+     * Get the not found template for a specific provider, collection, and endpoint.
+     * Falls back to collection-level or provider-level templates if not found.
      * 
-     * @param string $providerName Name of the API provider
-     * @return string Path to the error response template
+     * @param string $provider Name of the API provider
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return string Not found template
      */
-    public function getErrorTemplate(string $providerName): string
+    public function getErrorTemplate(string $provider, ?string $collection = null, ?string $endpoint = null): string
     {
-        return $this->configuration[$providerName]['response']['templates']['error'] ?? 'Resources/templates/error.yaml';
+        if (! $this->hasProvider($provider)) {
+            return '';
+        }
+
+        // 1. Endpoint-specific templates
+        if ($collection && $endpoint) {
+            $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
+            if ($endpointOptions && isset($endpointOptions['templates']['error'])) {
+                return $endpointOptions['templates']['error'];
+            }
+        }
+
+        // 2. Collection-level templates
+        if ($collection) {
+            $collectionOptions = $this->getCollection($provider, $collection);
+            if ($collectionOptions && isset($collectionOptions['templates']['error'])) {
+                return $collectionOptions['templates']['error'];
+            }
+        }
+
+        // 3. Global default templates
+        $providerOptions = $this->getProvider($provider);
+        return $providerOptions['templates']['error'] ?? '';
     }
 
     /**
-     * Get the template path for no content (204) responses for a specific API provider.
+     * Get the not found template for a specific API provider, collection, and endpoint.
+     * Falls back to collection-level or provider-level templates if not defined at lower levels.
      * 
-     * @param string $providerName Name of the API provider
-     * @return string Path to the no content response template
+     * @param string $provider Name of the API provider
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return string Not found template
      */
-    public function getNoContentTemplate(string $providerName): string
+    public function getNotFoundTemplate(string $provider, ?string $collection = null, ?string $endpoint = null): string
     {
-        return $this->configuration[$providerName]['response']['templates']['no_content'] ?? 'Resources/templates/no_content.yaml';
+        if (! $this->hasProvider($provider)) {
+            return '';
+        }
+
+        // 1. Endpoint-specific templates
+        if ($collection && $endpoint) {
+            $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
+            if ($endpointOptions && isset($endpointOptions['templates']['not_found'])) {
+                return $endpointOptions['templates']['not_found'];
+            }
+        }
+
+        // 2. Collection-level templates
+        if ($collection) {
+            $collectionOptions = $this->getCollection($provider, $collection);
+            if ($collectionOptions && isset($collectionOptions['templates']['not_found'])) {
+                return $collectionOptions['templates']['not_found'];
+            }
+        }
+
+        // 3. Global default templates
+        $providerOptions = $this->getProvider($provider);
+        return $providerOptions['templates']['not_found'] ?? '';
+    }
+
+
+
+    // ──────────────────────────────
+    // RESPONSES
+    // ──────────────────────────────
+
+    /**
+     * Get the response configuration for a specific provider.
+     * 
+     * @param string $provider Name of the API provider
+     * @return array Response configuration array
+     */
+    public function getResponse(string $provider): array
+    {
+        if (! $this->hasProvider($provider)) {
+            return [];
+        }
+
+        $providerOptions = $this->getProvider($provider);
+        return $providerOptions['response'] ?? [];
     }
 
     /**
-     * Get the response format for a specific API provider.
+     * Get the response format for a specific provider.
+     * Defaults to 'json' if not specified.
      * 
-     * @param string $providerName Name of the API provider
+     * @param string $provider Name of the API provider
      * @return string Response format (e.g., 'json', 'xml')
      */
-    public function getResponseFormat(string $providerName): string
+    public function getResponseFormat(string $provider): string
     {
-        return $this->configuration[$providerName]['response']['format'] ?? 'json';
+        if (! $this->hasProvider($provider)) {
+            return 'json';
+        }
+
+        $providerOptions = $this->getProvider($provider);
+        return $providerOptions['response']['format'] ?? 'json';
+    }
+
+    /**
+     * Check if format overrides are allowed for a specific provider.
+     * 
+     * @param string $provider Name of the API provider
+     * @return bool True if format overrides are allowed, false otherwise
+     */
+    public function getResponseAllowFormatOverrides(string $provider): bool
+    {
+        if (! $this->hasProvider($provider)) {
+            return false;
+        }
+
+        $providerOptions = $this->getProvider($provider);
+        return $providerOptions['response']['allow_format_override'] ?? false;
+    }
+
+    /**
+     * Check if response checksum is enabled for a specific provider.
+     * 
+     * @param string $provider Name of the API provider
+     * @return bool True if response checksum is enabled, false otherwise
+     */
+    public function isResponseChecksumEnabled(string $provider): bool
+    {
+        if (! $this->hasProvider($provider)) {
+            return false;
+        }
+
+        $options = $this->getResponse($provider);
+        return $options['checksum']['enabled'] ?? false;
+    }
+
+    /**
+     * Get the response checksum algorithm for a specific provider.
+     * Defaults to 'md5' if not specified.
+     * 
+     * @param string $provider Name of the API provider
+     * @return string Checksum algorithm (e.g., 'md5', 'sha256')
+     */
+    public function getResponseChecksumAlgorithm(string $provider): string
+    {
+        if (! $this->hasProvider($provider)) {
+            return 'md5';
+        }
+
+        $options = $this->getResponse($provider);
+        return $options['checksum']['algorithm'] ?? 'md5';
     }
 
 
