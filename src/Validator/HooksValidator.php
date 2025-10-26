@@ -11,7 +11,7 @@ final class HooksValidator
      */
     public static function validate(array $hooks): bool
     {
-        foreach (['before', 'after'] as $key) {
+        foreach (['before', 'after', 'around', 'on_success', 'on_error', 'on_complete'] as $key) {
             if (!isset($hooks[$key])) {
                 continue;
             }

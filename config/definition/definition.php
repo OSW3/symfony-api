@@ -589,115 +589,308 @@ return static function($definition)
             ->end()
 
             // ──────────────────────────────
+            // HOOKS
+            // ──────────────────────────────
+            ->arrayNode('hooks')
+                ->info('Defines callable hooks to be executed before and after all actions.')
+                ->addDefaultsIfNotSet()->children()
+
+                    ->enumNode('merge')
+                        ->info('Defines how to handle merging hooks: "replace" to overwrite existing hooks, "append" to add to them, or "prepend" to add them at the beginning.')
+                        ->values(['replace', 'append', 'prepend'])
+                        ->defaultValue('append')
+                        ->treatNullLike('append')
+                    ->end()
+
+                    ->arrayNode('before')
+                        ->info('List of callable listeners to execute **before** the endpoint action is run.')
+                        ->scalarPrototype()->end()
+                        ->defaultValue([])
+                    ->end()
+
+                    ->arrayNode('after')
+                        ->info('List of callable listeners to execute **after** the endpoint action has completed.')
+                        ->scalarPrototype()->end()
+                        ->defaultValue([])
+                    ->end()
+
+                    ->arrayNode('around')
+                        ->info('List of callable listeners to execute **around** the endpoint action.')
+                        ->scalarPrototype()->end()
+                        ->defaultValue([])
+                    ->end()
+
+                    ->arrayNode('on_success')
+                        ->info('List of callable listeners to execute on success action.')
+                        ->scalarPrototype()->end()
+                        ->defaultValue([])
+                    ->end()
+
+                    ->arrayNode('on_failure')
+                        ->info('List of callable listeners to execute on failure action.')
+                        ->scalarPrototype()->end()
+                        ->defaultValue([])
+                    ->end()
+
+                    ->arrayNode('on_complete')
+                        ->info('List of callable listeners to execute on complete action.')
+                        ->scalarPrototype()->end()
+                        ->defaultValue([])
+                    ->end()
+
+                ->end()
+
+                ->validate()
+                    ->ifTrue(fn($hooks) => !HooksValidator::validate($hooks))
+                    ->thenInvalid('One or more hooks (before/after) are invalid. They must be valid callables (Class::method or callable).')
+                ->end()
+            ->end()
+
+            // ──────────────────────────────
+            // Access control
+            // ──────────────────────────────
+            ->arrayNode('access_control')
+                ->info('Defines access control settings for the API provider.')
+                ->addDefaultsIfNotSet()->children()
+
+                    ->enumNode('merge')
+                        ->info('Defines how to handle merging access control settings: "replace" to overwrite existing settings, "append" to add to them, or "prepend" to add them at the beginning.')
+                        ->values(['replace', 'append', 'prepend'])
+                        ->defaultValue('append')
+                        ->treatNullLike('append')
+                    ->end()
+
+                    ->arrayNode('roles')
+                        ->info('List of Symfony security roles required to access this API provider.')
+                        ->scalarPrototype()->end()
+                        ->defaultValue([])
+                    ->end()
+
+                    ->scalarNode('voter')
+                        ->info('Optional custom voter FQCN. If set, Symfony will use this voter to determine access instead of roles or expressions.')
+                        ->defaultNull()
+                    ->end()
+
+                ->end()
+            ->end()
+
+            // ──────────────────────────────
             // Security
             // ──────────────────────────────
 			->arrayNode('security')
-            ->info('Defines security settings for the API.')
-            ->addDefaultsIfNotSet()->children()
-
-                ->arrayNode('entity')
-                ->info('Defines the user entity used for authentication and authorization.')
+                ->info('Defines security settings for the API.')
                 ->addDefaultsIfNotSet()->children()
 
-                    ->scalarNode('class')
-                        ->info('Fully qualified class name of the User entity used for authentication and authorization.')
-                        ->defaultNull()
-                        ->validate()
-                            ->ifTrue(fn($class) => $class !== null && !EntityValidator::isValid($class))
-                            ->thenInvalid('Invalid entity class "%s".', 'entity.class')
+                    ->arrayNode('entity')
+                        ->info('Defines the user entity used for authentication and authorization.')
+                        ->addDefaultsIfNotSet()->children()
+
+                            ->scalarNode('class')
+                                ->info('Fully qualified class name of the User entity used for authentication and authorization.')
+                                ->defaultNull()
+                                ->validate()
+                                    ->ifTrue(fn($class) => $class !== null && !EntityValidator::isValid($class))
+                                    ->thenInvalid('Invalid entity class "%s".', 'entity.class')
+                                ->end()
+                            ->end()
+
+                            ->scalarNode('identifier')
+                                ->info('Identifier field for the User entity (e.g., "email").')
+                                ->defaultValue('email')
+                                ->treatNullLike('email')
+                            ->end()
+
+                            ->scalarNode('password')
+                                ->info('Password field for the User entity (e.g., "password").')
+                                ->defaultValue('password')
+                                ->treatNullLike('password')
+                            ->end()
+
                         ->end()
                     ->end()
 
-                ->end()->end()
-
-                ->arrayNode('routes')
-                ->info('Defines the security routes settings for the API.')
-                ->addDefaultsIfNotSet()->children()
-
-                    ->scalarNode('collection')
-                        ->info('Name of the collection used in the URL path for registration and login endpoints.')
+                    ->scalarNode('group')
+                        ->info('Route group for security-related endpoints (login, registration, etc.).')
                         ->defaultValue('security')
+                        ->treatNullLike('security')
                     ->end()
 
-                ->end()->end()
+                    ->arrayNode('registration')
+                        ->info('Defines the registration settings for the API.')
+                        ->addDefaultsIfNotSet()->children()
 
-                ->arrayNode('register')
-                ->info('Defines the registration settings for the API.')
-                ->addDefaultsIfNotSet()->children()
+                            ->arrayNode('login')
+                                ->info('')
+                                ->addDefaultsIfNotSet()->children()
+                                
+                                ->end()
+                            ->end()
 
-                    ->booleanNode('enable')
-                        ->info('Enable or disable registration.')
-                        ->defaultFalse()
-                    ->end()
+                            ->arrayNode('logout')
+                                ->info('')
+                                ->addDefaultsIfNotSet()->children()
+                                
+                                ->end()
+                            ->end()
 
-                    ->scalarNode('method')
-                        ->info('HTTP method to use for the registration endpoint.')
-                        ->defaultValue('POST')
-                    ->end()
+                            ->arrayNode('refresh_token')
+                                ->info('')
+                                ->addDefaultsIfNotSet()->children()
+                                
+                                ->end()
+                            ->end()
+ 
+                            // ->booleanNode('enabled')
+                            //     ->info('Enable or disable registration.')
+                            //     ->defaultFalse()
+                            //     ->treatNullLike(false)
+                            // ->end()
 
-                    ->scalarNode('path')
-                        ->info('Path for the registration endpoint.')
-                        ->defaultNull()
-                    ->end()
+                            // ->scalarNode('path')
+                            //     ->info('Path for the registration endpoint.')
+                            //     ->defaultNull()
+                            // ->end()
 
-                    ->scalarNode('controller')
-                        ->info('Optional Symfony controller (FQCN::method) to handle registration. If not defined, the default RegisterController will be used.')
-                        // ->cannotBeEmpty()
-                        ->defaultValue('OSW3\Api\Controller\RegisterController::register')
-                        ->validate()
-                            ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
-                            ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.', 'register.controller')
+                            // ->scalarNode('controller')
+                            //     ->info('Optional Symfony controller (FQCN::method) to handle registration. If not defined, the default RegisterController will be used.')
+                            //     ->defaultValue('OSW3\Api\Controller\RegisterController::register')
+                            //     ->treatNullLike('OSW3\Api\Controller\RegisterController::register')
+                            //     ->validate()
+                            //         ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                            //         ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.', 'register.controller')
+                            //     ->end()
+                            // ->end()
+
+                            // ->arrayNode('properties')
+                            //     ->info('Maps request properties to entity fields during login.')
+                            //     ->normalizeKeys(false)
+                            //     ->scalarPrototype()->end()
+                            //     ->defaultValue([
+                            //         'username' => 'email',
+                            //         'password' => 'password',
+                            //         'confirm'  => 'confirmPassword',
+                            //     ])
+                            // ->end()
+
+                            // ->arrayNode('hooks')
+                            //     ->info('Defines callable hooks to be executed before and after the registration action.')
+                            //     ->addDefaultsIfNotSet()->children()
+
+                            //         ->enumNode('merge')
+                            //             ->info('Defines how to handle merging hooks: "replace" to overwrite existing hooks, "append" to add to them, or "prepend" to add them at the beginning.')
+                            //             ->values(['replace', 'append', 'prepend'])
+                            //             ->defaultValue('append')
+                            //             ->treatNullLike('append')
+                            //         ->end()
+
+                            //         ->arrayNode('before')
+                            //             ->info('List of callable listeners to execute **before** the registration action is run.')
+                            //             ->scalarPrototype()->end()
+                            //             ->defaultValue([])
+                            //         ->end()
+
+                            //         ->arrayNode('after')
+                            //             ->info('List of callable listeners to execute **after** the registration action has completed.')
+                            //             ->scalarPrototype()->end()
+                            //             ->defaultValue([])
+                            //         ->end()
+
+                            //         ->arrayNode('around')
+                            //             ->info('List of callable listeners to execute **around** the registration action.')
+                            //             ->scalarPrototype()->end()
+                            //             ->defaultValue([])
+                            //         ->end()
+
+                            //         ->arrayNode('on_success')
+                            //             ->info('List of callable listeners to execute on success action.')
+                            //             ->scalarPrototype()->end()
+                            //             ->defaultValue([])
+                            //         ->end()
+
+                            //         ->arrayNode('on_failure')
+                            //             ->info('List of callable listeners to execute on failure action.')
+                            //             ->scalarPrototype()->end()
+                            //             ->defaultValue([])
+                            //         ->end()
+
+                            //         ->arrayNode('on_complete')
+                            //             ->info('List of callable listeners to execute on complete action.')
+                            //             ->scalarPrototype()->end()
+                            //             ->defaultValue([])
+                            //         ->end()
+
+                            //     ->end()
+
+                            //     ->validate()
+                            //         ->ifTrue(fn($hooks) => !HooksValidator::validate($hooks))
+                            //         ->thenInvalid('One or more hooks (before/after) are invalid. They must be valid callables (Class::method or callable).')
+                            //     ->end()
+                            // ->end()
+
                         ->end()
                     ->end()
 
-                    ->arrayNode('properties')
-                        ->info('Maps request properties to entity fields during login.')
-                        ->normalizeKeys(false)
-                        ->scalarPrototype()->end()
-                        ->defaultValue(['username' => 'email', 'password' => 'password'])
-                    ->end()
+                    ->arrayNode('authentication')
+                        ->info('Defines the authentication settings for the API.')
+                        ->addDefaultsIfNotSet()->children()
 
-                ->end()->end()
+                            ->arrayNode('register')
+                                ->info('')
+                                ->addDefaultsIfNotSet()->children()
+                                
+                                ->end()
+                            ->end()
 
-                ->arrayNode('login')
-                ->info('Defines the login settings for the API.')
-                ->addDefaultsIfNotSet()->children()
+                            ->arrayNode('verify_email')
+                                ->info('')
+                                ->addDefaultsIfNotSet()->children()
+                                
+                                ->end()
+                            ->end()
 
-                    ->booleanNode('enable')
-                        ->info('Enable or disable login.')
-                        ->defaultFalse()
-                    ->end()
+                            ->arrayNode('reset_password')
+                                ->info('')
+                                ->addDefaultsIfNotSet()->children()
+                                
+                                ->end()
+                            ->end()
 
-                    ->scalarNode('method')
-                        ->info('HTTP method to use for the login endpoint.')
-                        ->defaultValue('POST')
-                    ->end()
+                            // ->booleanNode('enabled')
+                            //     ->info('Enable or disable login.')
+                            //     ->defaultFalse()
+                            //     ->treatNullLike(false)
+                            // ->end()
 
-                    ->scalarNode('path')
-                        ->info('Path for the registration endpoint.')
-                        ->defaultNull()
-                    ->end()
+                            // ->scalarNode('path')
+                            //     ->info('Path for the registration endpoint.')
+                            //     ->defaultNull()
+                            // ->end()
 
-                    ->scalarNode('controller')
-                        ->info('Optional Symfony controller (FQCN::method) to handle registration. If not defined, the default SecurityController will be used.')
-                        // ->cannotBeEmpty()
-                        ->defaultValue('OSW3\Api\Controller\SecurityController::login')
-                        ->validate()
-                            ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
-                            ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.', 'login.controller')
+                            // ->scalarNode('controller')
+                            //     ->info('Optional Symfony controller (FQCN::method) to handle registration. If not defined, the default SecurityController will be used.')
+                            //     ->defaultValue('OSW3\Api\Controller\SecurityController::login')
+                            //     ->treatNullLike('OSW3\Api\Controller\SecurityController::login')
+                            //     ->validate()
+                            //         ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                            //         ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.', 'login.controller')
+                            //     ->end()
+                            // ->end()
+
+                            // ->arrayNode('properties')
+                            //     ->info('Maps request properties to entity fields during login.')
+                            //     ->normalizeKeys(false)
+                            //     ->scalarPrototype()->end()
+                            //     ->defaultValue([
+                            //         'username' => 'email', 
+                            //         'password' => 'password',
+                            //     ])
+                            // ->end()
+
                         ->end()
                     ->end()
 
-                    ->arrayNode('properties')
-                        ->info('Maps request properties to entity fields during login.')
-                        ->normalizeKeys(false)
-                        ->scalarPrototype()->end()
-                        ->defaultValue(['username' => 'email', 'password' => 'password'])
-                    ->end()
-
-                ->end()->end()
-
-            ->end()->end()
+                ->end()
+            ->end()
 
             // ──────────────────────────────
             // Debug
@@ -991,6 +1184,90 @@ return static function($definition)
                             ->end()
                         ->end()
 
+                        // ──────────────────────────────
+                        // HOOKS
+                        // ──────────────────────────────
+                        ->arrayNode('hooks')
+                            ->info('Defines callable hooks to be executed at various points in the request lifecycle.')
+                            ->addDefaultsIfNotSet()->children()
+
+                                ->enumNode('merge')
+                                    ->info('Defines how to handle merging hooks: "replace" to overwrite existing hooks, "append" to add to them, or "prepend" to add them at the beginning.')
+                                    ->values(['replace', 'append', 'prepend'])
+                                    ->treatNullLike('append')
+                                ->end()
+
+                                ->arrayNode('before')
+                                    ->info('List of callable listeners to execute **before** the endpoint action is run.')
+                                    ->scalarPrototype()->end()
+                                    ->defaultValue([])
+                                ->end()
+
+                                ->arrayNode('after')
+                                    ->info('List of callable listeners to execute **after** the endpoint action has completed.')
+                                    ->scalarPrototype()->end()
+                                    ->defaultValue([])
+                                ->end()
+
+                                ->arrayNode('around')
+                                    ->info('List of callable listeners to execute **around** the endpoint action.')
+                                    ->scalarPrototype()->end()
+                                    ->defaultValue([])
+                                ->end()
+
+                                ->arrayNode('on_success')
+                                    ->info('List of callable listeners to execute on success action.')
+                                    ->scalarPrototype()->end()
+                                    ->defaultValue([])
+                                ->end()
+
+                                ->arrayNode('on_failure')
+                                    ->info('List of callable listeners to execute on failure action.')
+                                    ->scalarPrototype()->end()
+                                    ->defaultValue([])
+                                ->end()
+
+                                ->arrayNode('on_complete')
+                                    ->info('List of callable listeners to execute on complete action.')
+                                    ->scalarPrototype()->end()
+                                    ->defaultValue([])
+                                ->end()
+
+                            ->end()
+
+                            ->validate()
+                                ->ifTrue(fn($hooks) => !HooksValidator::validate($hooks))
+                                ->thenInvalid('One or more hooks (before/after) are invalid. They must be valid callables (Class::method or callable).')
+                            ->end()
+                        ->end()
+
+                        // ──────────────────────────────
+                        // Access control
+                        // ──────────────────────────────
+                        ->arrayNode('access_control')
+                            ->info('Defines access control settings for this collection.')
+                            ->addDefaultsIfNotSet()->children()
+
+                                ->enumNode('merge')
+                                    ->info('Defines how to handle merging access control settings: "replace" to overwrite existing settings, "append" to add to them, or "prepend" to add them at the beginning.')
+                                    ->values(['replace', 'append', 'prepend'])
+                                    ->defaultValue('append')
+                                    ->treatNullLike('append')
+                                ->end()
+
+                                ->arrayNode('roles')
+                                    ->info('List of Symfony security roles required to access this collection.')
+                                    ->scalarPrototype()->end()
+                                    ->defaultValue([])
+                                ->end()
+
+                                ->scalarNode('voter')
+                                    ->info('Optional custom voter FQCN. If set, Symfony will use this voter to determine access instead of roles or expressions.')
+                                    ->defaultNull()
+                                ->end()
+
+                            ->end()
+                        ->end()
 
                         // ──────────────────────────────
                         // REST endpoints
@@ -1246,20 +1523,15 @@ return static function($definition)
                                         ->end()
                                     ->end()
 
-
-
-
                                     // ──────────────────────────────
                                     // Repository config
                                     // ──────────────────────────────
                                     ->arrayNode('repository')
-                                        ->info('Specifies how data is retrieved: repository method to call, query criteria, ordering, limits, and loading strategy.')
-                                        // ->isRequired()
-                                        ->addDefaultsIfNotSet()
-                                        ->children()
+                                        ->info('Configuration options for the repository used to retrieve data for this endpoint.')
+                                        ->addDefaultsIfNotSet()->children()
 
-                                            ->scalarNode('service')
-                                                ->info('Optional: the service ID of a custom repository. Defaults to the default Doctrine repository for the entity.')
+                                            ->scalarNode('class')
+                                                ->info('Optional: the fully qualified class name of a custom repository. Defaults to the default Doctrine repository for the entity.')
                                                 ->defaultNull()
                                             ->end()
 
@@ -1270,13 +1542,17 @@ return static function($definition)
                                                     - A custom public method defined in your repository class.
                                                     The method will be called when the controller is null.
                                                     INFO)
-                                                // ->isRequired()
-                                                // ->cannotBeEmpty()
                                                 ->defaultNull()
                                             ->end()
 
+                                            ->arrayNode('parameters')
+                                                ->info('Parameters to pass to the repository method. Keys are parameter names, values are the values to pass.')
+                                                ->normalizeKeys(false)
+                                                ->scalarPrototype()->end()
+                                            ->end()
+
                                             ->arrayNode('criteria')
-                                                ->info('Optional array of criteria to filter results when using `findBy` or `findOneBy`. Keys are field names, values are the values to match.')
+                                                ->info('Criteria for filtering data. Keys are field names, values are the values to filter by.')
                                                 ->normalizeKeys(false)
                                                 ->scalarPrototype()->end()
                                             ->end()
@@ -1290,12 +1566,15 @@ return static function($definition)
                                             ->integerNode('limit')
                                                 ->info('Optional maximum number of results to return.')
                                                 ->defaultNull()
+                                                ->treatNullLike(0)
+                                                ->min(0)
                                             ->end()
 
                                             ->enumNode('fetch_mode')
                                                 ->info('Optional fetch mode for Doctrine relations. "lazy" loads relations on demand, "eager" loads them immediately.')
                                                 ->values(['lazy', 'eager'])
-                                                ->defaultNull()
+                                                ->defaultValue('lazy')
+                                                ->treatNullLike('lazy')
                                             ->end()
 
                                         ->end()
@@ -1305,98 +1584,25 @@ return static function($definition)
                                     // Metadata config
                                     // ──────────────────────────────
                                     ->arrayNode('metadata')
-                                        ->info('Holds functional metadata for the endpoint: description, deprecation status, caching, rate limiting, and documentation-related details.')
-                                        ->addDefaultsIfNotSet()
-                                        ->children()
-
-                                            ->scalarNode('description')
-                                                ->info('Short human-readable description of the endpoint. Used for documentation (e.g. OpenAPI summary).')
-                                                ->defaultNull()
-                                            ->end()
-
-                                            // ->scalarNode('summary')
-                                            //     ->info('A brief one-line summary for OpenAPI documentation. Useful when "description" is longer.')
-                                            //     ->defaultNull()
-                                            // ->end()
-
-                                            ->booleanNode('internal_only')
-                                                ->info('If true, marks the endpoint as internal (not exposed in public documentation or API discovery)s.')
-                                                ->defaultFalse()
-                                            ->end()
-
-                                            ->scalarNode('tags') // TODO: arrayNode ?
-                                                ->info('Optional tags to group endpoints in documentation tools like Swagger UI. Accepts a comma-separated string or array.')
-                                                ->defaultNull()
-                                            ->end()
-
-                                            ->arrayNode('examples')
-                                                ->info('Optional example request/response objects for documentation and developer experience. Keys are media types, values are example payloads.')
-                                                ->normalizeKeys(false)
-                                                ->scalarPrototype()->end()
-                                                ->defaultValue([])
-                                            ->end()
-
-                                            ->scalarNode('operation_id')
-                                                ->info('Custom operationId for OpenAPI documentation. If null, it will be generated from the route name.')
-                                                ->defaultNull()
-                                            ->end()
-
-                                            // ->arrayNode('parameters')
-                                            //     ->info('Optional query/path/header parameters documentation. Used mainly for OpenAPI or generated API docs.')
-                                            //     ->normalizeKeys(false)
-                                            //     ->arrayPrototype()
-                                            //         ->children()
-                                            //             ->scalarNode('type')
-                                            //                 ->info('Parameter type (e.g., int, string, boolean). Used for documentation.')
-                                            //                 ->defaultNull()
-                                            //             ->end()
-                                            //             ->booleanNode('required')
-                                            //                 ->info('Whether this parameter is required.')
-                                            //                 ->defaultFalse()
-                                            //             ->end()
-                                            //             ->scalarNode('description')
-                                            //                 ->info('Human-readable description of the parameter.')
-                                            //                 ->defaultNull()
-                                            //             ->end()
-                                            //             ->scalarNode('location')
-                                            //                 ->info('Optional parameter location: query, path, header. Default: query.')
-                                            //                 ->defaultValue('query')
-                                            //             ->end()
-                                            //         ->end()
-                                            //     ->end()
-                                            // ->end()
-
-
-                                            // ->arrayNode('responses')
-                                            //     ->info('Describes possible HTTP responses for this endpoint, used for documentation and OpenAPI generation.')
-                                            //     ->normalizeKeys(false)
-                                            //     ->arrayPrototype()
-                                            //         ->children()
-                                            //             ->scalarNode('description')
-                                            //                 ->info('Human-readable description of the response.')
-                                            //                 ->isRequired()
-                                            //                 ->cannotBeEmpty()
-                                            //             ->end()
-                                            //             ->arrayNode('schema')
-                                            //                 ->info('Optional JSON schema or OpenAPI reference describing the response body structure.')
-                                            //                 ->normalizeKeys(false)
-                                            //                 ->variablePrototype()->end()
-                                            //             ->end()
-                                            //         ->end()
-                                            //     ->end()
-                                            // ->end()
-
-
-                                        ->end()
+                                        ->info('Free-form metadata for documentation and templating.')
+                                        ->normalizeKeys(false)
+                                        ->useAttributeAsKey('name')
+                                        ->variablePrototype()->end()
                                     ->end()
 
                                     // ──────────────────────────────
                                     // Access control
                                     // ──────────────────────────────
-                                    ->arrayNode('granted')
-                                        ->info('Defines the access control rules for this endpoint: allowed roles, security expressions, or custom Symfony voters.')
-                                        ->addDefaultsIfNotSet()
-                                        ->children()
+                                    ->arrayNode('access_control')
+                                        ->info('Defines the access control rules for this endpoint.')
+                                        ->addDefaultsIfNotSet()->children()
+
+                                            ->enumNode('merge')
+                                                ->info('Defines how to handle merging access control settings: "replace" to overwrite existing settings, "append" to add to them, or "prepend" to add them at the beginning.')
+                                                ->values(['replace', 'append', 'prepend'])
+                                                ->defaultValue('append')
+                                                ->treatNullLike('append')
+                                            ->end()
 
                                             ->arrayNode('roles')
                                                 ->info('List of Symfony security roles required to access this endpoint, e.g., ["ROLE_ADMIN", "PUBLIC_ACCESS"].')
@@ -1416,9 +1622,14 @@ return static function($definition)
                                     // Hooks & Events
                                     // ──────────────────────────────
                                     ->arrayNode('hooks')
-                                        ->info('Define event listeners to execute before or after the endpoint action. Useful for logging, auditing, validation, or custom side effects.')
-                                        ->addDefaultsIfNotSet()
-                                        ->children()
+                                        ->info('Defines callable hooks to be executed at various points in the request lifecycle.')
+                                        ->addDefaultsIfNotSet()->children()
+
+                                            ->enumNode('merge')
+                                                ->info('Defines how to handle merging hooks: "replace" to overwrite existing hooks, "append" to add to them, or "prepend" to add them at the beginning.')
+                                                ->values(['replace', 'append', 'prepend'])
+                                                ->treatNullLike('append')
+                                            ->end()
 
                                             ->arrayNode('before')
                                                 ->info('List of callable listeners to execute **before** the endpoint action is run.')
@@ -1432,14 +1643,26 @@ return static function($definition)
                                                 ->defaultValue([])
                                             ->end()
 
+                                            ->arrayNode('around')
+                                                ->info('List of callable listeners to execute **around** the endpoint action.')
+                                                ->scalarPrototype()->end()
+                                                ->defaultValue([])
+                                            ->end()
+
                                             ->arrayNode('on_success')
                                                 ->info('List of callable listeners to execute on success action.')
                                                 ->scalarPrototype()->end()
                                                 ->defaultValue([])
                                             ->end()
 
-                                            ->arrayNode('on_error')
-                                                ->info('List of callable listeners to execute on error action.')
+                                            ->arrayNode('on_failure')
+                                                ->info('List of callable listeners to execute on failure action.')
+                                                ->scalarPrototype()->end()
+                                                ->defaultValue([])
+                                            ->end()
+
+                                            ->arrayNode('on_complete')
+                                                ->info('List of callable listeners to execute on complete action.')
                                                 ->scalarPrototype()->end()
                                                 ->defaultValue([])
                                             ->end()
@@ -1572,6 +1795,8 @@ return static function($definition)
 
             // Templates
             EndpointTemplatesResolver::default($providers);
+
+            // Repository
 
 
             return $providers;

@@ -45,14 +45,11 @@ class RequestSubscriber implements EventSubscriberInterface
         $endpoint = $this->configurationService->getContext('endpoint');
 
 
-        dump( $this->configurationService->getSerializerGroups($provider, $collection, $endpoint) );
-        dump( $this->configurationService->getSerializerIgnore($provider, $collection, $endpoint) );
-        dump( $this->configurationService->getSerializerDatetimeFormat($provider) );
-        dump( $this->configurationService->getSerializerTimezone($provider) );
-        dump( $this->configurationService->getSerializerSkipNull($provider) );
-        dd( $this->configurationService->getSerializerTransformer($provider, $collection, $endpoint) );
-
-        // dump( $this->configurationService->getRoute($provider) );
+        dump( $this->configurationService->getSecurity($provider) );
+        dump( $this->configurationService->getRegistration($provider) );
+        dump( $this->configurationService->getLogin($provider) );
+        dump( $this->configurationService->getSecurityIdentifierProperty($provider) );
+        dd( $this->configurationService->getSecurityGroup($provider) );
         // dump( $this->configurationService->getRoute($provider, $collection) );
         // dd( $this->configurationService->getRoute($provider, $collection, $endpoint) );
 

@@ -2046,6 +2046,607 @@ class ConfigurationService
             ?? null
         ;
     }
+    
+
+
+    // ──────────────────────────────
+    // REPOSITORY
+    // ──────────────────────────────
+
+    /**
+     * Get the repository configuration for a specific provider, collection, and endpoint.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string $collection Name of the collection
+     * @param string $endpoint Name of the endpoint
+     * @return array Repository configuration array
+     */
+    public function getRepository(string $provider, string $collection, string $endpoint): array
+    {
+        if (! $this->hasProvider($provider)) {
+            return [];
+        }
+
+        if (! $this->hasCollection($provider, $collection)) {
+            return [];
+        }
+
+        if (! $this->hasEndpoint($provider, $collection, $endpoint)) {
+            return [];
+        }
+
+        $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
+        return $endpointOptions['repository'] ?? [];
+    }
+
+    /**
+     * Get the repository class for a specific provider, collection, and endpoint.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string $collection Name of the collection
+     * @param string $endpoint Name of the endpoint
+     * @return string|null Fully qualified class name of the repository, or null if not defined
+     */
+    public function getRepositoryClass(string $provider, string $collection, string $endpoint): ?string
+    {
+        $endpoint = $this->getEndpoint($provider, $collection, $endpoint);
+        return $endpoint['repository']['class'] ?? null;
+    }
+
+    /**
+     * Get the repository method for a specific provider, collection, and endpoint.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string $collection Name of the collection
+     * @param string $endpoint Name of the endpoint
+     * @return string|null Repository method name, or null if not defined
+     */
+    public function getRepositoryMethod(string $provider, string $collection, string $endpoint): ?string
+    {
+        $endpoint = $this->getEndpoint($provider, $collection, $endpoint);
+        return $endpoint['repository']['method'] ?? null;
+    }
+
+    /**
+     * Get the criteria configuration for a specific provider, collection, and endpoint.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string $collection Name of the collection
+     * @param string $endpoint Name of the endpoint
+     * @return array Criteria configuration array
+     */
+    public function getCriteria(string $provider, string $collection, string $endpoint): array
+    {
+        $endpoint = $this->getEndpoint($provider, $collection, $endpoint);
+        return $endpoint['repository']['criteria'] ?? [];
+    }
+
+    /**
+     * Get the order by configuration for a specific provider, collection, and endpoint.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string $collection Name of the collection
+     * @param string $endpoint Name of the endpoint
+     * @return array Order by configuration array
+     */
+    public function getOrderBy(string $provider, string $collection, string $endpoint): array
+    {
+        $endpoint = $this->getEndpoint($provider, $collection, $endpoint);
+        return $endpoint['repository']['order_by'] ?? [];
+    }
+
+    /**
+     * Get the limit for a specific provider, collection, and endpoint.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string $collection Name of the collection
+     * @param string $endpoint Name of the endpoint
+     * @return int|null Limit value, or null if not defined
+     */
+    public function getLimit(string $provider, string $collection, string $endpoint): ?int
+    {
+        $endpoint = $this->getEndpoint($provider, $collection, $endpoint);
+        $limit = $endpoint['repository']['limit'] ?? null;
+
+        if (!empty($limit) && is_int($limit) && $limit > 0) {
+            return $limit;
+        }
+
+        if ($this->isPaginationEnabled($provider)) {
+            return $this->getPaginationLimit($provider, $collection);
+        }
+
+        return null;
+    }
+
+    /**
+     * Get the fetch mode for a specific provider, collection, and endpoint.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string $collection Name of the collection
+     * @param string $endpoint Name of the endpoint
+     * @return string Fetch mode (e.g., 'eager', 'lazy')
+     */
+    public function getFetchMode(string $provider, string $collection, string $endpoint): string
+    {
+        $endpoint = $this->getEndpoint($provider, $collection, $endpoint);
+        return $endpoint['repository']['fetch_mode'] ?? '';
+    }
+
+
+
+    // ──────────────────────────────
+    // HOOKS
+    // ──────────────────────────────
+
+    /**
+     * Get the hook configuration for a specific provider, collection, and endpoint.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return array Hook configuration array
+     */
+    public function getHook(string $provider, ?string $collection = null, ?string $endpoint = null): array
+    {
+        $defaultHooks = [
+            'merge'       => 'append',
+            'before'      => [],
+            'after'       => [],
+            'around'      => [],
+            'on_success'  => [],
+            'on_failure'  => [],
+            'on_complete' => [],
+        ];
+
+        if (! $this->hasProvider($provider)) {
+            return $defaultHooks;
+        }
+
+        // 1. Endpoint-specific hooks
+        if ($collection && $endpoint) {
+            $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
+            if ($endpointOptions && isset($endpointOptions['hooks'])) {
+                return array_merge($defaultHooks, $endpointOptions['hooks']);
+            }
+        }
+
+        // 2. Collection-level hooks
+        if ($collection) {
+            $collectionOptions = $this->getCollection($provider, $collection);
+            if ($collectionOptions && isset($collectionOptions['hooks'])) {
+                return array_merge($defaultHooks, $collectionOptions['hooks']);
+            }
+        }
+
+        // 3. Global default hooks
+        $providerOptions = $this->getProvider($provider);
+        return $providerOptions['hooks'] ?? $defaultHooks;
+    }
+
+    /**
+     * Get the hook merge strategy for a specific provider, collection, and endpoint.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return string Hook merge strategy ('append' or 'replace')
+     */
+    public function getHookMergeStrategy(string $provider, ?string $collection = null, ?string $endpoint = null): string
+    {
+        $hooks = $this->getHook($provider, $collection, $endpoint);
+        return $hooks['merge'] ?? 'append';
+    }
+    
+    /**
+     * Get the 'before' hooks for a specific provider, collection, and endpoint.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return array Array of 'before' hooks
+     */
+    public function getHookBefore(string $provider, ?string $collection = null, ?string $endpoint = null): array
+    {
+        $hooks = $this->getHook($provider, $collection, $endpoint);
+        return $hooks['before'] ?? [];
+    }
+
+    /**
+     * Get the 'after' hooks for a specific provider, collection, and endpoint.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return array Array of 'after' hooks
+     */
+    public function getHookAfter(string $provider, ?string $collection = null, ?string $endpoint = null): array
+    {
+        $hooks = $this->getHook($provider, $collection, $endpoint);
+        return $hooks['after'] ?? [];
+    }
+
+    /**
+     * Get the 'around' hooks for a specific provider, collection, and endpoint.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return array Array of 'around' hooks
+     */
+    public function getHookAround(string $provider, ?string $collection = null, ?string $endpoint = null): array
+    {
+        $hooks = $this->getHook($provider, $collection, $endpoint);
+        return $hooks['around'] ?? [];
+    }
+
+    /**
+     * Get the 'on_success' hooks for a specific provider, collection, and endpoint.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return array Array of 'on_success' hooks
+     */
+    public function getHookOnSuccess(string $provider, ?string $collection = null, ?string $endpoint = null): array
+    {
+        $hooks = $this->getHook($provider, $collection, $endpoint);
+        return $hooks['on_success'] ?? [];
+    }
+
+    /**
+     * Get the 'on_failure' hooks for a specific provider, collection, and endpoint.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return array Array of 'on_failure' hooks
+     */
+    public function getHookOnFailure(string $provider, ?string $collection = null, ?string $endpoint = null): array
+    {
+        $hooks = $this->getHook($provider, $collection, $endpoint);
+        return $hooks['on_failure'] ?? [];
+    }
+
+    /**
+     * Get the 'on_complete' hooks for a specific provider, collection, and endpoint.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return array Array of 'on_complete' hooks
+     */
+    public function getHookOnComplete(string $provider, ?string $collection = null, ?string $endpoint = null): array
+    {
+        $hooks = $this->getHook($provider, $collection, $endpoint);
+        return $hooks['on_complete'] ?? [];
+    }
+
+
+    
+    // ──────────────────────────────
+    // META
+    // ──────────────────────────────
+
+    /**
+     * Get the metadata for a specific provider, collection, and endpoint.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return array Array of metadata
+     */
+    public function getAllMetadata(string $provider, string $collection, string $endpoint): array
+    {
+        if (! $this->hasProvider($provider)) {
+            return [];
+        }
+
+        if (! $this->hasCollection($provider, $collection)) {
+            return [];
+        }
+
+        if (! $this->hasEndpoint($provider, $collection, $endpoint)) {
+            return [];
+        }
+
+        $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
+        return $endpointOptions['metadata'] ?? [];
+    }
+
+    /**
+     * Get a specific metadata value for a given key from a provider, collection, and endpoint.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string $collection Name of the collection
+     * @param string $endpoint Name of the endpoint
+     * @param string $key Metadata key to retrieve
+     * @return mixed Metadata value, or null if the key does not exist
+     */
+    public function getMetadata(string $provider, string $collection, string $endpoint, string $key): mixed
+    {
+        $metadata = $this->getAllMetadata($provider, $collection, $endpoint);
+        return $metadata[$key] ?? null;
+    }
+    
+
+
+    // ──────────────────────────────
+    // ACCESS CONTROL
+    // ──────────────────────────────
+
+    /**
+     * Get the access control configuration for a specific provider, collection, and endpoint.
+     * Merges access control settings from provider, collection, and endpoint levels.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return array Access control configuration array
+     */
+    public function getAccessControl(string $provider, ?string $collection = null, ?string $endpoint = null): array
+    {
+        $defaults = [
+            'merge' => 'append',
+            'roles' => [],
+            'voter' => null,
+        ];
+
+        if (! $this->hasProvider($provider)) {
+            return $defaults;
+        }
+
+        // 1. Endpoint-specific access control
+        if ($collection && $endpoint) {
+            $collectionOptions = $this->getCollection($provider, $collection);
+            $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
+            return array_merge(
+                $defaults, 
+                $collectionOptions['access_control'] ?? [], 
+                $endpointOptions['access_control'] ?? []
+            );
+        }
+
+        // 2. Collection-level access control
+        if ($collection) {
+            $collectionOptions = $this->getCollection($provider, $collection);
+            return array_merge(
+                $defaults, 
+                $collectionOptions['access_control'] ?? []
+            );
+        }
+
+        // 3. Global default access control
+        $providerOptions = $this->getProvider($provider);
+        return array_merge(
+            $defaults, 
+            $providerOptions['access_control'] ?? []
+        );
+    }
+
+    /**
+     * Get the access control roles for a specific provider, collection, and endpoint.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return array Array of access control roles
+     */
+    public function getAccessControlRoles(string $provider, ?string $collection = null, ?string $endpoint = null): array
+    {
+        $accessControl = $this->getAccessControl($provider, $collection, $endpoint);
+        return $accessControl['roles'] ?? [];
+    }
+
+    /**
+     * Get the access control voter for a specific provider, collection, and endpoint.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return string Voter class name
+     */
+    public function getAccessControlVoter(string $provider, ?string $collection = null, ?string $endpoint = null): string
+    {
+        $accessControl = $this->getAccessControl($provider, $collection, $endpoint);
+        return $accessControl['voter'] ?? '';
+    }
+
+
+
+    // ──────────────────────────────
+    // SECURITY
+    // ──────────────────────────────
+
+    /**
+     * Get the security configuration for a specific API provider.
+     * 
+     * @param string $provider Name of the API provider
+     * @return array Security configuration array
+     */
+    public function getSecurity(string $provider): array
+    {
+        if (! $this->hasProvider($provider)) {
+            return [];
+        }
+
+        $providerOptions = $this->getProvider($provider);
+        return $providerOptions['security'] ?? [];
+    }
+
+    /**
+     * Get the security entity class for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string Fully qualified class name of the security entity
+     */
+    public function getSecurityClass(string $providerName): string
+    {
+        $security = $this->getSecurity($providerName);
+        return $security['entity']['class'] ?? '';
+    }
+
+    /**
+     * Get the security identifier property for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string Identifier property name
+     */
+    public function getSecurityIdentifierProperty(string $providerName): string
+    {
+        $security = $this->getSecurity($providerName);
+        return $security['entity']['identifier'] ?? '';
+    }
+
+    /**
+     * Get the security password property for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string Password property name
+     */
+    public function getSecurityPasswordProperty(string $providerName): string
+    {
+        $security = $this->getSecurity($providerName);
+        return $security['entity']['password'] ?? '';
+    }
+
+    /**
+     * Get the security group property for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string Group property name
+     */
+    public function getSecurityGroup(string $providerName): string
+    {
+        $security = $this->getSecurity($providerName);
+        return $security['group'] ?? '';
+    }
+
+    // Registration
+
+    public function getRegistration(string $provider): array
+    {
+        $security = $this->getSecurity($provider);
+        return $security['register'] ?? [];
+    }
+
+
+
+    public function isRegistrationEnabled(string $providerName): bool
+    {
+        return $this->configuration[$providerName]['security']['register']['enable'] ?? false;
+    }
+
+    /**
+     * Get the HTTP method used for user registration for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string HTTP method (e.g., 'POST', 'PUT')
+     */
+    public function getRegistrationMethod(string $providerName): string
+    {
+        return $this->configuration[$providerName]['security']['register']['method'] ?? 'POST';
+    }
+
+    /**
+     * Get the URL path for user registration for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string|null URL path for registration, or null if not defined
+     */
+    public function getRegistrationPath(string $providerName): ?string
+    {
+        return $this->configuration[$providerName]['security']['register']['path'] ?? null;
+    }
+
+    /**
+     * Get the controller responsible for handling user registration for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string Fully qualified class name of the registration controller
+     */
+    public function getRegistrationController(string $providerName): string
+    {
+        return $this->configuration[$providerName]['security']['register']['controller'] ?? 'OSW3\Api\Controller\RegisterController::register';
+    }
+
+    /**
+     * Get the properties required for user registration for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return array Array of registration properties
+     */
+    public function getRegistrationProperties(string $providerName): array
+    {
+        return $this->configuration[$providerName]['security']['register']['properties'] ?? [];
+    }
+
+    // Login
+
+    public function getLogin(string $provider): array
+    {
+        $security = $this->getSecurity($provider);
+        return $security['login'] ?? [];
+    }
+
+    /**
+     * Check if user login is enabled for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return bool True if login is enabled, false otherwise
+     */
+    public function isLoginEnabled(string $providerName): bool
+    {
+        return $this->configuration[$providerName]['security']['login']['enable'] ?? false;
+    }
+
+    /**
+     * Get the HTTP method used for user login for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string HTTP method (e.g., 'POST', 'PUT')
+     */
+    public function getLoginMethod(string $providerName): string
+    {
+        return $this->configuration[$providerName]['security']['login']['method'] ?? 'POST';
+    }
+
+    /**
+     * Get the URL path for user login for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string|null URL path for login, or null if not defined
+     */
+    public function getLoginPath(string $providerName): ?string
+    {
+        return $this->configuration[$providerName]['security']['login']['path'] ?? null;
+    }
+
+    /**
+     * Get the controller responsible for handling user login for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string Fully qualified class name of the login controller
+     */
+    public function getLoginController(string $providerName): ?string
+    {
+        return $this->configuration[$providerName]['security']['login']['controller'] ?? 'OSW3\Api\Controller\SecurityController::login';
+    }
+
+    /**
+     * Get the properties required for user login for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return array Array of login properties
+     */
+    public function getLoginProperties(string $providerName): array
+    {
+        return $this->configuration[$providerName]['security']['login']['properties'] ?? [];
+    }
+    
+
+
+
 
 
 
@@ -2128,320 +2729,6 @@ class ConfigurationService
 
 
 
-
-
-
-    // ──────────────────────────────
-    // SECURITY
-    // ──────────────────────────────
-
-    /**
-     * Get the fully qualified class name of the security entity for a specific API provider.
-     * 
-     * @param string $providerName Name of the API provider
-     * @return string Fully qualified class name of the security entity
-     */
-    public function getSecurityEntityClass(string $providerName): string
-    {
-        return $this->configuration[$providerName]['security']['entity']['class'] ?? '';
-    }
-
-    /**
-     * Get the name of the security collection for a specific API provider.
-     * 
-     * @param string $providerName Name of the API provider
-     * @return string Name of the security collection
-     */
-    public function getSecurityCollectionName(string $providerName): string
-    {
-        return $this->configuration[$providerName]['security']['routes']['collection'] ?? '';
-    }
-
-    // Registration
-
-    /**
-     * Check if user registration is enabled for a specific API provider.
-     * 
-     * @param string $providerName Name of the API provider
-     * @return bool True if registration is enabled, false otherwise
-     */
-    public function isRegistrationEnabled(string $providerName): bool
-    {
-        return $this->configuration[$providerName]['security']['register']['enable'] ?? false;
-    }
-
-    /**
-     * Get the HTTP method used for user registration for a specific API provider.
-     * 
-     * @param string $providerName Name of the API provider
-     * @return string HTTP method (e.g., 'POST', 'PUT')
-     */
-    public function getRegistrationMethod(string $providerName): string
-    {
-        return $this->configuration[$providerName]['security']['register']['method'] ?? 'POST';
-    }
-
-    /**
-     * Get the URL path for user registration for a specific API provider.
-     * 
-     * @param string $providerName Name of the API provider
-     * @return string|null URL path for registration, or null if not defined
-     */
-    public function getRegistrationPath(string $providerName): ?string
-    {
-        return $this->configuration[$providerName]['security']['register']['path'] ?? null;
-    }
-
-    /**
-     * Get the controller responsible for handling user registration for a specific API provider.
-     * 
-     * @param string $providerName Name of the API provider
-     * @return string Fully qualified class name of the registration controller
-     */
-    public function getRegistrationController(string $providerName): string
-    {
-        return $this->configuration[$providerName]['security']['register']['controller'] ?? 'OSW3\Api\Controller\RegisterController::register';
-    }
-
-    /**
-     * Get the properties required for user registration for a specific API provider.
-     * 
-     * @param string $providerName Name of the API provider
-     * @return array Array of registration properties
-     */
-    public function getRegistrationProperties(string $providerName): array
-    {
-        return $this->configuration[$providerName]['security']['register']['properties'] ?? [];
-    }
-
-    // Login
-
-    /**
-     * Check if user login is enabled for a specific API provider.
-     * 
-     * @param string $providerName Name of the API provider
-     * @return bool True if login is enabled, false otherwise
-     */
-    public function isLoginEnabled(string $providerName): bool
-    {
-        return $this->configuration[$providerName]['security']['login']['enable'] ?? false;
-    }
-
-    /**
-     * Get the HTTP method used for user login for a specific API provider.
-     * 
-     * @param string $providerName Name of the API provider
-     * @return string HTTP method (e.g., 'POST', 'PUT')
-     */
-    public function getLoginMethod(string $providerName): string
-    {
-        return $this->configuration[$providerName]['security']['login']['method'] ?? 'POST';
-    }
-
-    /**
-     * Get the URL path for user login for a specific API provider.
-     * 
-     * @param string $providerName Name of the API provider
-     * @return string|null URL path for login, or null if not defined
-     */
-    public function getLoginPath(string $providerName): ?string
-    {
-        return $this->configuration[$providerName]['security']['login']['path'] ?? null;
-    }
-
-    /**
-     * Get the controller responsible for handling user login for a specific API provider.
-     * 
-     * @param string $providerName Name of the API provider
-     * @return string Fully qualified class name of the login controller
-     */
-    public function getLoginController(string $providerName): ?string
-    {
-        return $this->configuration[$providerName]['security']['login']['controller'] ?? 'OSW3\Api\Controller\SecurityController::login';
-    }
-
-    /**
-     * Get the properties required for user login for a specific API provider.
-     * 
-     * @param string $providerName Name of the API provider
-     * @return array Array of login properties
-     */
-    public function getLoginProperties(string $providerName): array
-    {
-        return $this->configuration[$providerName]['security']['login']['properties'] ?? [];
-    }
-    
-
-
-    // ──────────────────────────────
-    // Endpoints Repository
-    // ──────────────────────────────
-
-    public function getRepositoryClass(string $providerName, string $entityClass, string $endpointName): ?string
-    {
-        return $this->getEndpoint($providerName, $entityClass, $endpointName)['repository']['service'] ?? '';
-    }
-
-    // TODO: remove this method
-    public function getRepository(string $providerName, string $entityClass, string $endpointName)
-    {
-        $repositoryClass = $this->getRepositoryClass($providerName, $entityClass, $endpointName);
-
-        if (!empty($repositoryClass)) {
-            foreach ($this->doctrine->getManager()->getMetadataFactory()->getAllMetadata() as $meta) {
-                if ($meta->customRepositoryClassName === $repositoryClass) {
-                    return $this->doctrine->getRepository($meta->getName());
-                }
-            }
-        }
-
-        return $this->getEntityRepository($entityClass);
-    }
-
-    public function getMethod(string $providerName, string $entityClass, string $endpointName): ?string
-    {
-        $repositoryMethod = $this->getEndpoint($providerName, $entityClass, $endpointName)['repository']['method'] ?? null;
-        return $repositoryMethod;
-
-        // if (!empty($repositoryMethod)) {
-        //     return $repositoryMethod;
-        // }
-
-        // $requestMethod = $this->request->getMethod();
-        // $id            = $this->request->get('id');
-        // // $criteria      = $this->getCriteria($providerName, $entityClass, $endpointName);
-        // // $orderBy       = $this->getOrderBy($providerName, $entityClass, $endpointName);
-        // // $limit         = $this->getLimit($providerName, $entityClass, $endpointName);
-
-        // return match ($requestMethod) {
-        //     // Request::METHOD_GET    => $id ? "find" : "findAll",
-        //     Request::METHOD_GET    => $id ? "find" : "findBy",
-        //     Request::METHOD_PUT    => "update",
-        //     Request::METHOD_POST   => "add",
-        //     Request::METHOD_PATCH  => "update",
-        //     Request::METHOD_DELETE => "delete",
-        //     default => null
-        // };
-
-        // // // Choix intelligent de la méthode par défaut
-        // // if (!$repositoryMethod) {
-        // //     $repositoryMethod = match ($request->getMethod()) {
-        // //         Request::METHOD_GET    => $id ? 'find' : 'findBy',
-        // //         Request::METHOD_PUT    => 'update',
-        // //         Request::METHOD_POST   => 'create',
-        // //         Request::METHOD_PATCH  => 'update',
-        // //         Request::METHOD_DELETE => 'delete',
-        // //         default => null
-        // //     };
-        // // }
-
-        // // // Construction automatique des arguments selon la méthode
-        // // $args = match ($repositoryMethod) {
-        // //     'find'   => [$id],
-        // //     'findBy' => [$criteria, $orderBy ?: null, $limit ?: null, $offset ?: null],
-        // //     default  => $id ? [$id] : []
-        // // };
-
-        // // return [
-        // //     'method' => $repositoryMethod,
-        // //     'args'   => array_filter($args, fn($v) => $v !== null) // nettoie les null inutiles
-        // // ];
-    }
-
-    public function getCriteria(string $providerName, string $entityClass, string $endpointName): array
-    {
-        return $this->getEndpoint($providerName, $entityClass, $endpointName)['repository']['criteria'] ?? [];
-    }
-
-    public function getOrderBy(string $providerName, string $entityClass, string $endpointName): array
-    {
-        return $this->getEndpoint($providerName, $entityClass, $endpointName)['repository']['order_by'] ?? [];
-    }
-
-    public function getLimit(string $providerName, string $entityClass, string $endpointName): ?int
-    {
-        $limit = $this->getEndpoint($providerName, $entityClass, $endpointName)['repository']['limit'];
-
-        if (!empty($limit)) {
-            return $limit;
-        }
-
-        if ($this->isPaginationEnabled($providerName)) {
-            return $this->getPaginationLimit($providerName, $entityClass);
-        }
-
-        return null;
-    }
-
-    public function getFetchMode(string $providerName, string $entityClass, string $endpointName): string
-    {
-        return $this->getEndpoint($providerName, $entityClass, $endpointName)['repository']['fetch_mode'] ?? '';
-    }
-
-
-    // ──────────────────────────────
-    // Endpoints Metadata
-    // ──────────────────────────────
-
-    public function getMetadata(string $providerName, string $entityClass, string $endpointName): ?array
-    {
-        return $this->getEndpoint($providerName, $entityClass, $endpointName)['metadata'] ?? null;
-    }
-
-    public function getMetadataDescription(string $providerName, string $entityClass, string $endpointName): ?string
-    {
-        return $this->getMetadata($providerName, $entityClass, $endpointName)['description'] ?? null;
-    }
-
-    public function getMetadataSummary(string $providerName, string $entityClass, string $endpointName): ?string
-    {
-        return $this->getMetadata($providerName, $entityClass, $endpointName)['summary'] ?? null;
-    }
-
-    public function getMetadataDeprecated(string $providerName, string $entityClass, string $endpointName): bool
-    {
-        return $this->getMetadata($providerName, $entityClass, $endpointName)['deprecated'] ?? false;
-    }
-
-    public function getMetadataCacheTTL(string $providerName, string $entityClass, string $endpointName): ?int
-    {
-        return $this->getMetadata($providerName, $entityClass, $endpointName)['cache_ttl'] ?? null;
-    }
-
-    public function getMetadataTags(string $providerName, string $entityClass, string $endpointName): ?string
-    {
-        return $this->getMetadata($providerName, $entityClass, $endpointName)['tags'] ?? null;
-    }
-
-    public function getMetadataOperationId(string $providerName, string $entityClass, string $endpointName): ?string
-    {
-        return $this->getMetadata($providerName, $entityClass, $endpointName)['operation_id'] ?? null;
-    }
-
-
-    // ──────────────────────────────
-    // Endpoints Granted
-    // ──────────────────────────────
-
-    public function getRoles(string $providerName, string $entityClass, string $endpointName): array
-    {
-        return $this->getEndpoint($providerName, $entityClass, $endpointName)['granted']['roles'];
-    }
-
-    public function getVoter(string $providerName, string $entityClass, string $endpointName): string
-    {
-        return $this->getEndpoint($providerName, $entityClass, $endpointName)['granted']['voter'] ?? '';
-    }
-
-
-    // ──────────────────────────────
-    // Endpoints Hooks
-    // ──────────────────────────────
-
-    public function getHooks(string $providerName, string $entityClass, string $endpointName): ?array
-    {
-        return $this->getEndpoint($providerName, $entityClass, $endpointName)['hooks'] ?? ['before' => [], 'after' => []];
-    }
 
 
     // ──────────────────────────────
