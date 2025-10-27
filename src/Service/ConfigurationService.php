@@ -674,6 +674,20 @@ class ConfigurationService
     }
 
     /**
+     * Get the route path of a specific endpoint.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string $collection Name of the collection
+     * @param string $endpoint Name of the endpoint
+     * @return string|null Route path or null if not found
+     */
+    public function getRoutePath(string $provider, string $collection, string $endpoint): string|null
+    {
+        $routeConfig = $this->getRoute($provider, $collection, $endpoint);
+        return $routeConfig['path'] ?? null;
+    }
+
+    /**
      * Get the route methods of a specific endpoint.
      * 
      * @param string $provider Name of the API provider
@@ -2522,7 +2536,7 @@ class ConfigurationService
         return $security['group'] ?? '';
     }
 
-    // Registration
+    // Endpoint : Registration
 
     /**
      * Get the registration configuration for a specific API provider.
@@ -2553,6 +2567,18 @@ class ConfigurationService
     {
         $registration = $this->getRegistration($provider);
         return $registration['register']['controller'] ?? '';
+    }
+
+    public function getRegistrationHosts(string $provider): array
+    {
+        $registration = $this->getRegistration($provider);
+        return $registration['register']['hosts'] ?? [];
+    }
+
+    public function getRegistrationSchemes(string $provider): array
+    {
+        $registration = $this->getRegistration($provider);
+        return $registration['register']['schemes'] ?? [];
     }
 
     public function getRegistrationFieldsMapping(string $provider): array
@@ -2599,7 +2625,7 @@ class ConfigurationService
         return $registration['resend_verification']['controller'] ?? '';
     }
 
-    // Authentication
+    // Endpoint : Authentication
 
     /**
      * Get the authentication configuration for a specific API provider.
@@ -2670,7 +2696,7 @@ class ConfigurationService
         return $authentication['refresh_token']['controller'] ?? '';
     }
 
-    // Password
+    // Endpoint : Password
 
     /**
      * Get the password configuration for a specific API provider.
@@ -2739,6 +2765,70 @@ class ConfigurationService
     {
         $authentication = $this->getAuthentication($provider);
         return $authentication['change_password']['controller'] ?? '';
+    }
+
+    // Generic endpoint
+
+    public function isSecurityEndpointEnabled(string $provider, string $endpoint): bool
+    {
+        $registration = $this->getRegistration($provider);
+        $authentication = $this->getAuthentication($provider);
+        $password = $this->getPassword($provider);
+
+        return $registration[$endpoint]['enabled'] 
+            ?? $authentication[$endpoint]['enabled'] 
+            ?? $password[$endpoint]['enabled'] 
+            ?? false
+        ;
+    }
+
+    public function getSecurityEndpointPath(string $provider, string $endpoint): ?string
+    {
+        $registration = $this->getRegistration($provider);
+        $authentication = $this->getAuthentication($provider);
+        $password = $this->getPassword($provider);
+
+        return $registration[$endpoint]['path'] 
+            ?? $authentication[$endpoint]['path'] 
+            ?? $password[$endpoint]['path'] 
+            ?? null
+        ;
+    }
+
+    public function getSecurityEndpointHosts(string $provider, string $endpoint): array
+    {
+        $registration = $this->getRegistration($provider);
+        $authentication = $this->getAuthentication($provider);
+        $password = $this->getPassword($provider);
+
+        return $registration[$endpoint]['hosts'] 
+            ?? $authentication[$endpoint]['hosts'] 
+            ?? $password[$endpoint]['hosts'] 
+            ?? [];
+    }
+    
+    public function getSecurityEndpointSchemes(string $provider, string $endpoint): array
+    {
+        $registration = $this->getRegistration($provider);
+        $authentication = $this->getAuthentication($provider);
+        $password = $this->getPassword($provider);
+        return $registration[$endpoint]['schemes'] 
+            ?? $authentication[$endpoint]['schemes'] 
+            ?? $password[$endpoint]['schemes'] 
+            ?? [];
+    }
+
+    public function getSecurityEndpointController(string $provider, string $endpoint): ?string
+    {
+        $registration = $this->getRegistration($provider);
+        $authentication = $this->getAuthentication($provider);
+        $password = $this->getPassword($provider);
+
+        return $registration[$endpoint]['controller'] 
+            ?? $authentication[$endpoint]['controller'] 
+            ?? $password[$endpoint]['controller'] 
+            ?? null
+        ;
     }
 
     

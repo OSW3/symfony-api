@@ -38,7 +38,7 @@ final class RegistrationController
     private function findMatchingProvider(array $providers, string $route, string $action): ?string
     {
         foreach ($providers as $providerName => $provider) {
-            if ($this->routeService->getRouteNameByProvider($providerName, $action) === $route) {
+            if ($this->routeService->resolveRouteName($providerName, $action) === $route) {
                 return $providerName;
             }
         }

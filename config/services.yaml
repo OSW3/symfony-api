@@ -10,7 +10,7 @@ services:
             - '../src/DependencyInjection/'
             - '../src/Resources/'
 
-    OSW3\Api\Routing\RouteLoader:
+    OSW3\Api\Loader\RouteLoader:
         tags:
             - { name: routing.loader }
 
