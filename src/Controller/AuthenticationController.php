@@ -11,7 +11,7 @@ use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 
-class SecurityController
+final class AuthenticationController
 {
     public function __construct(
         private JWTTokenManagerInterface $jwtManager,
@@ -49,5 +49,23 @@ class SecurityController
             return new JsonResponse(['error' => 'JWT creation failed: '.$e->getMessage()], 500);
         }
 
+    }
+
+    public function logout(UserInterface $user)
+    {
+        // In JWT, logout is typically handled on the client side by deleting the token.
+        // Optionally, you can implement token blacklisting here.
+
+        return new JsonResponse(['message' => 'Logout successful']);
+    }
+
+    public function refreshToken(UserInterface $user)
+    {
+        try {
+            $token = $this->jwtManager->create($user);
+            return new JsonResponse(['token' => $token]);
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => 'JWT refresh failed: '.$e->getMessage()], 500);
+        }
     }
 }

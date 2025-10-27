@@ -17,7 +17,7 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-class RegisterController
+final class RegistrationController
 {
     public function __construct(
         private readonly RequestStack $requestStack,
@@ -74,8 +74,8 @@ class RegisterController
 
         
         // --- 4. Retrieve the provider configuration
-        $entityClass = $this->configuration->getSecurityEntityClass($providerName);
-        $properties  = $this->configuration->getRegistrationProperties($providerName);
+        $entityClass = $this->configuration->getSecurityClass($providerName);
+        $properties  = $this->configuration->getRegistrationFieldsMapping($providerName);
 
         if (empty($entityClass)) {
             return new JsonResponse(['error' => 'No security entity defined'], 500);
@@ -130,5 +130,19 @@ class RegisterController
         return new JsonResponse([
             'message' => 'User created successfully',
         ], 201);
+    }
+
+    public function verifyEmail(): JsonResponse 
+    {
+        return new JsonResponse([
+            'version' => $this->versionService->getLabel(),
+        ], Response::HTTP_OK);
+    }
+
+    public function resendVerification(): JsonResponse 
+    {
+        return new JsonResponse([
+            'version' => $this->versionService->getLabel(),
+        ], Response::HTTP_OK);
     }
 }

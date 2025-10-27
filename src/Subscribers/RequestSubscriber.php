@@ -45,11 +45,11 @@ class RequestSubscriber implements EventSubscriberInterface
         $endpoint = $this->configurationService->getContext('endpoint');
 
 
-        dump( $this->configurationService->getSecurity($provider) );
-        dump( $this->configurationService->getRegistration($provider) );
-        dump( $this->configurationService->getLogin($provider) );
-        dump( $this->configurationService->getSecurityIdentifierProperty($provider) );
-        dd( $this->configurationService->getSecurityGroup($provider) );
+        // dump( $this->configurationService->getSecurity($provider) );
+        // dump( $this->configurationService->isDebugEnabled($provider) );
+        // dump( $this->configurationService->isRegistrationEnabled($provider) );
+        // dump( $this->configurationService->isEmailVerificationEnabled($provider) );
+        // dd( $this->configurationService->isResendVerificationEnabled($provider) );
         // dump( $this->configurationService->getRoute($provider, $collection) );
         // dd( $this->configurationService->getRoute($provider, $collection, $endpoint) );
 

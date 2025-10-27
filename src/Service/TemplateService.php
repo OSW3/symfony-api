@@ -95,7 +95,7 @@ final class TemplateService
             'list'       => $this->configuration->getListTemplate($provider),
             'item'       => $this->configuration->getItemTemplate($provider),
             'error'      => $this->configuration->getErrorTemplate($provider),
-            'no_content' => $this->configuration->getNoContentTemplate($provider),
+            'no_content' => $this->configuration->getNotFoundTemplate($provider),
             default      => throw new \Exception("Unknown template type"),
         };
 
@@ -187,7 +187,7 @@ final class TemplateService
             }
 
             $data = $this->responseService->getData();
-            $algorithm = $this->configuration->getResponseHashingAlgorithm($provider);
+            $algorithm = $this->configuration->getChecksumAlgorithm($provider);
 
 
             // App
@@ -363,12 +363,16 @@ final class TemplateService
 
             // Metadata
             $value = match($expression) {
-                'meta.description'      => $this->configuration->getMetadataDescription($provider, $collection, $endpoint) ?? $default,
-                'meta.summary'          => $this->configuration->getMetadataSummary($provider, $collection, $endpoint) ?? $default,
-                'meta.deprecated'       => $this->configuration->getMetadataDeprecated($provider, $collection, $endpoint) ?? $default,
-                'meta.cache_ttl'        => $this->configuration->getMetadataCacheTTL($provider, $collection, $endpoint) ?? $default,
-                'meta.tags'             => $this->configuration->getMetadataTags($provider, $collection, $endpoint) ?? $default,
-                'meta.operation_id'     => $this->configuration->getMetadataOperationId($provider, $collection, $endpoint) ?? $default,
+                'meta.description'      => $this->configuration->getMetadata(
+                    provider  : $provider,
+                    collection: $collection,
+                    endpoint  : $endpoint,
+                    key       : 'description'
+                ) ?? $default,
+                // 'meta.deprecated'       => $this->configuration->getMetadataDeprecated($provider, $collection, $endpoint) ?? $default,
+                // 'meta.cache_ttl'        => $this->configuration->getMetadataCacheTTL($provider, $collection, $endpoint) ?? $default,
+                // 'meta.tags'             => $this->configuration->getMetadataTags($provider, $collection, $endpoint) ?? $default,
+                // 'meta.operation_id'     => $this->configuration->getMetadataOperationId($provider, $collection, $endpoint) ?? $default,
                 'meta.license'          => null,
                 'meta.author'           => null,
                 'meta.contact'          => null,

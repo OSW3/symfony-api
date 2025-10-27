@@ -2524,159 +2524,246 @@ class ConfigurationService
 
     // Registration
 
+    /**
+     * Get the registration configuration for a specific API provider.
+     * 
+     * @param string $provider Name of the API provider
+     * @return array Registration configuration array
+     */
     public function getRegistration(string $provider): array
     {
         $security = $this->getSecurity($provider);
-        return $security['register'] ?? [];
+        return $security['registration'] ?? [];
     }
 
 
-
-    public function isRegistrationEnabled(string $providerName): bool
+    public function isRegistrationEnabled(string $provider): bool
     {
-        return $this->configuration[$providerName]['security']['register']['enable'] ?? false;
+        $registration = $this->getRegistration($provider);
+        return $registration['register']['enabled'] ?? false;
     }
+
+    public function getRegistrationPath(string $provider): string
+    {
+        $registration = $this->getRegistration($provider);
+        return $registration['register']['path'] ?? '';
+    }
+
+    public function getRegistrationController(string $provider): string
+    {
+        $registration = $this->getRegistration($provider);
+        return $registration['register']['controller'] ?? '';
+    }
+
+    public function getRegistrationFieldsMapping(string $provider): array
+    {
+        $registration = $this->getRegistration($provider);
+        return $registration['register']['fields'] ?? [];
+    }
+
+
+    public function isEmailVerificationEnabled(string $provider): bool
+    {
+        $registration = $this->getRegistration($provider);
+        return $registration['verify_email']['enabled'] ?? false;
+    }
+
+    public function getEmailVerificationPath(string $provider): string
+    {
+        $registration = $this->getRegistration($provider);
+        return $registration['verify_email']['path'] ?? '';
+    }
+
+    public function getEmailVerificationController(string $provider): string
+    {
+        $registration = $this->getRegistration($provider);
+        return $registration['verify_email']['controller'] ?? '';
+    }
+
+
+    public function isResendVerificationEnabled(string $provider): bool
+    {
+        $registration = $this->getRegistration($provider);
+        return $registration['resend_verification']['enabled'] ?? false;
+    }
+
+    public function getResendVerificationPath(string $provider): string
+    {
+        $registration = $this->getRegistration($provider);
+        return $registration['resend_verification']['path'] ?? '';
+    }
+
+    public function getResendVerificationController(string $provider): string
+    {
+        $registration = $this->getRegistration($provider);
+        return $registration['resend_verification']['controller'] ?? '';
+    }
+
+    // Authentication
 
     /**
-     * Get the HTTP method used for user registration for a specific API provider.
+     * Get the authentication configuration for a specific API provider.
      * 
-     * @param string $providerName Name of the API provider
-     * @return string HTTP method (e.g., 'POST', 'PUT')
+     * @param string $provider Name of the API provider
+     * @return array Authentication configuration array
      */
-    public function getRegistrationMethod(string $providerName): string
-    {
-        return $this->configuration[$providerName]['security']['register']['method'] ?? 'POST';
-    }
-
-    /**
-     * Get the URL path for user registration for a specific API provider.
-     * 
-     * @param string $providerName Name of the API provider
-     * @return string|null URL path for registration, or null if not defined
-     */
-    public function getRegistrationPath(string $providerName): ?string
-    {
-        return $this->configuration[$providerName]['security']['register']['path'] ?? null;
-    }
-
-    /**
-     * Get the controller responsible for handling user registration for a specific API provider.
-     * 
-     * @param string $providerName Name of the API provider
-     * @return string Fully qualified class name of the registration controller
-     */
-    public function getRegistrationController(string $providerName): string
-    {
-        return $this->configuration[$providerName]['security']['register']['controller'] ?? 'OSW3\Api\Controller\RegisterController::register';
-    }
-
-    /**
-     * Get the properties required for user registration for a specific API provider.
-     * 
-     * @param string $providerName Name of the API provider
-     * @return array Array of registration properties
-     */
-    public function getRegistrationProperties(string $providerName): array
-    {
-        return $this->configuration[$providerName]['security']['register']['properties'] ?? [];
-    }
-
-    // Login
-
-    public function getLogin(string $provider): array
+    public function getAuthentication(string $provider): array
     {
         $security = $this->getSecurity($provider);
-        return $security['login'] ?? [];
+        return $security['authentication'] ?? [];
     }
+
+
+    public function isLoginEnabled(string $provider): bool
+    {
+        $authentication = $this->getAuthentication($provider);
+        return $authentication['login']['enabled'] ?? false;
+    }
+
+    public function getLoginPath(string $provider): string
+    {
+        $authentication = $this->getAuthentication($provider);
+        return $authentication['login']['path'] ?? '';
+    }
+
+    public function getLoginController(string $provider): string
+    {
+        $authentication = $this->getAuthentication($provider);
+        return $authentication['login']['controller'] ?? '';
+    }
+
+
+    public function isLogoutEnabled(string $provider): bool
+    {
+        $authentication = $this->getAuthentication($provider);
+        return $authentication['logout']['enabled'] ?? false;
+    }
+
+    public function getLogoutPath(string $provider): string
+    {
+        $authentication = $this->getAuthentication($provider);
+        return $authentication['logout']['path'] ?? '';
+    }
+
+    public function getLogoutController(string $provider): string
+    {
+        $authentication = $this->getAuthentication($provider);
+        return $authentication['logout']['controller'] ?? '';
+    }
+
+
+    public function isRefreshTokenEnabled(string $provider): bool
+    {
+        $authentication = $this->getAuthentication($provider);
+        return $authentication['refresh_token']['enabled'] ?? false;
+    }
+
+    public function getRefreshTokenPath(string $provider): string
+    {
+        $authentication = $this->getAuthentication($provider);
+        return $authentication['refresh_token']['path'] ?? '';
+    }
+
+    public function getRefreshTokenController(string $provider): string
+    {
+        $authentication = $this->getAuthentication($provider);
+        return $authentication['refresh_token']['controller'] ?? '';
+    }
+
+    // Password
 
     /**
-     * Check if user login is enabled for a specific API provider.
+     * Get the password configuration for a specific API provider.
      * 
-     * @param string $providerName Name of the API provider
-     * @return bool True if login is enabled, false otherwise
+     * @param string $provider Name of the API provider
+     * @return array Password configuration array
      */
-    public function isLoginEnabled(string $providerName): bool
+    public function getPassword(string $provider): array
     {
-        return $this->configuration[$providerName]['security']['login']['enable'] ?? false;
+        $security = $this->getSecurity($provider);
+        return $security['password'] ?? [];
     }
 
-    /**
-     * Get the HTTP method used for user login for a specific API provider.
-     * 
-     * @param string $providerName Name of the API provider
-     * @return string HTTP method (e.g., 'POST', 'PUT')
-     */
-    public function getLoginMethod(string $providerName): string
+
+    public function isResetRequestEnabled(string $provider): bool
     {
-        return $this->configuration[$providerName]['security']['login']['method'] ?? 'POST';
+        $authentication = $this->getAuthentication($provider);
+        return $authentication['reset_request']['enabled'] ?? false;
     }
 
-    /**
-     * Get the URL path for user login for a specific API provider.
-     * 
-     * @param string $providerName Name of the API provider
-     * @return string|null URL path for login, or null if not defined
-     */
-    public function getLoginPath(string $providerName): ?string
+    public function getResetRequestPath(string $provider): string
     {
-        return $this->configuration[$providerName]['security']['login']['path'] ?? null;
+        $authentication = $this->getAuthentication($provider);
+        return $authentication['reset_request']['path'] ?? '';
     }
 
-    /**
-     * Get the controller responsible for handling user login for a specific API provider.
-     * 
-     * @param string $providerName Name of the API provider
-     * @return string Fully qualified class name of the login controller
-     */
-    public function getLoginController(string $providerName): ?string
+    public function getResetRequestController(string $provider): string
     {
-        return $this->configuration[$providerName]['security']['login']['controller'] ?? 'OSW3\Api\Controller\SecurityController::login';
+        $authentication = $this->getAuthentication($provider);
+        return $authentication['reset_request']['controller'] ?? '';
     }
 
-    /**
-     * Get the properties required for user login for a specific API provider.
-     * 
-     * @param string $providerName Name of the API provider
-     * @return array Array of login properties
-     */
-    public function getLoginProperties(string $providerName): array
+
+    public function isResetConfirmEnabled(string $provider): bool
     {
-        return $this->configuration[$providerName]['security']['login']['properties'] ?? [];
+        $authentication = $this->getAuthentication($provider);
+        return $authentication['reset_confirm']['enabled'] ?? false;
     }
-    
+
+    public function getResetConfirmPath(string $provider): string
+    {
+        $authentication = $this->getAuthentication($provider);
+        return $authentication['reset_confirm']['path'] ?? '';
+    }
+
+    public function getResetConfirmController(string $provider): string
+    {
+        $authentication = $this->getAuthentication($provider);
+        return $authentication['reset_confirm']['controller'] ?? '';
+    }
 
 
+    public function isChangePasswordEnabled(string $provider): bool
+    {
+        $authentication = $this->getAuthentication($provider);
+        return $authentication['change_password']['enabled'] ?? false;
+    }
 
+    public function getChangePasswordPath(string $provider): string
+    {
+        $authentication = $this->getAuthentication($provider);
+        return $authentication['change_password']['path'] ?? '';
+    }
 
-
-
-
-
-
-
-
-
-
+    public function getChangePasswordController(string $provider): string
+    {
+        $authentication = $this->getAuthentication($provider);
+        return $authentication['change_password']['controller'] ?? '';
+    }
 
     
     // ──────────────────────────────
-    // DEBUG & TRACING
+    // DEBUG
     // ──────────────────────────────
 
-    public function isDebugEnabled(string $providerName): bool
+    public function isDebugEnabled(string $provider): bool
     {
-        return $this->configuration[$providerName]['debug']['enable'] ?? false;
+        if (! $this->hasProvider($provider)) {
+            return false;
+        }
+
+        $providerOptions = $this->getProvider($provider);
+        return $providerOptions['debug']['enabled'] ?? false;
     }
 
-    public function isTracingEnabled(string $providerName): bool
-    {
-        return $this->configuration[$providerName]['tracing']['enable'] ?? false;
-    }
 
-    public function isTracingIdRequestEnabled(string $providerName): bool
-    {
-        return $this->configuration[$providerName]['tracing']['request'] ?? false;
-    }
+
+
+
+
+
+
+
 
 
 
@@ -2732,18 +2819,6 @@ class ConfigurationService
 
 
     // ──────────────────────────────
-    // Endpoints Transformer
-    // ──────────────────────────────
-
-    public function getTransformer(string $providerName, string $entityClass, string $endpointName): string
-    {
-        return $this->getEndpoint($providerName, $entityClass, $endpointName)['transformer'] ?? '';
-    }
-
-
-
-
-    // ──────────────────────────────
     // DOCUMENTATION
     // ──────────────────────────────
 
@@ -2767,9 +2842,9 @@ class ConfigurationService
     // ──────────────────────────────
 
 
-    public function getEntityRepository(string $entity)
-    {
-        return $this->doctrine->getRepository($entity);
-    }
+    // public function getEntityRepository(string $entity)
+    // {
+    //     return $this->doctrine->getRepository($entity);
+    // }
 
 }

@@ -48,7 +48,7 @@ final class AuthenticationSubscriber implements EventSubscriberInterface
             return;
         }
 
-        $roles = $this->configuration->getRoles(
+        $roles = $this->configuration->getAccessControlRoles(
             $context['provider'],
             $context['collection'],
             $context['endpoint']

@@ -1,12 +1,6 @@
 <?php 
 namespace OSW3\Api\Service;
 
-use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\Persistence\ManagerRegistry;
-use OSW3\Api\Service\ConfigurationService;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\RequestStack;
-use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 
 final class UtilsService
 {

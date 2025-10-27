@@ -719,58 +719,100 @@ return static function($definition)
                         ->info('Defines the registration settings for the API.')
                         ->addDefaultsIfNotSet()->children()
 
-                            ->arrayNode('login')
-                                ->info('')
+                            ->arrayNode('register')
+                                ->info('Defines the registration endpoint settings.')
                                 ->addDefaultsIfNotSet()->children()
-                                
-                                ->end()
-                            ->end()
-
-                            ->arrayNode('logout')
-                                ->info('')
-                                ->addDefaultsIfNotSet()->children()
-                                
-                                ->end()
-                            ->end()
-
-                            ->arrayNode('refresh_token')
-                                ->info('')
-                                ->addDefaultsIfNotSet()->children()
-                                
-                                ->end()
-                            ->end()
  
-                            // ->booleanNode('enabled')
-                            //     ->info('Enable or disable registration.')
-                            //     ->defaultFalse()
-                            //     ->treatNullLike(false)
-                            // ->end()
+                                    ->booleanNode('enabled')
+                                        ->info('Enable or disable registration.')
+                                        ->defaultFalse()
+                                        ->treatNullLike(false)
+                                    ->end()
 
-                            // ->scalarNode('path')
-                            //     ->info('Path for the registration endpoint.')
-                            //     ->defaultNull()
-                            // ->end()
+                                    ->scalarNode('path')
+                                        ->info('Path for the registration endpoint.')
+                                        ->defaultNull('/register')
+                                    ->end()
 
-                            // ->scalarNode('controller')
-                            //     ->info('Optional Symfony controller (FQCN::method) to handle registration. If not defined, the default RegisterController will be used.')
-                            //     ->defaultValue('OSW3\Api\Controller\RegisterController::register')
-                            //     ->treatNullLike('OSW3\Api\Controller\RegisterController::register')
-                            //     ->validate()
-                            //         ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
-                            //         ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.', 'register.controller')
-                            //     ->end()
-                            // ->end()
+                                    ->scalarNode('controller')
+                                        ->info('Optional Symfony controller (FQCN::method) to handle registration. If not defined, the default RegistrationController will be used.')
+                                        ->defaultValue('OSW3\Api\Controller\RegistrationController::register')
+                                        ->treatNullLike('OSW3\Api\Controller\RegistrationController::register')
+                                        ->validate()
+                                            ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                                            ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.', 'register.controller')
+                                        ->end()
+                                    ->end()
 
-                            // ->arrayNode('properties')
-                            //     ->info('Maps request properties to entity fields during login.')
-                            //     ->normalizeKeys(false)
-                            //     ->scalarPrototype()->end()
-                            //     ->defaultValue([
-                            //         'username' => 'email',
-                            //         'password' => 'password',
-                            //         'confirm'  => 'confirmPassword',
-                            //     ])
-                            // ->end()
+                                    ->arrayNode('fields')
+                                        ->info('Registration fields mapping.')
+                                        ->normalizeKeys(false)
+                                        ->scalarPrototype()->end()
+                                        ->defaultValue([
+                                            'username' => 'email',
+                                            'password' => 'password',
+                                            'confirm'  => 'confirmPassword',
+                                        ])
+                                    ->end()
+                                
+                                ->end()
+                            ->end()
+
+                            ->arrayNode('verify_email')
+                                ->info('Defines the email verification settings for the API.')
+                                ->addDefaultsIfNotSet()->children()
+ 
+                                    ->booleanNode('enabled')
+                                        ->info('Enable or disable email verification.')
+                                        ->defaultFalse()
+                                        ->treatNullLike(false)
+                                    ->end()
+
+                                    ->scalarNode('path')
+                                        ->info('Path for the email verification endpoint.')
+                                        ->defaultNull('/verify-email')
+                                    ->end()
+
+                                    ->scalarNode('controller')
+                                        ->info('Optional Symfony controller (FQCN::method) to handle email verification. If not defined, the default RegistrationController will be used.')
+                                        ->defaultValue('OSW3\Api\Controller\RegistrationController::verifyEmail')
+                                        ->treatNullLike('OSW3\Api\Controller\RegistrationController::verifyEmail')
+                                        ->validate()
+                                            ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                                            ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.', 'verify_email.controller')
+                                        ->end()
+                                    ->end()
+                                
+                                ->end()
+                            ->end()
+
+                            ->arrayNode('resend_verification')
+                                ->info('Defines the resend email verification settings for the API.')
+                                ->addDefaultsIfNotSet()->children()
+ 
+                                    ->booleanNode('enabled')
+                                        ->info('Enable or disable resend email verification.')
+                                        ->defaultFalse()
+                                        ->treatNullLike(false)
+                                    ->end()
+
+                                    ->scalarNode('path')
+                                        ->info('Path for the resend email verification endpoint.')
+                                        ->defaultNull('/resend-verification')
+                                    ->end()
+
+                                    ->scalarNode('controller')
+                                        ->info('Optional Symfony controller (FQCN::method) to handle registration. If not defined, the default RegistrationController will be used.')
+                                        ->defaultValue('OSW3\Api\Controller\RegistrationController::resendVerification')
+                                        ->treatNullLike('OSW3\Api\Controller\RegistrationController::resendVerification')
+                                        ->validate()
+                                            ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                                            ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.', 'resend_verification.controller')
+                                        ->end()
+                                    ->end()
+
+                                ->end()
+                            ->end()
 
                             // ->arrayNode('hooks')
                             //     ->info('Defines callable hooks to be executed before and after the registration action.')
@@ -834,47 +876,99 @@ return static function($definition)
                         ->info('Defines the authentication settings for the API.')
                         ->addDefaultsIfNotSet()->children()
 
-                            ->arrayNode('register')
-                                ->info('')
+                            ->arrayNode('login')
+                                ->info('Defines the login settings for the API.')
                                 ->addDefaultsIfNotSet()->children()
+ 
+                                    ->booleanNode('enabled')
+                                        ->info('Enable or disable login.')
+                                        ->defaultFalse()
+                                        ->treatNullLike(false)
+                                    ->end()
+
+                                    ->scalarNode('path')
+                                        ->info('Path for the login endpoint.')
+                                        ->defaultNull('/login')
+                                    ->end()
+
+                                    ->scalarNode('controller')
+                                        ->info('Optional Symfony controller (FQCN::method) to handle login. If not defined, the default AuthenticationController will be used.')
+                                        ->defaultValue('OSW3\Api\Controller\AuthenticationController::login')
+                                        ->treatNullLike('OSW3\Api\Controller\AuthenticationController::login')
+                                        ->validate()
+                                            ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                                            ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.', 'login.controller')
+                                        ->end()
+                                    ->end()
+
+                                    ->arrayNode('fields')
+                                        ->info('Login fields mapping.')
+                                        ->normalizeKeys(false)
+                                        ->scalarPrototype()->end()
+                                        ->defaultValue([
+                                            'username' => 'email',
+                                            'password' => 'password',
+                                        ])
+                                    ->end()
                                 
                                 ->end()
                             ->end()
 
-                            ->arrayNode('verify_email')
-                                ->info('')
+                            ->arrayNode('logout')
+                                ->info('Defines the logout settings for the API.')
                                 ->addDefaultsIfNotSet()->children()
-                                
+ 
+                                    ->booleanNode('enabled')
+                                        ->info('Enable or disable logout.')
+                                        ->defaultFalse()
+                                        ->treatNullLike(false)
+                                    ->end()
+
+                                    ->scalarNode('path')
+                                        ->info('Path for the logout endpoint.')
+                                        ->defaultNull('/logout')
+                                    ->end()
+
+                                    ->scalarNode('controller')
+                                        ->info('Optional Symfony controller (FQCN::method) to handle logout. If not defined, the default AuthenticationController will be used.')
+                                        ->defaultValue('OSW3\Api\Controller\AuthenticationController::logout')
+                                        ->treatNullLike('OSW3\Api\Controller\AuthenticationController::logout')
+                                        ->validate()
+                                            ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                                            ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.', 'logout.controller')
+                                        ->end()
+                                    ->end()
+
                                 ->end()
                             ->end()
 
-                            ->arrayNode('reset_password')
-                                ->info('')
+                            ->arrayNode('refresh_token')
+                                ->info('Defines the refresh token settings for the API.')
                                 ->addDefaultsIfNotSet()->children()
-                                
+ 
+                                    ->booleanNode('enabled')
+                                        ->info('Enable or disable refresh token.')
+                                        ->defaultFalse()
+                                        ->treatNullLike(false)
+                                    ->end()
+
+                                    ->scalarNode('path')
+                                        ->info('Path for the refresh token endpoint.')
+                                        ->defaultNull('/refresh-token')
+                                    ->end()
+
+                                    ->scalarNode('controller')
+                                        ->info('Optional Symfony controller (FQCN::method) to handle refresh token. If not defined, the default AuthenticationController will be used.')
+                                        ->defaultValue('OSW3\Api\Controller\AuthenticationController::refreshToken')
+                                        ->treatNullLike('OSW3\Api\Controller\AuthenticationController::refreshToken')
+                                        ->validate()
+                                            ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                                            ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.', 'refresh_token.controller')
+                                        ->end()
+                                    ->end()
+
                                 ->end()
                             ->end()
-
-                            // ->booleanNode('enabled')
-                            //     ->info('Enable or disable login.')
-                            //     ->defaultFalse()
-                            //     ->treatNullLike(false)
-                            // ->end()
-
-                            // ->scalarNode('path')
-                            //     ->info('Path for the registration endpoint.')
-                            //     ->defaultNull()
-                            // ->end()
-
-                            // ->scalarNode('controller')
-                            //     ->info('Optional Symfony controller (FQCN::method) to handle registration. If not defined, the default SecurityController will be used.')
-                            //     ->defaultValue('OSW3\Api\Controller\SecurityController::login')
-                            //     ->treatNullLike('OSW3\Api\Controller\SecurityController::login')
-                            //     ->validate()
-                            //         ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
-                            //         ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.', 'login.controller')
-                            //     ->end()
-                            // ->end()
 
                             // ->arrayNode('properties')
                             //     ->info('Maps request properties to entity fields during login.')
@@ -889,6 +983,97 @@ return static function($definition)
                         ->end()
                     ->end()
 
+                    ->arrayNode('password')
+                        ->info('Defines the password settings for the API.')
+                        ->addDefaultsIfNotSet()->children()
+
+                            ->arrayNode('reset_request')
+                                ->info('Defines the password reset request settings for the API.')
+                                ->addDefaultsIfNotSet()->children()
+ 
+                                    ->booleanNode('enabled')
+                                        ->info('Enable or disable password reset request.')
+                                        ->defaultFalse()
+                                        ->treatNullLike(false)
+                                    ->end()
+
+                                    ->scalarNode('path')
+                                        ->info('Path for the password reset request endpoint.')
+                                        ->defaultNull('/password/reset')
+                                    ->end()
+
+                                    ->scalarNode('controller')
+                                        ->info('Optional Symfony controller (FQCN::method) to handle registration. If not defined, the default PasswordController will be used.')
+                                        ->defaultValue('OSW3\Api\Controller\PasswordController::resetRequest')
+                                        ->treatNullLike('OSW3\Api\Controller\PasswordController::resetRequest')
+                                        ->validate()
+                                            ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                                            ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.', 'reset_request.controller')
+                                        ->end()
+                                    ->end()
+                                
+                                ->end()
+                            ->end()
+
+                            ->arrayNode('reset_confirm')
+                                ->info('Defines the password reset confirmation settings for the API.')
+                                ->addDefaultsIfNotSet()->children()
+ 
+                                    ->booleanNode('enabled')
+                                        ->info('Enable or disable password reset confirmation.')
+                                        ->defaultFalse()
+                                        ->treatNullLike(false)
+                                    ->end()
+
+                                    ->scalarNode('path')
+                                        ->info('Path for the password reset confirmation endpoint.')
+                                        ->defaultNull('/password/reset/confirm')
+                                    ->end()
+
+                                    ->scalarNode('controller')
+                                        ->info('Optional Symfony controller (FQCN::method) to handle registration. If not defined, the default PasswordController will be used.')
+                                        ->defaultValue('OSW3\Api\Controller\PasswordController::resetConfirm')
+                                        ->treatNullLike('OSW3\Api\Controller\PasswordController::resetConfirm')
+                                        ->validate()
+                                            ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                                            ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.', 'reset_confirm.controller')
+                                        ->end()
+                                    ->end()
+
+                                ->end()
+                            ->end()
+
+                            ->arrayNode('change')
+                                ->info('Defines the password change settings for the API.')
+                                ->addDefaultsIfNotSet()->children()
+ 
+                                    ->booleanNode('enabled')
+                                        ->info('Enable or disable password change.')
+                                        ->defaultFalse()
+                                        ->treatNullLike(false)
+                                    ->end()
+
+                                    ->scalarNode('path')
+                                        ->info('Path for the password change endpoint.')
+                                        ->defaultNull('/password/change')
+                                    ->end()
+
+                                    ->scalarNode('controller')
+                                        ->info('Optional Symfony controller (FQCN::method) to handle registration. If not defined, the default PasswordController will be used.')
+                                        ->defaultValue('OSW3\Api\Controller\PasswordController::change')
+                                        ->treatNullLike('OSW3\Api\Controller\PasswordController::change')
+                                        ->validate()
+                                            ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                                            ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.', 'change.controller')
+                                        ->end()
+                                    ->end()
+
+                                ->end()
+                            ->end()
+
+                        ->end()
+                    ->end()
+
                 ->end()
             ->end()
 
@@ -899,25 +1084,15 @@ return static function($definition)
                 ->info('Debug configuration')
                 ->addDefaultsIfNotSet()->children()
 
-                    ->booleanNode('enable')
+                    ->booleanNode('enabled')
                         ->info('Enable or disable debug.')
-                        ->defaultTrue()
+                        ->defaultFalse()
+                        ->treatNullLike(false)
                     ->end()
-
-                // 	->booleanNode('enable')
-                //         ->info('Enable or disable tracing.')
-                //         ->defaultTrue()
-                //     ->end()
-
-                // 	->booleanNode('request')
-                //         ->info('Enable or disable request_id.')
-                //         ->defaultTrue()
-                //     ->end()
 
 			    ->end()
             ->end()
 
-            
             // ──────────────────────────────
             // Collections (Doctrine Entities)
             // ──────────────────────────────
@@ -1277,7 +1452,6 @@ return static function($definition)
                             ->useAttributeAsKey('endpoint')  
                             ->requiresAtLeastOneElement()
                             ->arrayPrototype()
-                            // ->ignoreExtraKeys(false)
                                 ->children()
 
                                     // ──────────────────────────────
@@ -1533,6 +1707,12 @@ return static function($definition)
                                             ->scalarNode('class')
                                                 ->info('Optional: the fully qualified class name of a custom repository. Defaults to the default Doctrine repository for the entity.')
                                                 ->defaultNull()
+
+                                                // TODO: Validator to check if class exists and is a valid repository
+                                                // ->validate()
+                                                //     ->ifTrue(fn($hooks) => !HooksValidator::validate($hooks))
+                                                //     ->thenInvalid('One or more hooks (before/after) are invalid. They must be valid callables (Class::method or callable).')
+                                                // ->end()
                                             ->end()
 
                                             ->scalarNode('method')
@@ -1672,18 +1852,6 @@ return static function($definition)
                                         ->validate()
                                             ->ifTrue(fn($hooks) => !HooksValidator::validate($hooks))
                                             ->thenInvalid('One or more hooks (before/after) are invalid. They must be valid callables (Class::method or callable).')
-                                        ->end()
-                                    ->end()
-
-                                    // ──────────────────────────────
-                                    // Transformer / DTOs
-                                    // ──────────────────────────────
-                                    ->scalarNode('transformer')
-                                        ->info('Optional FQCN::method of a transformer or DTO to convert entity data before serialization.')
-                                        ->defaultNull()
-                                        ->validate()
-                                            ->ifTrue(fn($v) => !TransformerValidator::isValid($v))
-                                            ->thenInvalid('Invalid transformer: class or method does not exist.')
                                         ->end()
                                     ->end()
 

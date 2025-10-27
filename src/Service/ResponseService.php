@@ -176,7 +176,7 @@ final class ResponseService
         // Build the response by format (with $content and $statusCode)
         // --
 
-        $response = match ($this->configuration->getResponseFormat($provider)) {
+        $response = match ($this->configuration->getResponseType($provider)) {
             'csv'   => $this->buildCsvResponse($content, $statusCode),
             'json'  => $this->buildJsonResponse($content, $statusCode),
             'xml'   => $this->buildXmlResponse($content, $statusCode),

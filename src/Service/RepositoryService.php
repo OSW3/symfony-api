@@ -1,6 +1,7 @@
 <?php 
 namespace OSW3\Api\Service;
 
+use OSW3\Api\Service\ContextService;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use OSW3\Api\Service\ConfigurationService;
@@ -14,6 +15,9 @@ final class RepositoryService
     private readonly Request $request;
 
     public function __construct(
+        private readonly ContextService $contextService,
+
+
         private readonly EntityManagerInterface $entityManager,
         private readonly ConfigurationService $configuration,
         private readonly ManagerRegistry $doctrine,
@@ -27,20 +31,22 @@ final class RepositoryService
         $this->request = $requestStack->getCurrentRequest();
     }
 
-    private function getContext(): array 
-    {
-        return [
-            'provider'   => $this->configuration->getContext('provider'),
-            'collection' => $this->configuration->getContext('collection'),
-            'endpoint'   => $this->configuration->getContext('endpoint'),
-        ];
-    }
     
-    private function getRepository(): object
-    {
-        ['provider' => $provider,'collection' => $collection,'endpoint' => $endpoint] = $this->getContext();
-        return $this->configuration->getRepository($provider, $collection, $endpoint);
-    }
+
+
+    // private function getRepository(): object
+    // {
+    //     $repository = $this->configuration->getRepositoryClass(
+    //         provider  : $this->contextService->getProvider(),
+    //         collection: $this->contextService->getCollection(),
+    //         endpoint  : $this->contextService->getEndpoint(),
+    //     );
+    //     dump($repository);
+    
+    //     dd("REPOSITORY SERVICE");
+    //     ['provider' => $provider,'collection' => $collection,'endpoint' => $endpoint] = $this->getContext();
+    //     return $this->configuration->getRepository($provider, $collection, $endpoint);
+    // }
 
     private function getOffset(): int
     {
@@ -58,14 +64,15 @@ final class RepositoryService
      */
     public function resolveRepositoryClass(): ?string
     {
-        $context = $this->getContext();
-        $provider = $context['provider'];
-        $entityClass = $context['collection'];
-        $endpoint = $context['endpoint'];
-        // dd($context);
-        
+        // Get the entity class from the context
+        $entityClass = $this->contextService->getCollection();
 
-        $repositoryClass = $this->configuration->getRepositoryClass($provider, $entityClass, $endpoint);
+        // Get the repository class from the configuration
+        $repositoryClass = $this->configuration->getRepositoryClass(
+            provider  : $this->contextService->getProvider(),
+            collection: $this->contextService->getCollection(),
+            endpoint  : $this->contextService->getEndpoint(),
+        );
 
         // If Repository class is not defined, fallback onto Entity repository
         if (empty($repositoryClass)) {
@@ -81,21 +88,25 @@ final class RepositoryService
 
     public function resolveRepositoryMethod(): ?string
     {
-        [
-            'provider'   => $provider,
-            'collection' => $collection,
-            'endpoint'   => $endpoint
-        ] = $this->getContext();
+        // Output
+        $method = null; 
 
-        // Try to get  the custom method from the config (repository.method)
-        $method = $this->configuration->getMethod($provider, $collection, $endpoint);
+        // Get allowed HTTP methods for the route
+        $repositoryMethod = $this->configuration->getRepositoryMethod(
+            provider  : $this->contextService->getProvider(),
+            collection: $this->contextService->getCollection(),
+            endpoint  : $this->contextService->getEndpoint(),
+        );
+
+        // Get HTTP method
+        $httpMethod  = $this->request->getMethod();
+
+        // Get route parameters
+        $routeParams = $this->request->attributes->get('_route_params', []);
 
         // Resolve method if not defined
-        if (!$method) 
+        if (!$repositoryMethod) 
         {
-            $httpMethod  = $this->request->getMethod();
-            $routeParams = $this->request->attributes->get('_route_params', []);
-
             switch ($httpMethod) 
             {
                 case Request::METHOD_GET:
@@ -128,12 +139,16 @@ final class RepositoryService
     public function resolveRepositoryInstance(string $repositoryClassOrEntity): object
     {
         // Si c’est une entité connue par Doctrine, retourne son repository standard
-        if (class_exists($repositoryClassOrEntity) && $this->doctrine->getManagerForClass($repositoryClassOrEntity)) {
+        if (class_exists($repositoryClassOrEntity) 
+            && $this->doctrine->getManagerForClass($repositoryClassOrEntity)){
             return $this->doctrine->getRepository($repositoryClassOrEntity);
         }
 
         // Si c’est un repository custom héritant de ServiceEntityRepository, instancie avec Doctrine
-        if (class_exists($repositoryClassOrEntity) && is_subclass_of($repositoryClassOrEntity, ServiceEntityRepository::class)) {
+        if (
+            class_exists($repositoryClassOrEntity) 
+            && is_subclass_of($repositoryClassOrEntity, ServiceEntityRepository::class)
+        ){
             return new $repositoryClassOrEntity($this->doctrine);
         }
 
@@ -181,7 +196,10 @@ final class RepositoryService
     {
         $this->pagination->enable();
         $this->responseStatusService->setCode(200);
-        return $this->getRepository()->findBy($criteria, $order, $limit, $offset);
+
+        $repositoryClass = $this->resolveRepositoryClass();
+        $repository = $this->resolveRepositoryInstance($repositoryClass);
+        return $repository->findBy($criteria, $order, $limit, $offset);
     }
 
     private function find(int|string $id): object|null
@@ -205,7 +223,9 @@ final class RepositoryService
 
     private function count(array $criteria): int
     {
-        return $this->getRepository()->count($criteria);
+        $repositoryClass = $this->resolveRepositoryClass();
+        $repository = $this->resolveRepositoryInstance($repositoryClass);
+        return $repository->count($criteria);
     }
 
     private function create(): object|null
@@ -313,40 +333,49 @@ final class RepositoryService
 
     public function execute(): mixed
     {
-        ['provider' => $provider, 'collection' => $collection, 'endpoint' => $endpoint] = $this->getContext();
-
-        // Résolution repository
+        // Get repository class
         $repositoryClass = $this->resolveRepositoryClass();
-        if (!$repositoryClass) {
-            throw new \RuntimeException("Aucun repository trouvé pour {$collection}");
-        }
         $repository = $this->resolveRepositoryInstance($repositoryClass);
 
-        // Résolution méthode
-        $customMethod = $this->configuration->getMethod($provider, $collection, $endpoint);
-        $method = $customMethod ?? $this->resolveRepositoryMethod();
+        // Get repository method
+        $repositoryMethod = $this->configuration->getRepositoryMethod(
+            provider  : $this->contextService->getProvider(),
+            collection: $this->contextService->getCollection(),
+            endpoint  : $this->contextService->getEndpoint(),
+        );
+        $method = $repositoryMethod ?? $this->resolveRepositoryMethod();
 
-        // Paramètres pour méthode custom
-        $params = $customMethod ? $this->requestService->getParams() : [];
 
-        // ──────────────
-        // Execution
-        // ──────────────
-        if ($customMethod) {
+        // Get params if custom method
+        $params = $repositoryMethod ? $this->requestService->getParams() : [];
+
+
+        if ($repositoryMethod) {
             // Si la méthode existe et est callable
-            if (!is_callable([$repository, $customMethod])) {
+            if (!is_callable([$repository, $repositoryMethod])) {
                 throw new \RuntimeException(
-                    sprintf('Méthode custom "%s" introuvable dans "%s"', $customMethod, $repositoryClass)
+                    sprintf('Méthode custom "%s" introuvable dans "%s"', $repositoryMethod, $repositoryClass)
                 );
             }
-            return $repository->$customMethod(...array_values($params));
+            return $repository->$repositoryMethod(...array_values($params));
         }
 
-        // Méthodes standard HTTP
         $id       = $this->request->get('id');
-        $criteria = $this->configuration->getCriteria($provider, $collection, $endpoint);
-        $order    = $this->configuration->getOrderBy($provider, $collection, $endpoint);
-        $limit    = $this->configuration->getLimit($provider, $collection, $endpoint);
+        $criteria = $this->configuration->getCriteria(
+            provider  : $this->contextService->getProvider(),
+            collection: $this->contextService->getCollection(),
+            endpoint  : $this->contextService->getEndpoint(),
+        );
+        $order    = $this->configuration->getOrderBy(
+            provider  : $this->contextService->getProvider(),
+            collection: $this->contextService->getCollection(),
+            endpoint  : $this->contextService->getEndpoint(),
+        );
+        $limit    = $this->configuration->getLimit(
+            provider  : $this->contextService->getProvider(),
+            collection: $this->contextService->getCollection(),
+            endpoint  : $this->contextService->getEndpoint(),
+        );
         $offset   = $this->getOffset();
 
         if ($id) {

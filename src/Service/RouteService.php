@@ -122,7 +122,7 @@ final class RouteService
     {
         $pattern    = $this->configuration->getRouteNamePattern($provider);
         $version    = $this->versionService->getLabel($provider);
-        $collection = $this->configuration->getSecurityCollectionName($provider);
+        $collection = $this->configuration->getSecurityGroup($provider);
 
         $route      = $pattern;
         $route      = preg_replace("/{version}/", $version, $route);
@@ -167,7 +167,7 @@ final class RouteService
         $context = [
             'provider' => $provider,
             'endpoint' => "register",
-            'collection' => $this->configuration->getSecurityCollectionName($provider),
+            'collection' => $this->configuration->getSecurityGroup($provider),
         ];
 
         $name                      = $this->getRouteNameByProvider($provider, $context['endpoint']);
@@ -179,7 +179,7 @@ final class RouteService
         $options                   = ['context' => $context];
         // $host                      = null;
         // $schemes                   = [];
-        $methods                   = [$this->configuration->getRegistrationMethod($provider) ?: 'POST'];
+        $methods                   = ['POST']; // [$this->configuration->getRegistrationMethod($provider) ?: 'POST'];
         // $condition                 = '';
 
         $this->addRouteToCollection($routes, [
@@ -200,7 +200,7 @@ final class RouteService
         $context = [
             'provider' => $provider,
             'endpoint' => "login",
-            'collection' => $this->configuration->getSecurityCollectionName($provider),
+            'collection' => $this->configuration->getSecurityGroup($provider),
         ];
 
         $name                      = $this->getRouteNameByProvider($provider, $context['endpoint']);
@@ -212,7 +212,7 @@ final class RouteService
         $options                   = ['context' => $context];
         // $host                      = null;
         // $schemes                   = [];
-        $methods                   = [$this->configuration->getLoginMethod($provider) ?: 'POST'];
+        $methods                   = ['POST']; // [$this->configuration->getLoginMethod($provider) ?: 'POST'];
         // $condition                 = '';
 
         $this->addRouteToCollection($routes, [
