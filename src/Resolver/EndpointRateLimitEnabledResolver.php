@@ -3,21 +3,19 @@ namespace OSW3\Api\Resolver;
 
 final class EndpointRateLimitEnabledResolver
 {
-    public static function default(array &$providers): array 
+    public static function default(array &$providers): array
     {
         foreach ($providers as &$provider) {
-            foreach ($provider['collections'] as $collectionName => &$collection) {
-                foreach ($collection['endpoints'] as $endpointName => &$endpoint) {
+            foreach ($provider['collections'] as &$collection) {
+                $collectionRateLimit = $collection['rate_limit']['enabled'] ?? ($provider['rate_limit']['enabled'] ?? true);
 
-                    if (
-                        !isset($endpoint['rate_limit']['enabled']) || 
-                        (empty($endpoint['rate_limit']['enabled']) && !empty($collection['rate_limit']['enabled']))
-                    ) {
-                        $endpoint['rate_limit']['enabled'] = $collection['rate_limit']['enabled'] ?? [];
+                foreach ($collection['endpoints'] as &$endpoint) {
+                    $value = $endpoint['rate_limit']['enabled'] ?? null;
+
+                    if ($value === null) {
+                        $endpoint['rate_limit']['enabled'] = $collectionRateLimit;
                     }
-                    
                 }
-
             }
         }
 

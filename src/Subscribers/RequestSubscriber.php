@@ -1,14 +1,17 @@
 <?php 
 namespace OSW3\Api\Subscribers;
 
-use OSW3\Api\Service\ConfigurationService;
+use OSW3\Api\Service\RouteService;
+use OSW3\Api\Service\ContextService;
+use OSW3\Api\Service\RequestService;
 use OSW3\Api\Service\SupportService;
 use OSW3\Api\Service\ResponseService;
 use OSW3\Api\Service\TemplateService;
 use OSW3\Api\Service\SerializeService;
 use OSW3\Api\Service\RepositoryService;
-use OSW3\Api\Service\RouteService;
+use OSW3\Api\Service\ConfigurationService;
 use Symfony\Component\HttpKernel\KernelEvents;
+use OSW3\Api\Exception\RepositoryCallException;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
@@ -29,7 +32,9 @@ class RequestSubscriber implements EventSubscriberInterface
         private readonly TemplateService $templateService,
         private readonly SerializeService $serializeService,
         private readonly RepositoryService $repositoryService,
-        
+
+        private readonly ContextService $contextService,
+        private readonly RequestService $requestService,
         private readonly ConfigurationService $configurationService,
     ){}
 
@@ -40,33 +45,60 @@ class RequestSubscriber implements EventSubscriberInterface
     
     public function onRequest(RequestEvent $event): void 
     {
-        $provider = $this->configurationService->getContext('provider');
-        $collection = $this->configurationService->getContext('collection');
-        $endpoint = $this->configurationService->getContext('endpoint');
+        $provider   = $this->contextService->getProvider();
+        $collection = $this->contextService->getCollection();
+        $endpoint   = $this->contextService->getEndpoint();
+        $security   = $this->configurationService->getSecurity($provider);
+        $routeName  = $event->getRequest()->attributes->get('_route');
 
+        $securityEndpoints = array_keys(array_merge(
+            $security['registration'] ?? [], 
+            $security['authentication'] ?? [], 
+            $security['password'] ?? [], 
+        ));
 
-        // dump( $this->configurationService->getSecurity($provider) );
-        // dump( $this->configurationService->isDebugEnabled($provider) );
-        // dump( $this->configurationService->isRegistrationEnabled($provider) );
-        // dump( $this->configurationService->isEmailVerificationEnabled($provider) );
-        // dd( $this->configurationService->isResendVerificationEnabled($provider) );
-        // dump( $this->configurationService->getRoute($provider, $collection) );
-        // dd( $this->configurationService->getRoute($provider, $collection, $endpoint) );
+        // Support
+        // -- 
 
+        // Is _route parameter is defined ?
+        if (!$routeName) {
+            return;
+        }
 
-
+        // Is main request
         if (!$event->isMainRequest()) {
             return;
         }
 
-        $context = $this->routeService->getContext();
-        
-        if (in_array($context['endpoint'], ['register', 'login'], true)) {
+        // Bypass for Security.registration and Security.authentication endpoints
+        if (in_array($endpoint, $securityEndpoints, true)) {
             return;
         }
 
-        // Check if the request is not a valid defined route
-        if (!$this->supportService->supports()) {
+        // Is _route parameter is defined ?
+        if (!$routeName) {
+            return;
+        }
+        
+        // Is route is defined in the config
+        if (!$this->routeService->isRegisteredRoute($routeName)) {
+            return;
+        }
+
+        // Is the HTTP Method supported
+        if (!$this->routeService->isMethodSupported($routeName)) {
+            return;
+        }
+
+        // Is the collection repository callable
+        if (!$this->repositoryService->isRepositoryCallable()) {
+            $repository = $this->repositoryService->getRepositoryClass();
+            $method     = $this->repositoryService->getRepositoryMethod();
+            throw RepositoryCallException::invalid($repository, $method);
+        }
+
+        // Has requirements params
+        if (!$this->requestService->hasRequiredParameters()) {
             return;
         }
 
@@ -74,6 +106,10 @@ class RequestSubscriber implements EventSubscriberInterface
         if ($event->getRequest()->attributes->get('_controller')) {
             return;
         }
+
+
+        // Processing
+        // -- 
 
         // Retrieve and normalize data from the repository
         $raw        = $this->repositoryService->execute();

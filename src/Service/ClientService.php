@@ -26,6 +26,12 @@ final class ClientService
         return $this->request->getClientIp();
     }
 
+    public function getIps(): array 
+    {
+        return $this->request->getClientIps();
+    }
+
+
     
     // ──────────────────────────────
     // User Agent
@@ -170,16 +176,62 @@ final class ClientService
     // Languages
     // ──────────────────────────────
 
+    /**
+     * Get all accepted languages
+     * 
+     * @return array
+     */
     public function getLanguages(): array 
     {
         return $this->request->getLanguages();
     }
+
+    /**
+     * Get the preferred language
+     * 
+     * @return string|null
+     */
     public function getLanguage(): ?string
     {
         return $this->request->getPreferredLanguage();
     }
 
     
+    // ──────────────────────────────
+    // Charsets
+    // ──────────────────────────────
+
+    /**
+     * Get all accepted charsets
+     * 
+     * @return array
+     */
+    public function getCharsets(): array
+    {
+        return $this->request->getCharsets();
+    }
+
+    /**
+     * Get all accepted content types
+     * 
+     * @return array
+     */
+    public function getAcceptableContentTypes(): array
+    {
+        return $this->request->getAcceptableContentTypes();
+    }
+
+    /**
+     * Get all accepted encodings
+     * 
+     * @return array
+     */
+    public function getEncodings(): array
+    {
+        return $this->request->getEncodings();
+    }
+
+
     // ──────────────────────────────
     // Fingerprint
     // ──────────────────────────────

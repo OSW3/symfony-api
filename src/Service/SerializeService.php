@@ -11,20 +11,95 @@ use Symfony\Component\Serializer\SerializerInterface;
 final class SerializeService
 {
     public function __construct(
-        private readonly ConfigurationService $configuration,
+        private readonly ContextService $contextService,
+        private readonly ConfigurationService $configurationService,
+        private readonly SecurityService $securityService,
+
         private readonly SerializerInterface $serializer,
         private readonly Security $security,
         private readonly UrlGeneratorInterface $urlGenerator,
     ){}
 
-    private function getContext(): array 
+    /**
+     * Get the encoder to use
+     * 
+     * @return string
+     */
+    public function getEncoder(): string
     {
-        return [
-            'provider'   => $this->configuration->getContext('provider'),
-            'collection' => $this->configuration->getContext('collection'),
-            'endpoint'   => $this->configuration->getContext('endpoint'),
-        ];
+        return 'json';
     }
+    
+    /**
+     * Get the serialization groups
+     * 
+     * @return array
+     */
+    public function getGroups(): array 
+    {
+        return $this->configurationService->getSerializerGroups(
+            provider  : $this->contextService->getProvider(),
+            collection: $this->contextService->getCollection(),
+            endpoint  : $this->contextService->getEndpoint(),
+        );
+    }
+
+    /**
+     * Get the ignored attributes
+     * 
+     * @return array
+     */
+    public function getIgnoredAttributes(): array 
+    {
+        return $this->configurationService->getSerializerIgnore(
+            provider  : $this->contextService->getProvider(),
+            collection: $this->contextService->getCollection(),
+            endpoint  : $this->contextService->getEndpoint(),
+        );
+    }
+
+    /**
+     * Get the datetime format
+     * 
+     * @return string|null
+     */
+    public function getDatetimeFormat(): ?string 
+    {
+        return $this->configurationService->getSerializerDatetimeFormat($this->contextService->getProvider());
+    }
+
+    /**
+     * Get the timezone
+     * 
+     * @return string|null
+     */
+    public function getTimezone(): ?string 
+    {
+        return $this->configurationService->getSerializerTimezone($this->contextService->getProvider());
+    }
+
+    /**
+     * Check if null values should be skipped
+     * 
+     * @return bool
+     */
+    public function isSkipNull(): bool 
+    {
+        return $this->configurationService->getSerializerSkipNull($this->contextService->getProvider());
+    }
+
+    /**
+     * Check if URL support is enabled
+     * 
+     * @return bool
+     */
+    public function hasUrlSupport(): bool 
+    {
+        return $this->configurationService->hasUrlSupport($this->contextService->getProvider());
+    }
+
+    // = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+
 
     public function normalize($data): array
     {
@@ -48,17 +123,15 @@ final class SerializeService
 
     public function serialize($entity)
     {
-        ['provider' => $provider,'collection' => $collection,'endpoint' => $endpoint] = $this->getContext();
-
-        $encoder        = 'json';
+        $collection     = $this->contextService->getCollection();
+        $encoder        = $this->getEncoder();
         $serializer     = $this->serializer;
-        // $class          = $this->configuration->getContext('collection');
-        $groups         = $this->configuration->getSerializerGroups($provider, $collection, $endpoint);
-        $ignore         = $this->configuration->getSerializerIgnore($provider, $collection, $endpoint);
-        $datetimeFormat = $this->configuration->getSerializerDatetimeFormat($provider);
-        $timezone       = $this->configuration->getSerializerTimezone($provider);
-        $skipNull       = $this->configuration->getSerializerSkipNull($provider);
-        $hasUrlSupport  = $this->configuration->hasUrlSupport($provider);
+        $groups         = $this->getGroups();
+        $ignore         = $this->getIgnoredAttributes();
+        $datetimeFormat = $this->getDatetimeFormat();
+        $timezone       = $this->getTimezone();
+        $skipNull       = $this->isSkipNull();
+        $hasUrlSupport  = $this->hasUrlSupport();
 
         if (!($entity instanceof $collection)) {
             return [];
@@ -87,25 +160,25 @@ final class SerializeService
 
     private function resolveUrl(&$data, $entity)
     {
-        ['provider' => $provider, 'collection' => $collection] = $this->getContext();
-        
         $accessor   = PropertyAccess::createPropertyAccessor();
         $user       = $this->security->getUser();
-        $isAbsolute = $this->configuration->isUrlAbsolute($provider);
-        $property   = $this->configuration->getUrlProperty($provider);
-        $endpoints  = array_keys($this->configuration->getEndpoints($provider, $collection) ?? []);
+        $provider   = $this->contextService->getProvider();
+        $collection = $this->contextService->getCollection();
+        $isAbsolute = $this->configurationService->isUrlAbsolute($provider);
+        $property   = $this->configurationService->getUrlProperty($provider);
+        $endpoints  = array_keys($this->configurationService->getEndpoints($provider, $collection) ?? []);
 
         foreach ($endpoints as $endpoint) 
         {
-            $allowedRoles = $this->configuration->getRoles($provider, $collection, $endpoint);
-            
+            $allowedRoles = $this->configurationService->getAccessControlRoles($provider, $collection, $endpoint);
+
             if (!($user === null && in_array('PUBLIC_ACCESS', $allowedRoles) || $this->security->isGranted($allowedRoles))) {
                 continue;
             }
 
-            $routeName    = $this->configuration->getEndpointRouteName($provider, $collection, $endpoint);
-            $routeOptions = $this->configuration->getEndpointRouteOptions($provider, $collection, $endpoint);
-            $routeMethods = $this->configuration->getEndpointRouteMethods($provider, $collection, $endpoint);
+            $routeName    = $this->configurationService->getRouteName($provider, $collection, $endpoint);
+            $routeOptions = $this->configurationService->getRouteOptions($provider, $collection, $endpoint);
+            $routeMethods = $this->configurationService->getRouteMethods($provider, $collection, $endpoint);
             $routeParams  = [];
 
             if (!in_array(Request::METHOD_GET, $routeMethods)) {

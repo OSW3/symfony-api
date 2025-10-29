@@ -9,8 +9,18 @@ final class ResponseStatusService
 
     /**
      * Code (200, 404, 301, ...)
+     * 
+     * @deprecated Use setStatusCode() instead.
+     * @param int $code HTTP status code
+     * @return static
      */
     public function setCode(int $code): static 
+    {
+        $this->setStatusCode($code);
+
+        return $this;
+    }
+    public function setStatusCode(int $code): static 
     {
         if (!array_key_exists($code, Response::$statusTexts)) {
             throw new \InvalidArgumentException("Code HTTP invalide : {$code}");
@@ -24,19 +34,31 @@ final class ResponseStatusService
     /**
      * Code (200, 404, 301, ...)
      * 
+     * @deprecated Use getStatusCode() instead.
      * @return int HTTP status code
      */
     public function getCode(): int 
+    {
+        return $this->getStatusCode();
+    }
+    public function getStatusCode(): int 
     {
         return $this->code;
     }
 
     /**
-     * Text (OK)
+     * StatusText (OK, Not Found, Moved Permanently, ...)
+     * 
+     * @deprecated Use getStatusText() instead.
+     * @return string HTTP status text
      */
     public function getText(): string 
     {
         return Response::$statusTexts[ $this->getCode() ];
+    }
+    public function getStatusText(): string 
+    {
+        return Response::$statusTexts[ $this->getStatusCode() ];
     }
 
     /**
@@ -44,7 +66,7 @@ final class ResponseStatusService
      */
     public function getState(): string 
     {
-        $code = $this->getCode();
+        $code = $this->getStatusCode();
 
         return match (true) {
             $code >= 200 && $code < 300 => 'success',

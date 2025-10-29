@@ -1,11 +1,14 @@
 <?php
 namespace OSW3\Api\Service;
 
+use OSW3\Api\ApiBundle;
 use OSW3\Api\Service\ConfigurationService;
+use Symfony\Component\HttpKernel\KernelInterface;
 
 final class ContextService
 {
     public function __construct(
+        private readonly KernelInterface $kernel,
         private readonly ConfigurationService $configurationService,
     ){}
 
@@ -54,5 +57,48 @@ final class ContextService
     public function getEndpoint(): string
     {
         return $this->configurationService->getContext('endpoint');
+    }
+
+    /**
+     * Get the application environment
+     * 
+     * @return string
+     */
+    public function getEnvironment(): string
+    {
+        return $this->kernel->getEnvironment();
+    }
+
+    /**
+     * Check if the application is in debug mode
+     * 
+     * @return bool
+     */
+    public function isDebug(): bool
+    {
+        return $this->kernel->isDebug();
+    }
+
+    /**
+     * Get the bundle directory path
+     * 
+     * @return string
+     */
+    public function getBundleDir(): string
+    {
+        $bundleClass = ApiBundle::class;
+        $bundleName  = (new \ReflectionClass($bundleClass))->getShortName();
+
+        return $this->kernel->getBundle($bundleName)->getPath();
+    }
+
+    /**
+     * Get the project directory path
+     * 
+     * @return string
+     */
+    public function getProjectDir(): string
+    {
+        return $this->kernel->getProjectDir();
     }
 }

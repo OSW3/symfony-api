@@ -9,7 +9,8 @@ final class RequestService
     private readonly Request $request;
 
     public function __construct(
-        private readonly ConfigurationService $configuration,
+        private readonly ContextService $contextService,
+        private readonly RouteService $routeService,
         private readonly RequestStack $requestStack,
     ){
         $this->request = $requestStack->getCurrentRequest();
@@ -25,25 +26,22 @@ final class RequestService
      * 
      * @return Request
      */
-    public function getRequest(): Request 
-    {
-        return $this->getCurrentRequest();
-    }
     public function getCurrentRequest(): Request 
     {
         return $this->request;
     }
 
 
-    public function getCurrentRoute(): string 
+    // ──────────────────────────────
+    // Current Route 
+    // ──────────────────────────────
+
+    public function getCurrentRoute(): ?string 
     {
-        return $this->request->attributes->get('_route');
+        return $this->request->attributes->get('_route') ?? null;
     }
 
-
-    // ──────────────────────────────
-    // HTTP Request
-    // ──────────────────────────────
+    
 
     /**
      * Get the HTTP Method (GET, POST, ...)
@@ -81,15 +79,25 @@ final class RequestService
      */
     public function isSecure(): bool
     {
-        return str_ends_with("s", $this->getScheme());
+        return $this->request->isSecure();
+    }
+
+    public function isFromTrustedProxy(): bool
+    {
+        return $this->request->isFromTrustedProxy();
     }
 
     /**
      * Get the base URL (scheme + host + port + basePath)
      * 
+     * @deprecated use getBaseUrl() instead
      * @return string
      */
     public function getBase(): string 
+    {
+        return $this->getBaseUrl();
+    }
+    public function getBaseUrl(): string 
     {
         $scheme   = $this->request->getScheme();
         $host     = $this->request->getHost();
@@ -123,11 +131,21 @@ final class RequestService
     /**
      * Get the URI Path
      * 
+     * @deprecated use getPath() or getPathInfo() instead
      * @var string
      */
     public function getPath(): string 
     {
         return $this->request->getPathInfo();
+    }
+    public function getPathInfo(): string 
+    {
+        return $this->request->getPathInfo();
+    }
+
+    public function isAjax(): bool
+    {
+        return $this->request->isXmlHttpRequest();
     }
 
 
@@ -138,6 +156,7 @@ final class RequestService
     /**
      * Get all params
      * 
+     * @deprecated use getParameters() instead
      * @return array
      */
     public function getParams(): array
@@ -148,13 +167,26 @@ final class RequestService
             $this->getAttributesParams()
         );
     }
+    public function getParameters(): array
+    {
+        return array_merge(
+            $this->getQueryParameters(),
+            $this->getRequestParameters(),
+            $this->getAttributesParameters()
+        );
+    }
 
     /**
      * Get the query params
      * 
+     * @deprecated use getQueryParameters() instead
      * @return array
      */
     public function getQueryParams(): array 
+    {
+        return $this->request->query->all();
+    }
+    public function getQueryParameters(): array 
     {
         return $this->request->query->all();
     }
@@ -162,9 +194,14 @@ final class RequestService
     /**
      * Get the request params
      * 
+     * @deprecated use getRequestParameters() instead
      * @return array
      */
     public function getRequestParams(): array 
+    {
+        return $this->request->request->all();
+    }
+    public function getRequestParameters(): array 
     {
         return $this->request->request->all();
     }
@@ -172,9 +209,14 @@ final class RequestService
     /**
      * Get the attributes params
      * 
+     * @deprecated use getAttributesParameters() instead
      * @return array
      */
     public function getAttributesParams(): array 
+    {
+        return $this->request->attributes->all();
+    }
+    public function getAttributesParameters(): array 
     {
         return $this->request->attributes->all();
     }
@@ -184,10 +226,13 @@ final class RequestService
      * 
      * @return bool
      */
-    public function hasRequiredParams(): bool 
+    public function hasRequiredParameters(): bool 
     {
-        ['provider' => $provider, 'collection' => $collection, 'endpoint' => $endpoint] = $this->configuration->getContext();
-        $required    = $this->configuration->getRouteRequirements($provider, $collection, $endpoint);
+        $required = $this->routeService->getRequirements(
+            provider: $this->contextService->getProvider(),
+            collection: $this->contextService->getCollection(),
+            endpoint: $this->contextService->getEndpoint(),
+        );
         $routeParams = $this->request->attributes->get('_route_params', []);
 
         foreach (array_keys($required) as $param) {
@@ -234,67 +279,67 @@ final class RequestService
     }
 
 
-    public function getEntityClassname(): string|null
-    {
-        // $providers = $this->configuration->getProviders();
-        // $current = $this->requestStack->getCurrentRequest()->get('_route');
+    // public function getEntityClassname(): string|null
+    // {
+    //     // $providers = $this->configuration->getProviders();
+    //     // $current = $this->requestStack->getCurrentRequest()->get('_route');
 
-        // foreach ($providers as $provider) 
-        // foreach ($provider['collections'] ?? [] as $entityName => $collections) 
-        // foreach ($collections['endpoints'] ?? [] as $endpointName => $endpointOption) 
-        // {
-        //     $routeName = $endpointOption['name'];
+    //     // foreach ($providers as $provider) 
+    //     // foreach ($provider['collections'] ?? [] as $entityName => $collections) 
+    //     // foreach ($collections['endpoints'] ?? [] as $endpointName => $endpointOption) 
+    //     // {
+    //     //     $routeName = $endpointOption['name'];
 
-        //     if ($current == $routeName) {
-        //         return $entityName;
-        //     }
-        // }
+    //     //     if ($current == $routeName) {
+    //     //         return $entityName;
+    //     //     }
+    //     // }
         
-        return null;
-    }
+    //     return null;
+    // }
 
-    /**
-     * Get the repository method
-     *
-     * @return string|null
-     */
-    public function getRepositoryMethod(): string|null 
-    {
-        // $providers = $this->configuration->getProviders();
-        // $current = $this->requestStack->getCurrentRequest()->get('_route');
+    // /**
+    //  * Get the repository method
+    //  *
+    //  * @return string|null
+    //  */
+    // public function getRepositoryMethod(): string|null 
+    // {
+    //     // $providers = $this->configuration->getProviders();
+    //     // $current = $this->requestStack->getCurrentRequest()->get('_route');
 
-        // foreach ($providers as $provider) 
-        // foreach ($provider['collections'] ?? [] as $entityName => $collections) 
-        // foreach ($collections['endpoints'] ?? [] as $endpointName => $endpointOption) 
-        // {
-        //     $routeName = $endpointOption['name'];
+    //     // foreach ($providers as $provider) 
+    //     // foreach ($provider['collections'] ?? [] as $entityName => $collections) 
+    //     // foreach ($collections['endpoints'] ?? [] as $endpointName => $endpointOption) 
+    //     // {
+    //     //     $routeName = $endpointOption['name'];
 
-        //     if ($current == $routeName) {
-        //         return $endpointOption['repository']['method'];
-        //     }
-        // }
+    //     //     if ($current == $routeName) {
+    //     //         return $endpointOption['repository']['method'];
+    //     //     }
+    //     // }
 
-        return null;
-    }
+    //     return null;
+    // }
        
-    public function getRepositoryCriteria(): array
-    {
-        // $providers = $this->configuration->getProviders();
-        // $current = $this->requestStack->getCurrentRequest()->get('_route');
+    // public function getRepositoryCriteria(): array
+    // {
+    //     // $providers = $this->configuration->getProviders();
+    //     // $current = $this->requestStack->getCurrentRequest()->get('_route');
 
-        // foreach ($providers as $provider) 
-        // foreach ($provider['collections'] ?? [] as $entityName => $collections) 
-        // foreach ($collections['endpoints'] ?? [] as $endpointName => $endpointOption) 
-        // {
-        //     $routeName = $endpointOption['name'];
+    //     // foreach ($providers as $provider) 
+    //     // foreach ($provider['collections'] ?? [] as $entityName => $collections) 
+    //     // foreach ($collections['endpoints'] ?? [] as $endpointName => $endpointOption) 
+    //     // {
+    //     //     $routeName = $endpointOption['name'];
 
-        //     if ($current == $routeName) {
-        //         return $endpointOption['repository']['criteria'];
-        //     }
-        // }
+    //     //     if ($current == $routeName) {
+    //     //         return $endpointOption['repository']['criteria'];
+    //     //     }
+    //     // }
 
-        return [];
-    }
+    //     return [];
+    // }
 
     public function getSorter(): array 
     {

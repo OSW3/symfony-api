@@ -7,25 +7,29 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 final class PaginationService
 {
-    private bool $enabled = false;
     private int $total = 0;
 
     public function __construct(
-        private readonly RequestService $request,
-        private readonly ConfigurationService $configuration,
+        private readonly RequestService $requestService,
+        private readonly ContextService $contextService,
+        private readonly ConfigurationService $configurationService,
         private readonly UrlGeneratorInterface $urlGenerator,
     ){}
+    
 
-    public function enable(): static 
-    {
-        $this->enabled = true;
-
-        return $this;
-    }
     public function isEnabled(): bool 
     {
-        return $this->enabled;
+        $provider   = $this->contextService->getProvider();
+        $collection = $this->contextService->getCollection();
+        $endpoint   = $this->contextService->getEndpoint();
+
+        return $this->configurationService->isPaginationEnabled($provider, $collection, $endpoint);
     }
+
+
+    // ──────────────────────────────
+    // Pages
+    // ──────────────────────────────
 
     /**
      * Get the total number of pages
@@ -34,10 +38,15 @@ final class PaginationService
      */
     public function getTotalPages(): int 
     {
-        $total = $this->getTotal();
-        $limit = $this->getLimit();
+        if (!$this->isEnabled()) {
+            return 1;
+        }
 
-        return (int) ceil($total / $limit);
+        $items = $this->getTotalItems();
+        $limit = $this->getLimit();
+        $pages = (int) ceil($items / $limit);
+
+        return $pages > 0 ? $pages : 1;
     }
 
     /**
@@ -47,10 +56,34 @@ final class PaginationService
      */
     public function getPage(): int 
     {
-        $params = $this->request->getQueryParams();
-        $page = (int) ($params['page'] ?? 1);
+        if (!$this->isEnabled()) {
+            return 1;
+        }
+
+        $params = $this->requestService->getQueryParams();
+        $page   = (int) ($params['page'] ?? 1);
+
         return max(1, $page);
     }
+
+    /**
+     * Get the current page number (alias of getPage)
+     * 
+     * @return int
+     */
+    public function getCurrentPage(): int 
+    {
+        if (!$this->isEnabled()) {
+            return 1;
+        }
+
+        return $this->getPage();
+    }
+
+
+    // ──────────────────────────────
+    // Items
+    // ──────────────────────────────
 
     /**
      * Set the total number of items
@@ -72,8 +105,31 @@ final class PaginationService
      */
     public function getTotal(): int 
     {
+        if (!$this->isEnabled()) {
+            return 0;
+        }
+
         return $this->total;
     }
+
+    /**
+     * Get the total number of items (alias of getTotal)
+     * 
+     * @return int
+     */
+    public function getTotalItems(): int 
+    {
+        if (!$this->isEnabled()) {
+            return 0;
+        }
+
+        return $this->getTotal();
+    }
+
+
+    // ──────────────────────────────
+    // Limit & Offset
+    // ──────────────────────────────
 
     /**
      * Get the number of items per page
@@ -82,11 +138,15 @@ final class PaginationService
      */
     public function getLimit(): int 
     {
-        $provider = $this->configuration->getContext('provider');
-        $default  = $this->configuration->getPaginationLimit($provider);
+        if (!$this->isEnabled()) {
+            return 0;
+        }
 
-        if ($this->configuration->isPaginationLimitOverrideAllowed($provider)) {
-            $params = $this->request->getQueryParams();
+        $provider = $this->configurationService->getContext('provider');
+        $default  = $this->configurationService->getPaginationLimit($provider);
+
+        if ($this->configurationService->isPaginationLimitOverrideAllowed($provider)) {
+            $params = $this->requestService->getQueryParams();
             $limit = (int) ($params['limit'] ?? $default);
             return max(1, $limit);
         }
@@ -101,16 +161,29 @@ final class PaginationService
      */
     public function getOffset(): int
     {
+        if (!$this->isEnabled()) {
+            return 0;
+        }
+
         return ($this->getPage() - 1) * $this->getLimit();
     }
+
+
+    // ──────────────────────────────
+    // Urls
+    // ──────────────────────────────
 
     /**
      * Get the URL for the previous page
      * 
      * @return string
      */
-    public function getPrev(): string
+    public function getPrevious(): string
     {
+        if (!$this->isEnabled()) {
+            return '';
+        }
+
         $prev = $this->getPage() - 1;
         $prev = $prev <= 1 ? 1 : $prev;
         $prev = $prev >= $this->getTotalPages() ? $this->getTotalPages() : $prev;
@@ -125,6 +198,10 @@ final class PaginationService
      */
     public function getNext(): string
     {
+        if (!$this->isEnabled()) {
+            return '';
+        }
+
         $next = $this->getPage() + 1;
         $next = $next >= $this->getTotalPages() ? $this->getTotalPages() : $next;
         $next = $next < 1 ? 1 : $next;
@@ -139,6 +216,10 @@ final class PaginationService
      */
     public function getSelf(): string
     {
+        if (!$this->isEnabled()) {
+            return '';
+        }
+
         return $this->replacePageInUrl($this->getPage());
     }
 
@@ -149,6 +230,10 @@ final class PaginationService
      */
     public function getFirst(): string
     {
+        if (!$this->isEnabled()) {
+            return '';
+        }
+
         return $this->replacePageInUrl(1);
     }
 
@@ -159,16 +244,29 @@ final class PaginationService
      */
     public function getLast(): string
     {
+        if (!$this->isEnabled()) {
+            return '';
+        }
+
         return $this->replacePageInUrl($this->getTotalPages());
     }
+
+
+    // ──────────────────────────────
+    // Flags
+    // ──────────────────────────────
 
     /**
      * Check if the current page is the first page
      * 
      * @return bool
      */
-    public function isFirst(): bool
+    public function isFirstPage(): bool
     {
+        if (!$this->isEnabled()) {
+            return true;
+        }
+
         return $this->getPage() === 1;
     }
 
@@ -177,8 +275,12 @@ final class PaginationService
      * 
      * @return bool
      */
-    public function isLast(): bool
+    public function isLastPage(): bool
     {
+        if (!$this->isEnabled()) {
+            return true;
+        }
+
         return $this->getPage() === $this->getTotalPages();
     }
 
@@ -187,9 +289,13 @@ final class PaginationService
      * 
      * @return bool
      */
-    public function hasPrev(): bool
+    public function hasPreviousPage(): bool
     {
-        return !$this->isFirst();
+        if (!$this->isEnabled()) {
+            return false;
+        }
+
+        return !$this->isFirstPage();
     }
 
     /**
@@ -197,9 +303,13 @@ final class PaginationService
      * 
      * @return bool
      */
-    public function hasNext(): bool
+    public function hasNextPage(): bool
     {
-        return !$this->isLast();
+        if (!$this->isEnabled()) {
+            return false;
+        }
+
+        return !$this->isLastPage();
     }
 
     /**
@@ -210,7 +320,7 @@ final class PaginationService
      */
     public function replacePageInUrl(int $newPage): string
     {
-        $params = $this->request->getQueryParams();
+        $params = $this->requestService->getQueryParams();
 
         if (isset($params['page'])) {
             $params['page'] = $newPage;
@@ -219,7 +329,7 @@ final class PaginationService
         }
 
         return $this->urlGenerator->generate(
-            $this->request->getCurrentRoute(), 
+            $this->requestService->getCurrentRoute(), 
             $params, 
             UrlGeneratorInterface::ABSOLUTE_URL
         );

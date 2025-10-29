@@ -17,7 +17,6 @@ final class RepositoryService
     public function __construct(
         private readonly ContextService $contextService,
 
-
         private readonly EntityManagerInterface $entityManager,
         private readonly ConfigurationService $configuration,
         private readonly ManagerRegistry $doctrine,
@@ -26,31 +25,82 @@ final class RepositoryService
         private readonly RequestService $requestService,
         private readonly ResponseService $responseService,
         private readonly ResponseStatusService $responseStatusService,
-        private readonly PaginationService $pagination,
+        private readonly PaginationService $paginationService,
     ){
         $this->request = $requestStack->getCurrentRequest();
     }
 
-    
-
-
-    // private function getRepository(): object
-    // {
-    //     $repository = $this->configuration->getRepositoryClass(
-    //         provider  : $this->contextService->getProvider(),
-    //         collection: $this->contextService->getCollection(),
-    //         endpoint  : $this->contextService->getEndpoint(),
-    //     );
-    //     dump($repository);
-    
-    //     dd("REPOSITORY SERVICE");
-    //     ['provider' => $provider,'collection' => $collection,'endpoint' => $endpoint] = $this->getContext();
-    //     return $this->configuration->getRepository($provider, $collection, $endpoint);
-    // }
-
-    private function getOffset(): int
+    private function getId(): int|string|null
     {
-        return 0;
+        return $this->request->get('id');
+    }
+
+    private function getCriteria(): array
+    {
+        return $this->configuration->getCriteria(
+            provider  : $this->contextService->getProvider(),
+            collection: $this->contextService->getCollection(),
+            endpoint  : $this->contextService->getEndpoint(),
+        );
+    }
+
+    private function getOrderBy(): array
+    {
+        return $this->configuration->getOrderBy(
+            provider  : $this->contextService->getProvider(),
+            collection: $this->contextService->getCollection(),
+            endpoint  : $this->contextService->getEndpoint(),
+        );
+    }
+
+    private function getLimit(): int
+    {
+        // $limit = $this->configuration->getLimit(
+        //     provider  : $this->contextService->getProvider(),
+        //     collection: $this->contextService->getCollection(),
+        //     endpoint  : $this->contextService->getEndpoint(),
+        // );
+
+        // if ($this->paginationService->isEnabled()) {
+        //     $this->paginationService->getLimit();
+        // }
+
+        if (!$this->paginationService->isEnabled()) {
+            return 0;
+        }
+
+        return $this->paginationService->getLimit();
+    }
+
+    private function getOffset(): ?int
+    {
+        return $this->paginationService->getOffset();
+    }
+
+
+    // ──────────────────────────────
+    // Class and Method Resolvers
+    // ──────────────────────────────
+
+    public function getRepositoryClass(): ?string
+    {
+        return $this->resolveRepositoryClass();
+    }
+
+    public function getRepositoryMethod(): ?string
+    {
+        return $this->resolveRepositoryMethod();
+    }
+
+    public function getRepositoryInstance(): ?object
+    {
+        $repositoryClass = $this->getRepositoryClass();
+
+        if (!$repositoryClass) {
+            return null;
+        }
+
+        return $this->resolveRepositoryInstance($repositoryClass);
     }
 
 
@@ -62,7 +112,7 @@ final class RepositoryService
      * Define the repository class to use
      * Try to find custom class (repository.service), fallback to the entity (collection name) repository
      */
-    public function resolveRepositoryClass(): ?string
+    private function resolveRepositoryClass(): ?string
     {
         // Get the entity class from the context
         $entityClass = $this->contextService->getCollection();
@@ -86,7 +136,7 @@ final class RepositoryService
         return $repositoryClass;
     }
 
-    public function resolveRepositoryMethod(): ?string
+    private function resolveRepositoryMethod(): ?string
     {
         // Output
         $method = null; 
@@ -136,7 +186,7 @@ final class RepositoryService
         return $method;
     }
 
-    public function resolveRepositoryInstance(string $repositoryClassOrEntity): object
+    private function resolveRepositoryInstance(string $repositoryClassOrEntity): object
     {
         // Si c’est une entité connue par Doctrine, retourne son repository standard
         if (class_exists($repositoryClassOrEntity) 
@@ -159,10 +209,8 @@ final class RepositoryService
 
     public function isRepositoryCallable(): bool 
     {
-        $repositoryClass = $this->resolveRepositoryClass();
-        $method          = $this->resolveRepositoryMethod();
-
-        // dd($repositoryClass, $method);
+        $repositoryClass = $this->getRepositoryClass();
+        $method          = $this->getRepositoryMethod();
 
         // If Repository class is not defined, fallback onto Entity repository
         if (empty($repositoryClass)) {
@@ -175,16 +223,7 @@ final class RepositoryService
         }
         $repository = $this->resolveRepositoryInstance($repositoryClass);
 
-        if ($this->isStandardHttpMethod($method)) {
-            return true;
-        }
-
         return method_exists($repository, $method);
-    }
-
-    private function isStandardHttpMethod(string $method): bool
-    {
-        return in_array($method, ['create', 'update', 'delete', 'find', 'findOneBy', 'findBy', 'count'], true);
     }
 
 
@@ -194,11 +233,13 @@ final class RepositoryService
 
     private function findBy(array $criteria, array $order, ?int $limit, ?int $offset): array
     {
-        $this->pagination->enable();
+        $this->paginationService->isEnabled();
         $this->responseStatusService->setCode(200);
 
-        $repositoryClass = $this->resolveRepositoryClass();
-        $repository = $this->resolveRepositoryInstance($repositoryClass);
+        // $repositoryClass = $this->resolveRepositoryClass();
+        // $repository = $this->resolveRepositoryInstance($repositoryClass);
+
+        $repository = $this->getRepositoryInstance();
         return $repository->findBy($criteria, $order, $limit, $offset);
     }
 
@@ -345,10 +386,8 @@ final class RepositoryService
         );
         $method = $repositoryMethod ?? $this->resolveRepositoryMethod();
 
-
         // Get params if custom method
-        $params = $repositoryMethod ? $this->requestService->getParams() : [];
-
+        $params = $repositoryMethod ? $this->requestService->getParameters() : [];
 
         if ($repositoryMethod) {
             // Si la méthode existe et est callable
@@ -360,29 +399,18 @@ final class RepositoryService
             return $repository->$repositoryMethod(...array_values($params));
         }
 
-        $id       = $this->request->get('id');
-        $criteria = $this->configuration->getCriteria(
-            provider  : $this->contextService->getProvider(),
-            collection: $this->contextService->getCollection(),
-            endpoint  : $this->contextService->getEndpoint(),
-        );
-        $order    = $this->configuration->getOrderBy(
-            provider  : $this->contextService->getProvider(),
-            collection: $this->contextService->getCollection(),
-            endpoint  : $this->contextService->getEndpoint(),
-        );
-        $limit    = $this->configuration->getLimit(
-            provider  : $this->contextService->getProvider(),
-            collection: $this->contextService->getCollection(),
-            endpoint  : $this->contextService->getEndpoint(),
-        );
+
+        $id       = $this->getId();
+        $criteria = $this->getCriteria();
+        $order    = $this->getOrderBy();
+        $limit    = $this->getLimit();
         $offset   = $this->getOffset();
 
         if ($id) {
             $criteria = ['id' => $id];
         }
 
-        $this->pagination->setTotal( $this->count($criteria) );
+        $this->paginationService->setTotal( $this->count($criteria) );
 
 
         return match ($method) {

@@ -3,16 +3,17 @@ namespace OSW3\Api\Resolver;
 
 final class CollectionPaginationEnabledResolver
 {
-    public static function default(array &$providers): array 
+    public static function default(array &$providers): array
     {
         foreach ($providers as &$provider) {
-            foreach ($provider['collections'] as &$collection) {
+            $providerPagination = $provider['pagination']['enabled'] ?? true;
 
-                if (!isset($collection['pagination']['enabled']) || $collection['pagination']['enabled'] === null) 
-                {
-                    $collection['pagination']['enabled'] = $provider['pagination']['enabled'];
-                }
+            foreach ($provider['collections'] as &$collection) {
+                $value = $collection['pagination']['enabled'] ?? null;
                 
+                if ($value === null) {
+                    $collection['pagination']['enabled'] = $providerPagination;
+                }
             }
         }
 

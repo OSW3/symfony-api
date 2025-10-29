@@ -19,9 +19,6 @@ final class RouteService
         $this->request = $requestStack->getCurrentRequest();
     }
 
-
-    // All routes methods
-
     /**
      * Get all exposed routes from configuration
      * 
@@ -122,9 +119,6 @@ final class RouteService
         return $routes;
     }
 
-
-    // Single route methods
-
     /**
      * Resolve the route name for a given provider and action
      *
@@ -148,7 +142,6 @@ final class RouteService
 
         return $route;
     }
-
 
     /**
      * Check if a given route is registered in the API configuration
@@ -215,10 +208,6 @@ final class RouteService
         return $options['context'] ?? [];
     }
 
-
-
-
-
     /**
      * Get the route name for a given provider, collection, and endpoint
      *
@@ -227,7 +216,7 @@ final class RouteService
      * @param string $endpoint
      * @return string|null
      */
-    private function getName(string $provider, string $collection, string $endpoint): string|null
+    public function getName(string $provider, string $collection, string $endpoint): string|null
     {
         return $this->configuration->getRouteName(
             provider   : $provider,
@@ -244,7 +233,7 @@ final class RouteService
      * @param string $endpoint
      * @return string|null
      */
-    private function getPath(string $provider, string $collection, string $endpoint): string|null
+    public function getPath(string $provider, string $collection, string $endpoint): string|null
     {
         $path = $this->configuration->getRoutePath(
             provider   : $provider,
@@ -271,7 +260,7 @@ final class RouteService
      * @param string $endpoint
      * @return string|null
      */
-    private function getController(string $provider, string $collection, string $endpoint): string|null
+    public function getController(string $provider, string $collection, string $endpoint): string|null
     {
         return $this->configuration->getRouteController(
             provider   : $provider,
@@ -288,7 +277,7 @@ final class RouteService
      * @param string $endpoint
      * @return array
      */
-    private function getHosts(string $provider, string $collection, string $endpoint): array
+    public function getHosts(string $provider, string $collection, string $endpoint): array
     {
         return $this->configuration->getRouteHosts(
             provider   : $provider,
@@ -305,7 +294,7 @@ final class RouteService
      * @param string $endpoint
      * @return array
      */
-    private function getRequirements(string $provider, string $collection, string $endpoint): array
+    public function getRequirements(string $provider, string $collection, string $endpoint): array
     {
         return $this->configuration->getRouteRequirements(
             provider   : $provider,
@@ -322,7 +311,7 @@ final class RouteService
      * @param string $endpoint
      * @return array
      */
-    private function getOptions(string $provider, string $collection, string $endpoint): array
+    public function getOptions(string $provider, string $collection, string $endpoint): array
     {
         $options = $this->configuration->getRouteOptions(
             provider   : $provider,
@@ -347,7 +336,7 @@ final class RouteService
      * @param string $endpoint
      * @return array
      */
-    private function getSchemes(string $provider, string $collection, string $endpoint): array
+    public function getSchemes(string $provider, string $collection, string $endpoint): array
     {
         return $this->configuration->getRouteSchemes(
             provider   : $provider,
@@ -364,7 +353,7 @@ final class RouteService
      * @param string $endpoint
      * @return array|null
      */
-    private function getMethods(string $provider, string $collection, string $endpoint): array|null
+    public function getMethods(string $provider, string $collection, string $endpoint): array|null
     {
         return $this->configuration->getRouteMethods(
             provider   : $provider,
@@ -381,7 +370,7 @@ final class RouteService
      * @param string $endpoint
      * @return string|null
      */
-    private function getCondition(string $provider, string $collection, string $endpoint): string|null
+    public function getCondition(string $provider, string $collection, string $endpoint): string|null
     {
         return $this->configuration->getRouteCondition(
             provider   : $provider,
@@ -398,7 +387,7 @@ final class RouteService
      * @param string $endpoint
      * @return array
      */
-    private function getDefaults(string $provider, string $collection, string $endpoint): array
+    public function getDefaults(string $provider, string $collection, string $endpoint): array
     {
         $controller = $this->configuration->getRouteController(
             provider   : $provider,
@@ -420,7 +409,7 @@ final class RouteService
      * @param array $options
      * @return void
      */
-    private function addRouteToCollection(array &$route, array $options = []): void 
+    public function addRouteToCollection(array &$route, array $options = []): void 
     {
         if (!isset($route[$options['name']])) {
             $route[$options['name']] = [

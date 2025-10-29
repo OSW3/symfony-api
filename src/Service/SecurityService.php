@@ -1,18 +1,14 @@
 <?php 
 namespace OSW3\Api\Service;
 
-use OSW3\Api\Service\ConfigurationService;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Security\Core\User\UserInterface;
-use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
 final class SecurityService
 {
     private ?UserInterface $cachedUser = null;
 
     public function __construct(
-        // private readonly ?AuthorizationCheckerInterface $auth,
-        private readonly ConfigurationService $configuration,
         private readonly Security $security,
     ) {}
 
@@ -52,9 +48,13 @@ final class SecurityService
      * 
      * @return string|null
      */
-    public function getUserName(): ?string
+    public function getIdentifier(): ?string
     {
         return $this->getUser()?->{'getUserIdentifier'}();
+    }
+    public function getUsername(): ?string
+    {
+        return $this->getIdentifier();
     }
 
     /**
@@ -95,7 +95,9 @@ final class SecurityService
      */
     public function getPermissions(): ?array
     {
-        return []; // $this->getUser()?->{'getPermissions'}();
+        return $this->getUser()?->{'getPermissions'}()
+            ?? $this->getRoles()
+            ?? [];
     }
 
     /**
@@ -103,7 +105,7 @@ final class SecurityService
      * 
      * @return bool|null
      */
-    public function getMfaEnabled(): ?bool
+    public function isMfaEnabled(): ?bool
     {
         return false; //$this->getUser()?->{'isMfaEnabled'}();
     }

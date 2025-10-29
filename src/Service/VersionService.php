@@ -4,18 +4,9 @@ namespace OSW3\Api\Service;
 final class VersionService 
 {
     public function __construct(
-        private readonly ConfigurationService $configuration,
+        private readonly ContextService $contextService,
+        private readonly ConfigurationService $configurationService,
     ){}
-    
-    /**
-     * Get the current API provider from configuration
-     * 
-     * @return string
-     */
-    private function getProvider(): string
-    {
-        return $this->configuration->getContext('provider');
-    }
 
     /**
      * Get the version number of the API from configuration
@@ -24,7 +15,8 @@ final class VersionService
      */
     public function getNumber(): int
     {
-        return $this->configuration->getVersionNumber($this->getProvider());
+        $provider = $this->contextService->getProvider();
+        return $this->configurationService->getVersionNumber($provider);
     }
 
     /**
@@ -34,13 +26,19 @@ final class VersionService
      */
     public function getPrefix(): string
     {
-        return $this->configuration->getVersionPrefix($this->getProvider());
+        $provider = $this->contextService->getProvider();
+        return $this->configurationService->getVersionPrefix($provider);
     }
 
+    /**
+     * Get all available API versions
+     * 
+     * @return array<string>
+     */
     public function getAllVersions(): array 
     {
         $versions = [];
-        $providers = $this->configuration->getProviders();
+        $providers = $this->configurationService->getProviders();
 
         foreach($providers as $provider => $options) 
         {
@@ -58,7 +56,7 @@ final class VersionService
     public function getSupportedVersions(): array 
     {
         $versions = [];
-        $providers = $this->configuration->getProviders();
+        $providers = $this->configurationService->getProviders();
 
         foreach($providers as $provider => $options) 
         {
@@ -80,7 +78,7 @@ final class VersionService
     public function getDeprecatedVersions(): array 
     {
         $versions = [];
-        $providers = $this->configuration->getProviders();
+        $providers = $this->configurationService->getProviders();
 
         foreach($providers as $provider => $options) 
         {
@@ -101,12 +99,12 @@ final class VersionService
      */
     public function getLabel(?string $provider = null): string 
     {
-        if (!$provider || !$this->configuration->hasProvider($provider)) {
-            $provider = $this->getProvider();
+        if (!$provider || !$this->configurationService->hasProvider($provider)) {
+            $provider = $this->contextService->getProvider();
         }
 
-        $prefix   = $this->configuration->getVersionPrefix($provider);
-        $number   = $this->configuration->getVersionNumber($provider);
+        $prefix   = $this->configurationService->getVersionPrefix($provider);
+        $number   = $this->configurationService->getVersionNumber($provider);
         $beta     = $this->isBeta($provider);
         
         return "{$prefix}{$number}" . ($beta ? '-beta' : '');
@@ -119,11 +117,11 @@ final class VersionService
      */
     public function isBeta(?string $provider = null): bool
     {
-        if (!$provider || !$this->configuration->hasProvider($provider)) {
-            $provider = $this->getProvider();
+        if (!$provider || !$this->configurationService->hasProvider($provider)) {
+            $provider = $this->contextService->getProvider();
         }
 
-        return $this->configuration->isVersionBeta($provider);
+        return $this->configurationService->isVersionBeta($provider);
     }
 
     /**
@@ -133,10 +131,10 @@ final class VersionService
      */
     public function isDeprecated(?string $provider = null): bool
     {
-        if (!$provider || !$this->configuration->hasProvider($provider)) {
-            $provider = $this->getProvider();
+        if (!$provider || !$this->configurationService->hasProvider($provider)) {
+            $provider = $this->contextService->getProvider();
         }
 
-        return $this->configuration->isVersionDeprecated($provider);
+        return $this->configurationService->isVersionDeprecated($provider);
     }
 }

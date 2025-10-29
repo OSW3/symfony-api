@@ -39,6 +39,7 @@ final class TemplateService
         private readonly DocumentationService $documentation,
         private readonly ResponseService $responseService,
         private readonly RouteService $routeService,
+        private readonly ContextService $contextService,
         #[Autowire(service: 'service_container')] private readonly ContainerInterface $container,
     ){}
 
@@ -157,10 +158,10 @@ final class TemplateService
     public function parse(array $template): array
     {
         // Current context
-        $context    = $this->routeService->getContext();
-        $provider   = $context['provider'] ?? null;
-        $collection = $context['collection'] ?? null;
-        $endpoint   = $context['endpoint'] ?? null;
+        // $context    = $this->routeService->getContext();
+        $provider   = $this->contextService->getProvider();
+        $collection = $this->contextService->getCollection();
+        $endpoint   = $this->contextService->getEndpoint();
 
         array_walk_recursive($template, function (&$value, $k) use ($provider, $collection, $endpoint) {
             
@@ -299,7 +300,7 @@ final class TemplateService
             };
 
             // Pagination
-            if ($this->configuration->isPaginationEnabled($provider) && $this->pagination->isEnabled())
+            if ($this->pagination->isEnabled($provider))
             {
                 $value = match($expression) {
                     'pagination.pages'    => $this->pagination->getTotalPages() ?? 0,
@@ -307,15 +308,15 @@ final class TemplateService
                     'pagination.total'    => $this->pagination->getTotal() ?? 0,
                     'pagination.limit'    => $this->pagination->getLimit() ?? 25,
                     'pagination.offset'   => $this->pagination->getOffset() ?? 0,
-                    'pagination.prev'     => $this->pagination->getPrev(),
+                    'pagination.prev'     => $this->pagination->getPrevious(),
                     'pagination.next'     => $this->pagination->getNext(),
                     'pagination.self'     => $this->pagination->getSelf(),
                     'pagination.first'    => $this->pagination->getFirst(),
                     'pagination.last'     => $this->pagination->getLast(),
-                    'pagination.is_first' => $this->pagination->isFirst(),
-                    'pagination.is_last'  => $this->pagination->isLast(),
-                    'pagination.has_prev' => $this->pagination->hasPrev(),
-                    'pagination.has_next' => $this->pagination->hasNext(),
+                    'pagination.is_first' => $this->pagination->isFirstPage(),
+                    'pagination.is_last'  => $this->pagination->isLastPage(),
+                    'pagination.has_prev' => $this->pagination->hasPreviousPage(),
+                    'pagination.has_next' => $this->pagination->hasNextPage(),
                     default               => $default ?? $value,
                 };
             }
@@ -328,7 +329,7 @@ final class TemplateService
                 'user.roles'            => $this->security->getRoles(),
                 'user.email'            => $this->security->getEmail(),
                 'user.permissions'      => $this->security->getPermissions(),
-                'user.mfa_enabled'      => $this->security->getMfaEnabled(),
+                'user.mfa_enabled'      => $this->security->isMfaEnabled(),
                 default                 => $default ?? $value,
             };
 

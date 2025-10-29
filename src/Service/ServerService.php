@@ -204,4 +204,242 @@ final class ServerService
         // $record = $reader->city($_SERVER['SERVER_ADDR'] ?? gethostbyname(gethostname()));
         // return $record->subdivisions[0]->name ?? null;
     }
+
+    /**
+     * Get the server uptime
+     * 
+     * @return string
+     */
+    public function getUptime(): string
+    {
+        $uptime = shell_exec("uptime");
+        return $uptime ?: 'Unknown';
+    }
+
+    /**
+     * Get the server load average
+     * 
+     * @return string
+     */
+    public function getLoadAverage(): string
+    {
+        $load = sys_getloadavg();
+        return implode(', ', $load);
+    }
+
+    /**
+     * Get the server memory limit
+     * 
+     * @return string|null
+     */
+    public function getMemoryLimit(): ?string
+    {
+        return ini_get('memory_limit');
+    }
+
+    /** Get the server total memory
+     * 
+     * @return string|null
+     */
+    public function getTotalMemory(): ?string
+    {
+        return shell_exec("free -m | awk 'NR==2{printf \"%s\", $2}'");
+    }
+
+    /**
+     * Get the server free memory
+     * 
+     * @return string|null
+     */
+    public function getFreeMemory(): ?string
+    {
+        return shell_exec("free -m | awk 'NR==2{printf \"%s\", $4}'");
+    }
+
+    /** Get the server available memory
+     * 
+     * @return string|null
+     */
+    public function getAvailableMemory(): ?string
+    {
+        return shell_exec("free -m | awk 'NR==2{printf \"%s\", $7}'");
+    }
+
+    /** Get the server used memory
+     * 
+     * @return string|null
+     */
+    public function getUsedMemory(): ?string
+    {
+        return shell_exec("free -m | awk 'NR==2{printf \"%s\", $3}'");
+    }
+
+    /** Get the server memory usage in percentage
+     * 
+     * @return string
+     */
+    public function getMemoryUsage(): string
+    {
+        $total = $this->getTotalMemory();
+        $used = $this->getUsedMemory();
+        return $total && is_numeric($used) ? round(($used / (int)$total) * 100, 2) . '%' : 'Unknown';
+    }
+
+    /** Get the server total disk space
+     * 
+     * @return string
+     */
+    public function getTotalDisk(): string
+    {
+        return shell_exec("df -h | awk 'NR==2{printf \"%s\", $2}'");
+    }
+
+    /** Get the server free disk space
+     * 
+     * @return string
+     */
+    public function getFreeDisk(): string
+    {
+        return shell_exec("df -h | awk 'NR==2{printf \"%s\", $4}'");
+    }
+
+    /** Get the server used disk space
+     * 
+     * @return string
+     */
+    public function getUsedDisk(): string
+    {
+        return shell_exec("df -h | awk 'NR==2{printf \"%s\", $3}'");
+    }
+
+    /** Get the server disk usage in percentage
+     * 
+     * @return string
+     */
+    public function getDiskUsage(): string
+    {
+        $total = $this->getTotalDisk();
+        $used = $this->getUsedDisk();
+        return $total && is_numeric($used) ? round(($used / (int)$total) * 100, 2) . '%' : 'Unknown';
+    }
+
+    /** Get the database driver
+     * 
+     * @return string
+     */
+    public function getDatabaseDriver(): string
+    {
+        return $_ENV['DATABASE_DRIVER'] ?? 'Unknown';
+    }
+
+    /** Get the database version
+     * 
+     * @return string
+     */
+    public function getDatabaseVersion(): string
+    {
+        return $_ENV['DATABASE_VERSION'] ?? 'Unknown';
+    }
+
+    /** Get the CPU manufacturer
+     * 
+     * @return string|null
+     */
+    public function getCpuManufacturer(): ?string
+    {
+        return shell_exec("cat /proc/cpuinfo | grep 'model name' | uniq | awk -F: '{print $2}'");
+    }
+
+    /** Get the CPU model
+     * 
+     * @return string|null
+     */
+    public function getCpuModel(): ?string
+    {
+        return shell_exec("cat /proc/cpuinfo | grep 'model name' | uniq | awk -F: '{print $2}'");
+    }
+
+    /** Get the number of CPU cores
+     * 
+     * @return int
+     */
+    public function getCpuCores(): int
+    {
+        return (int)shell_exec("nproc");
+    }
+
+    /** Get the CPU speed
+     * 
+     * @return string|null
+     */
+    public function getCpuSpeed(): ?string
+    {
+        return shell_exec("cat /proc/cpuinfo | grep 'cpu MHz' | uniq | awk -F: '{print $2}'");
+    }
+
+    /** Get the CPU threads
+     * 
+     * @return int
+     */
+    public function getCpuThreads(): int
+    {
+        return (int)shell_exec("cat /proc/cpuinfo | grep 'cpu cores' | uniq | awk -F: '{print $2}'");
+    }
+
+    /** Get the CPU physical cores
+     * 
+     * @return int
+     */
+    public function getCpuPhysicalCores(): int
+    {
+        return (int)shell_exec("cat /proc/cpuinfo | grep 'cpu cores' | uniq | awk -F: '{print $2}'");
+    }
+
+    /** Get the CPU logical cores
+     * 
+     * @return int
+     */
+    public function getCpuLogicalCores(): int
+    {
+        return (int)shell_exec("cat /proc/cpuinfo | grep 'cpu cores' | uniq | awk -F: '{print $2}'");
+    }
+
+    /** Get the CPU cache size
+     * 
+     * @return string|null
+     */
+    public function getCpuCache(): ?string
+    {
+        return shell_exec("cat /proc/cpuinfo | grep 'cache size' | uniq | awk -F: '{print $2}'");
+    }
+
+    /**
+     * Get the architecture of the server (e.g. x86_64, arm64 ...)
+     * 
+     * @return string
+     */
+    public function getArchitecture(): string
+    {
+        return shell_exec("uname -m");
+    }
+
+    /**
+     * Get the kernel version
+     * 
+     * @return string
+     */
+    public function getKernelVersion(): string
+    {
+        return shell_exec("uname -r");
+    }
+
+    /**
+     * Get the document root of the server
+     * 
+     * @return string
+     */
+    public function getDocumentRoot(): string
+    {
+        return $_SERVER['DOCUMENT_ROOT'] ?? '';
+    }
 }

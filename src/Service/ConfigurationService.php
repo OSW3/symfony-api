@@ -812,25 +812,10 @@ class ConfigurationService
             return true;
         }
 
-        // 1. Endpoint-specific pagination enable
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
-            if ($endpointOptions && isset($endpointOptions['pagination']['enable'])) {
-                return $endpointOptions['pagination']['enable'];
-            }
-        }
-
-        // 2. Collection-level pagination enable
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $collection);
-            if ($collectionOptions && isset($collectionOptions['pagination']['enable'])) {
-                return $collectionOptions['pagination']['enable'];
-            }
-        }
-
-        // 3. Global default pagination enable
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['pagination']['enable'] ?? true;
+        return $this->getPaginationFlag($this->getEndpoint($provider, $collection, $endpoint) ?? [])
+            ?? $this->getPaginationFlag($this->getCollection($provider, $collection) ?? [])
+            ?? $this->getPaginationFlag($this->getProvider($provider) ?? [])
+            ?? true;
     }
 
     /**
@@ -936,6 +921,17 @@ class ConfigurationService
 
         // 3. Global default pagination allow_limit_override
         return $this->getProvider($provider)['pagination']['allow_limit_override'] ?? true;
+    }
+
+    /**
+     * Helper method to extract the pagination enabled flag from a configuration array.
+     * 
+     * @param array $config Configuration array
+     * @return bool|null Pagination enabled flag or null if not set
+     */
+    private function getPaginationFlag(array $config): ?bool
+    {
+        return $config['pagination']['enabled'] ?? null;
     }
 
 
@@ -1342,7 +1338,7 @@ class ConfigurationService
      * @param string|null $endpoint Name of the endpoint (optional)
      * @return array Rate limit configuration by application
      */
-    public function getRateLimitByApp(string $provider, ?string $collection = null, ?string $endpoint = null): array
+    public function getRateLimitByApplication(string $provider, ?string $collection = null, ?string $endpoint = null): array
     {
         if (! $this->hasProvider($provider)) {
             return [];
@@ -1591,8 +1587,8 @@ class ConfigurationService
             return 'json';
         }
 
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['response']['format']['type'] ?? 'json';
+        $responseOptions = $this->getResponse($provider);
+        return $responseOptions['format']['type'] ?? 'json';
     }
 
     /**
@@ -1601,14 +1597,31 @@ class ConfigurationService
      * @param string $provider Name of the API provider
      * @return bool True if format overrides are allowed, false otherwise
      */
-    public function getResponseTypeOverrides(string $provider): bool
+    public function canOverrideResponseType(string $provider): bool
     {
         if (! $this->hasProvider($provider)) {
             return false;
         }
 
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['response']['format']['override'] ?? false;
+        $responseOptions = $this->getResponse($provider);
+        return $responseOptions['format']['override'] ?? false;
+    }
+
+    /**
+     * Get the response format parameter name for a specific provider.
+     * Defaults to '_format' if not specified.
+     * 
+     * @param string $provider Name of the API provider
+     * @return string Response format parameter name
+     */
+    public function getResponseFormatParameter(string $provider): string
+    {
+        if (! $this->hasProvider($provider)) {
+            return '_format';
+        }
+
+        $responseOptions = $this->getResponse($provider);
+        return $responseOptions['format']['parameter'] ?? '_format';
     }
 
 
@@ -2806,7 +2819,7 @@ class ConfigurationService
             ?? $password[$endpoint]['hosts'] 
             ?? [];
     }
-    
+
     public function getSecurityEndpointSchemes(string $provider, string $endpoint): array
     {
         $registration = $this->getRegistration($provider);
@@ -2921,9 +2934,9 @@ class ConfigurationService
      * @example
      * $enabled = $configService->isDocumentationEnabled('my_custom_api_v1'); // returns true or false
      */
-    public function isDocumentationEnabled(string $providerName): bool
+    public function isDocumentationEnabled(string $provider): bool
     {
-        return $this->configuration[$providerName]['documentation']['enable'] ?? false;
+        return $this->configuration[$provider]['documentation']['enabled'] ?? false;
     }
 
 
