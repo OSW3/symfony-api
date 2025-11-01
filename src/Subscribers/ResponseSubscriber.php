@@ -2,8 +2,10 @@
 namespace OSW3\Api\Subscribers;
 
 use OSW3\Api\Service\RouteService;
+use OSW3\Api\Service\ContextService;
 use OSW3\Api\Service\ConfigurationService;
 use OSW3\Api\Service\ExecutionTimeService;
+use OSW3\Api\Service\ResponseService;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -22,7 +24,9 @@ class ResponseSubscriber implements EventSubscriberInterface
     public function __construct(
         private readonly RouteService $routeService,
         private readonly ExecutionTimeService $timer,
-        private readonly ConfigurationService $configuration,
+        private readonly ContextService $contextService,
+        private readonly ConfigurationService $configurationService,
+        private readonly ResponseService $responseService,
     ){}
     
     public static function getSubscribedEvents(): array
@@ -32,20 +36,34 @@ class ResponseSubscriber implements EventSubscriberInterface
 
     public function onResponse(ResponseEvent $event): void
     {
+        $provider   = $this->contextService->getProvider();
+        // $collection = $this->contextService->getCollection();
+        $endpoint   = $this->contextService->getEndpoint();
+        $security   = $this->configurationService->getSecurity($provider);
+        // $routeName  = $event->getRequest()->attributes->get('_route');
+
+        $securityEndpoints = array_keys(array_merge(
+            $security['registration'] ?? [], 
+            $security['authentication'] ?? [], 
+            $security['password'] ?? [], 
+        ));
+
         if (!$event->isMainRequest()) {
             return;
         }
 
-        $context = $this->routeService->getContext();
-        
-        if (in_array($context['endpoint'], ['register', 'login'], true)) {
-            return;
-        }
+        // if (in_array($endpoint, $securityEndpoints, true)) {
+        //     return;
+        // }
+
+        // dd($event->getResponse());
 
 
         // dump($event->getResponse()->getStatusCode());
-        // dump($event->getResponse()->getMessage());
+        // dump($this->responseService->getContent());
         // dd($event->getResponse());
+
+        // $event->setResponse($this->responseService->build());
 
         // dd([
         //     __CLASS__, 

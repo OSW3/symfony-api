@@ -44,22 +44,29 @@ class ConfigurationService
             return null;
         }
 
-        foreach ($this->getProviders() as $provider => $providerOptions) {
-            foreach ($providerOptions['collections'] ?? [] as $collection => $entityOptions) {
-                foreach ($entityOptions['endpoints'] ?? [] as $endpoint => $endpointOption) {
-                    if (($endpointOption['route']['name'] ?? null) === $route) {
-                        return match ($part) {
-                            'provider'   => $provider,
-                            'collection' => $collection,
-                            'endpoint'   => $endpoint,
-                            default      => compact('provider', 'collection', 'endpoint'),
-                        };
-                    }
-                }
-            }
-        }
+        // foreach ($this->getProviders() as $provider => $providerOptions) {
+        //     foreach ($providerOptions['collections'] ?? [] as $collection => $entityOptions) {
+        //         foreach ($entityOptions['endpoints'] ?? [] as $endpoint => $endpointOption) {
+        //             if (($endpointOption['route']['name'] ?? null) === $route) {
+        //                 return match ($part) {
+        //                     'provider'   => $provider,
+        //                     'collection' => $collection,
+        //                     'endpoint'   => $endpoint,
+        //                     default      => compact('provider', 'collection', 'endpoint'),
+        //                 };
+        //             }
+        //         }
+        //     }
+        // }
 
-        return null;
+        $context = $this->request->attributes->all('_context') ?? [];
+
+        return match ($part) {
+            'provider'   => $context['provider'] ?? null,
+            'collection' => $context['collection'] ?? null,
+            'endpoint'   => $context['endpoint'] ?? null,
+            default      => $context,
+        };
     }
 
 
@@ -102,7 +109,7 @@ class ConfigurationService
      * @param string $provider Name of the API provider
      * @return bool True if the provider exists, false otherwise
      */
-    public function hasProvider(string $provider): bool
+    public function hasProvider(?string $provider): bool
     {
         $providers = $this->getProviders();
         return array_key_exists($provider, $providers);
@@ -1479,6 +1486,42 @@ class ConfigurationService
     }
 
     /**
+     * Get the delete template for a specific provider, collection, and endpoint.
+     * Falls back to collection-level or provider-level templates if not found.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return string Delete template
+     */
+    public function getDeleteTemplate(string $provider, ?string $collection = null, ?string $endpoint = null): string
+    {
+        if (! $this->hasProvider($provider)) {
+            return '';
+        }
+
+        // 1. Endpoint-specific templates
+        if ($collection && $endpoint) {
+            $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
+            if ($endpointOptions && isset($endpointOptions['templates']['delete'])) {
+                return $endpointOptions['templates']['delete'];
+            }
+        }
+
+        // 2. Collection-level templates
+        if ($collection) {
+            $collectionOptions = $this->getCollection($provider, $collection);
+            if ($collectionOptions && isset($collectionOptions['templates']['delete'])) {
+                return $collectionOptions['templates']['delete'];
+            }
+        }
+
+        // 3. Global default templates
+        $providerOptions = $this->getProvider($provider);
+        return $providerOptions['templates']['delete'] ?? '';
+    }
+
+    /**
      * Get the not found template for a specific provider, collection, and endpoint.
      * Falls back to collection-level or provider-level templates if not found.
      * 
@@ -2491,7 +2534,7 @@ class ConfigurationService
      * @param string $provider Name of the API provider
      * @return array Security configuration array
      */
-    public function getSecurity(string $provider): array
+    public function getSecurity(?string $provider): array
     {
         if (! $this->hasProvider($provider)) {
             return [];

@@ -54,7 +54,7 @@ final class RegistrationController
     {
         // --- 1. Request context
         $route  = $this->requestStack->getCurrentRequest()->attributes->get('_route');
-        $action = $this->requestStack->getCurrentRequest()->attributes->get('_api_endpoint');
+        $action = $this->configuration->getContext('endpoint');
         $data   = json_decode($request->getContent(), true) ?? [];
 
 

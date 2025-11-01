@@ -107,11 +107,11 @@ final class SerializeService
             case 'array': 
                 foreach ($data as $key => $item) {
                     $data[$key] = $this->normalize($item);
-                } 
+                }
                 break;
 
             case 'object': 
-                $data = $this->serialize($data); 
+                $data = $this->serialize($data);
                 break;
 
             default: 
@@ -119,6 +119,20 @@ final class SerializeService
         }
 
         return $data;
+    }
+
+    public function denormalize(array $data, string $entityClass)
+    {
+        $encoder    = $this->getEncoder();
+        $serializer = $this->serializer;
+
+        array_walk_recursive($data, function (&$value) {
+            if (is_float($value)) {
+                $value = (string) $value;
+            }
+        });
+
+        return $serializer->deserialize( json_encode($data), $entityClass, $encoder );
     }
 
     public function serialize($entity)

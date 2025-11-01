@@ -136,17 +136,17 @@ final class PaginationService
      * 
      * @return int
      */
-    public function getLimit(): int 
+    public function getLimit(): ?int 
     {
         if (!$this->isEnabled()) {
-            return 0;
+            return null;
         }
 
         $provider = $this->configurationService->getContext('provider');
         $default  = $this->configurationService->getPaginationLimit($provider);
 
         if ($this->configurationService->isPaginationLimitOverrideAllowed($provider)) {
-            $params = $this->requestService->getQueryParams();
+            $params = $this->requestService->getQueryParameters();
             $limit = (int) ($params['limit'] ?? $default);
             return max(1, $limit);
         }
@@ -159,10 +159,10 @@ final class PaginationService
      * 
      * @return int
      */
-    public function getOffset(): int
+    public function getOffset(): ?int
     {
         if (!$this->isEnabled()) {
-            return 0;
+            return null;
         }
 
         return ($this->getPage() - 1) * $this->getLimit();

@@ -116,6 +116,8 @@ final class RouteService
             }
         }
 
+        // dd($routes);
+
         return $routes;
     }
 
@@ -397,7 +399,11 @@ final class RouteService
 
         $defaults = [];
         $defaults['_controller'] = $controller;
-        $defaults['_api_endpoint'] = $endpoint;
+        $defaults['_context'] = [
+            'provider'   => $provider,
+            'collection' => $collection,
+            'endpoint'   => $endpoint,
+        ];
         
         return $defaults;
     }

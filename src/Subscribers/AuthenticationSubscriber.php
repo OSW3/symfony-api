@@ -2,6 +2,7 @@
 namespace OSW3\Api\Subscribers;
 
 use OSW3\Api\Service\ConfigurationService;
+use OSW3\Api\Service\ContextService;
 use OSW3\Api\Service\RequestService;
 use OSW3\Api\Service\RouteService;
 use Symfony\Component\HttpKernel\KernelEvents;
@@ -24,7 +25,8 @@ final class AuthenticationSubscriber implements EventSubscriberInterface
     public function __construct(
         private readonly RouteService $routeService,
         private readonly ?TranslatorInterface $translator,
-        private readonly ConfigurationService $configuration,
+        private readonly ContextService $contextService,
+        private readonly ConfigurationService $configurationService,
         private readonly AuthorizationCheckerInterface $auth,
     ){}
 
@@ -37,28 +39,41 @@ final class AuthenticationSubscriber implements EventSubscriberInterface
 
     public function onRequest(RequestEvent $event): void
     {
+        $provider   = $this->contextService->getProvider();
+        $collection = $this->contextService->getCollection();
+        $endpoint   = $this->contextService->getEndpoint();
+        $security   = $this->configurationService->getSecurity($provider);
+        $routeName  = $event->getRequest()->attributes->get('_route');
+        
+        $securityEndpoints = array_keys(array_merge(
+            $security['registration'] ?? [], 
+            $security['authentication'] ?? [], 
+            $security['password'] ?? [], 
+        ));
+
+        $roles = $this->configurationService->getAccessControlRoles(
+            $provider,
+            $collection,
+            $endpoint
+        );
+
+        $granted = false;
+
         if (!$event->isMainRequest()) {
             return;
         }
 
-        $context = $this->routeService->getContext();
+        // $context = $this->routeService->getContext();
 
-        // if (in_array($event->getRequest()->attributes->get('_api_endpoint'), ['register', 'login'], true)) {
-        if (in_array($context['endpoint'], ['register', 'login'], true)) {
+
+        if (in_array($endpoint, $securityEndpoints, true)) {
             return;
         }
-
-        $roles = $this->configuration->getAccessControlRoles(
-            $context['provider'],
-            $context['collection'],
-            $context['endpoint']
-        );
 
         if (empty($roles)) {
             return;
         }
-
-        $granted = false;
+        
         foreach ($roles as $role) {
             if ($this->auth->isGranted($role)) {
                 $granted = true;

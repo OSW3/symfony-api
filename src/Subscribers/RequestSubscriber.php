@@ -27,7 +27,7 @@ class RequestSubscriber implements EventSubscriberInterface
 {
     public function __construct(
         private readonly RouteService $routeService,
-        private readonly SupportService $supportService,
+        // private readonly SupportService $supportService,
         private readonly ResponseService $responseService,
         private readonly TemplateService $templateService,
         private readonly SerializeService $serializeService,
@@ -40,7 +40,9 @@ class RequestSubscriber implements EventSubscriberInterface
 
     public static function getSubscribedEvents(): array
     {
-        return [KernelEvents::REQUEST => ['onRequest', 0]];
+        return [
+            // KernelEvents::REQUEST => ['onRequest', 0]
+        ];
     }
     
     public function onRequest(RequestEvent $event): void 
@@ -57,6 +59,25 @@ class RequestSubscriber implements EventSubscriberInterface
             $security['password'] ?? [], 
         ));
 
+
+
+        // dd([
+        //     'provider'   => $provider,
+        //     'collection' => $collection,
+        //     'endpoint'   => $endpoint,
+        //     'routeName'  => $routeName,
+        //     'is_main'    => $event->isMainRequest(),
+        //     'request'    => $event->getRequest(),
+        //     // 'is_security_endpoint'    => in_array($endpoint, $securityEndpoints, true),
+        //     // 'is_registered_route'     => $this->routeService->isRegisteredRoute($routeName),
+        //     // 'is_method_supported'     => $this->routeService->isMethodSupported($routeName),
+        //     // 'is_repository_callable'  => $this->repositoryService->isRepositoryCallable(),
+        //     // 'has_required_parameters' => $this->requestService->hasRequiredParameters(),
+        //     // 'has_custom_controller'   => $event->getRequest()->attributes->get('_controller'),
+        // ]);
+
+
+
         // Support
         // -- 
 
@@ -72,11 +93,6 @@ class RequestSubscriber implements EventSubscriberInterface
 
         // Bypass for Security.registration and Security.authentication endpoints
         if (in_array($endpoint, $securityEndpoints, true)) {
-            return;
-        }
-
-        // Is _route parameter is defined ?
-        if (!$routeName) {
             return;
         }
         
@@ -111,9 +127,12 @@ class RequestSubscriber implements EventSubscriberInterface
         // Processing
         // -- 
 
-        // Retrieve and normalize data from the repository
+        // 1. Retrieve and normalize data from the repository
         $raw        = $this->repositoryService->execute();
         $normalized = $this->serializeService->normalize($raw);
+
+        // dd($raw, $normalized);
+        // 2. Set data to the response service
         $this->responseService->setData($normalized);
 
 
@@ -130,13 +149,17 @@ class RequestSubscriber implements EventSubscriberInterface
         // };
 
 
-        // Prepare the response using templates
+        // 3. Retrieve the template
         $type     = is_array($normalized) && array_is_list($normalized) && count($normalized) ? 'list' : 'item';
         $template = $this->templateService->getTemplate($type);
+        
+        // 4. Serialize data for the template
         $content  = $this->templateService->parse($template, $normalized);
+
+        // 5. Set the content to the response service
         $this->responseService->setContent($content);
 
-        // Set the response in the event
+        // 6. Build and set the response
         $event->setResponse($this->responseService->build());
     }
 }

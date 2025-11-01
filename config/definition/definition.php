@@ -43,6 +43,7 @@ use OSW3\Api\Resolver\CollectionRateLimitByApplicationResolver;
 use OSW3\Api\Resolver\CollectionRateLimitIncludeHeadersResolver;
 use OSW3\Api\Resolver\EndpointPaginationAllowLimitOverrideResolver;
 use OSW3\Api\Resolver\CollectionPaginationAllowLimitOverrideResolver;
+use OSW3\Api\Resolver\EndpointRouteControllerResolver;
 
 return static function($definition)
 {
@@ -251,6 +252,7 @@ return static function($definition)
                     ->scalarNode('property')
                         ->info('The name of the URL property in response.')
                         ->defaultValue('url')
+                        ->treatNullLike('url')
                     ->end()
 
                 ->end()
@@ -328,6 +330,12 @@ return static function($definition)
                         ->info('Path to the response template file used as a model for formatting the API output for single items.')
                         ->defaultValue('Resources/templates/item.yaml')
                         ->treatNullLike('Resources/templates/item.yaml')
+                    ->end()
+
+                    ->scalarNode('delete')
+                        ->info('Path to the response template file used as a model for formatting the API output for delete operations.')
+                        ->defaultValue('Resources/templates/delete.yaml')
+                        ->treatNullLike('Resources/templates/delete.yaml')
                     ->end()
 
                     ->scalarNode('error')
@@ -1462,6 +1470,11 @@ return static function($definition)
                                     ->defaultNull()
                                 ->end()
 
+                                ->scalarNode('delete')
+                                    ->info('Path to the response template file used as a model for formatting the API output for delete operations.')
+                                    ->defaultNull()
+                                ->end()
+
                                 ->scalarNode('error')
                                     ->info('Path to the response template file used as a model for formatting error responses.')
                                     ->defaultNull()
@@ -1805,6 +1818,11 @@ return static function($definition)
                                                 ->defaultNull()
                                             ->end()
 
+                                            ->scalarNode('template')
+                                                ->info('Path to the response template file used as a model for formatting the API output for generic templates.')
+                                                ->defaultNull()
+                                            ->end()
+
                                             ->scalarNode('error')
                                                 ->info('Path to the response template file used as a model for formatting error responses.')
                                                 ->defaultNull()
@@ -2089,6 +2107,7 @@ return static function($definition)
             EndpointRouteNameResolver::resolve($providers);
             EndpointRoutePathResolver::default($providers);
             EndpointRoutePathResolver::resolve($providers);
+            EndpointRouteControllerResolver::resolve($providers);
             EndpointRouteMethodsResolver::resolve($providers);
             EndpointRouteRequirementsResolver::resolve($providers);
             EndpointRouteOptionsResolver::resolve($providers);

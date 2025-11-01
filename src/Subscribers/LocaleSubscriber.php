@@ -1,6 +1,7 @@
 <?php
 namespace OSW3\Api\Subscribers;
 
+use OSW3\Api\Service\ContextService;
 use OSW3\Api\Service\ConfigurationService;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
@@ -17,7 +18,8 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 class LocaleSubscriber implements EventSubscriberInterface
 {
     public function __construct(
-        private readonly ConfigurationService $configuration,
+        private readonly ConfigurationService $configurationService,
+        private readonly ContextService $contextService,
     ){}
     
     public static function getSubscribedEvents(): array
@@ -29,11 +31,23 @@ class LocaleSubscriber implements EventSubscriberInterface
 
     public function onRequest(RequestEvent $event): void
     {
+        $provider   = $this->contextService->getProvider();
+        $collection = $this->contextService->getCollection();
+        $endpoint   = $this->contextService->getEndpoint();
+        $security   = $this->configurationService->getSecurity($provider);
+        $routeName  = $event->getRequest()->attributes->get('_route');
+        
+        $securityEndpoints = array_keys(array_merge(
+            $security['registration'] ?? [], 
+            $security['authentication'] ?? [], 
+            $security['password'] ?? [], 
+        ));
+        
         if (!$event->isMainRequest()) {
             return;
         }
 
-        if (in_array($event->getRequest()->attributes->get('_api_endpoint'), ['register', 'login'], true)) {
+        if (in_array($endpoint, $securityEndpoints, true)) {
             return;
         }
 

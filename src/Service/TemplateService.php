@@ -22,6 +22,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 
 final class TemplateService 
 {
+    private array $data = [];
+
     public function __construct(
         private readonly AppService $app,
         private readonly DebugService $debug,
@@ -95,6 +97,7 @@ final class TemplateService
         $templatePath = match($type) {
             'list'       => $this->configuration->getListTemplate($provider),
             'item'       => $this->configuration->getItemTemplate($provider),
+            'delete'     => $this->configuration->getDeleteTemplate($provider),
             'error'      => $this->configuration->getErrorTemplate($provider),
             'no_content' => $this->configuration->getNotFoundTemplate($provider),
             default      => throw new \Exception("Unknown template type"),
@@ -187,7 +190,7 @@ final class TemplateService
                 $default    = isset($matches[2]) ? trim($matches[2]) : null;
             }
 
-            $data = $this->responseService->getData();
+            $data      = $this->responseService->getData();
             $algorithm = $this->configuration->getChecksumAlgorithm($provider);
 
 
@@ -300,14 +303,14 @@ final class TemplateService
             };
 
             // Pagination
-            if ($this->pagination->isEnabled($provider))
+            // if ($this->pagination->isEnabled($provider))
             {
                 $value = match($expression) {
-                    'pagination.pages'    => $this->pagination->getTotalPages() ?? 0,
-                    'pagination.page'     => $this->pagination->getPage() ?? 1,
-                    'pagination.total'    => $this->pagination->getTotal() ?? 0,
-                    'pagination.limit'    => $this->pagination->getLimit() ?? 25,
-                    'pagination.offset'   => $this->pagination->getOffset() ?? 0,
+                    'pagination.pages'    => $this->pagination->getTotalPages(),
+                    'pagination.page'     => $this->pagination->getPage(),
+                    'pagination.total'    => $this->pagination->getTotal(),
+                    'pagination.limit'    => $this->pagination->getLimit(),
+                    'pagination.offset'   => $this->pagination->getOffset(),
                     'pagination.prev'     => $this->pagination->getPrevious(),
                     'pagination.next'     => $this->pagination->getNext(),
                     'pagination.self'     => $this->pagination->getSelf(),

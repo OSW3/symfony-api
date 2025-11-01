@@ -34,9 +34,9 @@ final class ContextService
      * 
      * @return string
      */
-    public function getProvider(): string
+    public function getProvider(): ?string
     {
-        return $this->configurationService->getContext('provider');
+        return $this->configurationService->getContext('provider') ?? null;
     }
 
     /**
@@ -44,9 +44,9 @@ final class ContextService
      * 
      * @return string
      */
-    public function getCollection(): string
+    public function getCollection(): ?string
     {
-        return $this->configurationService->getContext('collection');
+        return $this->configurationService->getContext('collection') ?? null;
     }
 
     /**
@@ -54,9 +54,9 @@ final class ContextService
      * 
      * @return string
      */
-    public function getEndpoint(): string
+    public function getEndpoint(): ?string
     {
-        return $this->configurationService->getContext('endpoint');
+        return $this->configurationService->getContext('endpoint') ?? null;
     }
 
     /**
@@ -64,9 +64,9 @@ final class ContextService
      * 
      * @return string
      */
-    public function getEnvironment(): string
+    public function getEnvironment(): ?string
     {
-        return $this->kernel->getEnvironment();
+        return $this->kernel->getEnvironment() ?? null;
     }
 
     /**
@@ -76,7 +76,7 @@ final class ContextService
      */
     public function isDebug(): bool
     {
-        return $this->kernel->isDebug();
+        return $this->kernel->isDebug() ?? false;
     }
 
     /**
