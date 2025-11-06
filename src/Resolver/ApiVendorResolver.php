@@ -28,8 +28,8 @@ final class ApiVendorResolver
             // $versionNumber = $config['version']['number'];
             // $versionPrefix = $config['version']['prefix'];
             // $fullVersion = "{$versionPrefix}{$versionNumber}";
-            // $config['version']['header_format'] = preg_replace("/{vendor}/", $fullVersion, $config['version']['header_format']);
-            // $config['version']['header_format'] = preg_replace("/{version}/", $fullVersion, $config['version']['header_format']);
+            // $config['version']['pattern'] = preg_replace("/{vendor}/", $fullVersion, $config['version']['pattern']);
+            // $config['version']['pattern'] = preg_replace("/{version}/", $fullVersion, $config['version']['pattern']);
             $config['vendor'] = "myapp";
         }
 

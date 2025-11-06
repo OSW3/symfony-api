@@ -8,6 +8,7 @@ use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 class ConfigurationService
 {
@@ -18,6 +19,7 @@ class ConfigurationService
         private readonly KernelInterface $kernel,
         private readonly ManagerRegistry $doctrine,
         private readonly RequestStack $requestStack,
+        private readonly UrlGeneratorInterface $urlGenerator,
         #[Autowire(service: 'service_container')] private readonly ContainerInterface $container,
     ){
         $this->request = $requestStack->getCurrentRequest();
@@ -68,6 +70,7 @@ class ConfigurationService
             default      => $context,
         };
     }
+
 
 
 
@@ -129,22 +132,6 @@ class ConfigurationService
 
         $providerConfig = $this->getProvider($provider);
         return $providerConfig['enabled'] ?? false;
-    }
-
-    /**
-     * Check if a specific API provider is deprecated.
-     * 
-     * @param string $provider Name of the API provider
-     * @return bool True if the provider is deprecated, false otherwise
-     */
-    public function isProviderDeprecated(string $provider): bool
-    {
-        if (! $this->hasProvider($provider)) {
-            return false;
-        }
-
-        $providerConfig = $this->getProvider($provider);
-        return $providerConfig['deprecated'] ?? false;
     }
 
 
@@ -228,27 +215,6 @@ class ConfigurationService
         return $collectionConfig['enabled'] ?? $this->isProviderEnabled($provider);
     }
 
-    /**
-     * Check if a specific collection is deprecated.
-     * 
-     * @param string $provider Name of the API provider
-     * @param string $collection Name of the collection
-     * @return bool True if the collection is deprecated, false otherwise
-     */
-    public function isCollectionDeprecated(string $provider, string $collection): bool
-    {
-        if (! $this->hasProvider($provider)) {
-            return false;
-        }
-
-        if (! $this->hasCollection($provider, $collection)) {
-            return false;
-        }
-        
-        $collectionConfig = $this->getCollection($provider, $collection);
-        return $collectionConfig['deprecated'] ?? false;
-    }
-
 
 
     // ──────────────────────────────
@@ -322,32 +288,6 @@ class ConfigurationService
 
         $endpointConfig = $this->getEndpoint($provider, $collection, $endpoint);
         return $endpointConfig['enabled'] ?? $this->isCollectionEnabled($provider, $collection);
-    }
-
-    /**
-     * Check if a specific endpoint is deprecated.
-     * 
-     * @param string $provider Name of the API provider
-     * @param string $collection Name of the collection
-     * @param string $endpoint Name of the endpoint
-     * @return bool True if the endpoint is deprecated, false otherwise
-     */
-    public function isEndpointDeprecated(string $provider, string $collection, string $endpoint): bool
-    {
-        if (! $this->hasProvider($provider)) {
-            return false;
-        }
-
-        if (! $this->hasCollection($provider, $collection)) {
-            return false;
-        }
-        
-        if (! $this->hasEndpoint($provider, $collection, $endpoint)) {
-            return false;
-        }
-
-        $endpointConfig = $this->getEndpoint($provider, $collection, $endpoint);
-        return $endpointConfig['deprecated'] ?? false;
     }
 
 
@@ -427,12 +367,12 @@ class ConfigurationService
     }
 
     /**
-     * Get version header format for a specific API provider.
+     * Get version header directive for a specific API provider.
      * 
      * @param string $providerName Name of the API provider
-     * @return string Version header format (e.g., 'application/vnd.{vendor}.v{version}+json')
+     * @return string Version header directive (e.g., 'Accept')
      */
-    public function getVersionHeaderFormat(string $provider): string|null
+    public function getVersionHeaderDirective(string $provider): string|null
     {
         if (!$this->hasProvider($provider)) {
             return null;
@@ -441,7 +381,25 @@ class ConfigurationService
         $options = $this->getProvider($provider);
         $version = $options['version'] ?? null;
 
-        return $version['header_format'] ?? null;
+        return $version['directive'] ?? null;
+    }
+
+    /**
+     * Get version header format for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string Version header format (e.g., 'application/vnd.{vendor}.v{version}+json')
+     */
+    public function getVersionHeaderPattern(string $provider): string|null
+    {
+        if (!$this->hasProvider($provider)) {
+            return null;
+        }
+
+        $options = $this->getProvider($provider);
+        $version = $options['version'] ?? null;
+
+        return $version['pattern'] ?? null;
     }
 
     /**
@@ -462,23 +420,283 @@ class ConfigurationService
         return $version['beta'] ?? false;
     }
 
+
+
+    // ──────────────────────────────
+    // DEPRECATION
+    // ──────────────────────────────
+
     /**
-     * Check if a specific API provider is marked as deprecated.
+     * Check if a specific API component (provider, collection, endpoint) is deprecated.
      * 
-     * @param string $providerName Name of the API provider
-     * @return bool True if the provider is deprecated, false otherwise
+     * @param string $provider Name of the API provider
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return bool True if the specified component is deprecated, false otherwise
      */
-    public function isVersionDeprecated(string $provider): bool
+    public function isDeprecationEnabled(string $provider, ?string $collection = null, ?string $endpoint = null): bool
     {
-        if (!$this->hasProvider($provider)) {
+        if (! $this->hasProvider($provider)) {
             return false;
         }
 
-        $options = $this->getProvider($provider);
-        $version = $options['version'] ?? null;
+        // 1. Provider-level deprecation
+        $providerOptions = $this->getProvider($provider);
+        if (isset($providerOptions['deprecation']['enabled']) && $providerOptions['deprecation']['enabled'] === true) {
+            return true;
+        }
 
-        return $version['deprecated'] ?? false;
+        // 2. Collection-level deprecation
+        if ($collection) {
+            $collectionOptions = $this->getCollection($provider, $collection);
+            if (isset($collectionOptions['deprecation']['enabled']) && $collectionOptions['deprecation']['enabled'] === true) {
+                return true;
+            }
+        }
+
+        // 3. Endpoint-level deprecation
+        if ($collection && $endpoint) {
+            $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
+            if (isset($endpointOptions['deprecation']['enabled']) && $endpointOptions['deprecation']['enabled'] === true) {
+                return true;
+            }
+        }
+
+        // 4. Default
+        return false;
     }
+
+    public function getDeprecationSinceDate(string $provider, ?string $collection = null, ?string $endpoint = null): ?string
+    {
+        if (! $this->hasProvider($provider)) {
+            return null;
+        }
+
+        if (!$this->isDeprecationEnabled($provider, $collection, $endpoint)) {
+            return null;
+        }
+
+        // 1. Endpoint-level deprecation since date
+        if ($collection && $endpoint) {
+            $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
+            if (isset($endpointOptions['deprecation']['since_date'])) {
+                return $endpointOptions['deprecation']['since_date'];
+            }
+        }
+
+        // 2. Collection-level deprecation since date
+        if ($collection) {
+            $collectionOptions = $this->getCollection($provider, $collection);
+            if (isset($collectionOptions['deprecation']['since_date'])) {
+                return $collectionOptions['deprecation']['since_date'];
+            }
+        }
+
+        // 3. Provider-level deprecation since date
+        $providerOptions = $this->getProvider($provider);
+        if (isset($providerOptions['deprecation']['since_date'])) {
+            return $providerOptions['deprecation']['since_date'];
+        }
+
+        // 4. Default
+        return null;
+    }
+
+    public function getDeprecationRemovalDate(string $provider, ?string $collection = null, ?string $endpoint = null): ?string
+    {
+        if (! $this->hasProvider($provider)) {
+            return null;
+        }
+
+        if (!$this->isDeprecationEnabled($provider, $collection, $endpoint)) {
+            return null;
+        }
+
+        // 1. Endpoint-level deprecation removal date
+        if ($collection && $endpoint) {
+            $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
+            if (isset($endpointOptions['deprecation']['removal_date'])) {
+                return $endpointOptions['deprecation']['removal_date'];
+            }
+        }
+
+        // 2. Collection-level deprecation removal date
+        if ($collection) {
+            $collectionOptions = $this->getCollection($provider, $collection);
+            if (isset($collectionOptions['deprecation']['removal_date'])) {
+                return $collectionOptions['deprecation']['removal_date'];
+            }
+        }
+
+        // 3. Provider-level deprecation removal date
+        $providerOptions = $this->getProvider($provider);
+        if (isset($providerOptions['deprecation']['removal_date'])) {
+            return $providerOptions['deprecation']['removal_date'];
+        }
+
+        // 4. Default
+        return null;
+    }
+
+    public function getDeprecationLink(string $provider, ?string $collection = null, ?string $endpoint = null): ?string
+    {
+        if (! $this->hasProvider($provider)) {
+            return null;
+        }
+
+        if (!$this->isDeprecationEnabled($provider, $collection, $endpoint)) {
+            return null;
+        }
+
+        // 1. Endpoint-level deprecation link
+        if ($collection && $endpoint) {
+            $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
+            if (isset($endpointOptions['deprecation']['link'])) {
+                return $this->resolveDeprecationLink($endpointOptions['deprecation']['link']);
+            }
+        }
+
+        // 2. Collection-level deprecation link
+        if ($collection) {
+            $collectionOptions = $this->getCollection($provider, $collection);
+            if (isset($collectionOptions['deprecation']['link'])) {
+                return $this->resolveDeprecationLink($collectionOptions['deprecation']['link']);
+            }
+        }
+
+        // 3. Provider-level deprecation link
+        $providerOptions = $this->getProvider($provider);
+        if (isset($providerOptions['deprecation']['link'])) {
+            return $this->resolveDeprecationLink($providerOptions['deprecation']['link']);
+        }
+
+        // 4. Default
+        return null;
+    }
+    private function resolveDeprecationLink(string $input): ?string
+    {
+        if (preg_match('#^https?://#i', $input)) {
+            return $input;
+        }
+
+        if ($this->urlGenerator->getRouteCollection()->get($input)) {
+            return $this->urlGenerator->generate(
+                $input,
+                [],
+                UrlGeneratorInterface::ABSOLUTE_URL
+            );
+        }
+        
+        return null;
+    }
+
+    public function getDeprecationReason(string $provider, ?string $collection = null, ?string $endpoint = null): ?string
+    {
+        if (! $this->hasProvider($provider)) {
+            return null;
+        }
+
+        if (!$this->isDeprecationEnabled($provider, $collection, $endpoint)) {
+            return null;
+        }
+
+        // 1. Endpoint-level deprecation reason
+        if ($collection && $endpoint) {
+            $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
+            if (isset($endpointOptions['deprecation']['reason'])) {
+                return $endpointOptions['deprecation']['reason'];
+            }
+        }
+
+        // 2. Collection-level deprecation reason
+        if ($collection) {
+            $collectionOptions = $this->getCollection($provider, $collection);
+            if (isset($collectionOptions['deprecation']['reason'])) {
+                return $collectionOptions['deprecation']['reason'];
+            }
+        }
+
+        // 3. Provider-level deprecation reason
+        $providerOptions = $this->getProvider($provider);
+        if (isset($providerOptions['deprecation']['reason'])) {
+            return $providerOptions['deprecation']['reason'];
+        }
+
+        // 4. Default
+        return null;
+    }
+
+    public function getDeprecationMessage(string $provider, ?string $collection = null, ?string $endpoint = null): ?string
+    {
+        if (! $this->hasProvider($provider)) {
+            return null;
+        }
+
+        if (!$this->isDeprecationEnabled($provider, $collection, $endpoint)) {
+            return null;
+        }
+
+        // 1. Endpoint-level deprecation message
+        if ($collection && $endpoint) {
+            $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
+            if (isset($endpointOptions['deprecation']['message'])) {
+                return $endpointOptions['deprecation']['message'];
+            }
+        }
+
+        // 2. Collection-level deprecation message
+        if ($collection) {
+            $collectionOptions = $this->getCollection($provider, $collection);
+            if (isset($collectionOptions['deprecation']['message'])) {
+                return $collectionOptions['deprecation']['message'];
+            }
+        }
+
+        // 3. Provider-level deprecation message
+        $providerOptions = $this->getProvider($provider);
+        if (isset($providerOptions['deprecation']['message'])) {
+            return $providerOptions['deprecation']['message'];
+        }
+
+        // 4. Default
+        return null;
+    }
+
+    // public function getDeprecationMode(string $provider, ?string $collection = null, ?string $endpoint = null): ?string
+    // {
+    //     if (! $this->hasProvider($provider)) {
+    //         return null;
+    //     }
+
+    //     if (!$this->isDeprecationEnabled($provider, $collection, $endpoint)) {
+    //         return null;
+    //     }
+
+    //     // 1. Endpoint-level deprecation mode
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
+    //         if (isset($endpointOptions['deprecation']['mode'])) {
+    //             return $endpointOptions['deprecation']['mode'];
+    //         }
+    //     }
+
+    //     // 2. Collection-level deprecation mode
+    //     if ($collection) {
+    //         $collectionOptions = $this->getCollection($provider, $collection);
+    //         if (isset($collectionOptions['deprecation']['mode'])) {
+    //             return $collectionOptions['deprecation']['mode'];
+    //         }
+    //     }
+
+    //     // 3. Provider-level deprecation mode
+    //     $providerOptions = $this->getProvider($provider);
+    //     if (isset($providerOptions['deprecation']['mode'])) {
+    //         return $providerOptions['deprecation']['mode'];
+    //     }
+
+    //     // 4. Default
+    //     return null;
+    // }
 
 
 
@@ -1864,7 +2082,11 @@ class ConfigurationService
         }
 
         $providerOptions = $this->getProvider($provider);
-        return $providerOptions['response']['headers']['custom'] ?? [];
+
+        $directives = $providerOptions['response']['headers']['custom'] ?? [];
+        $directives = array_map('trim', $directives);
+        $directives = array_combine(array_map(fn($key) => "X-{$key}", array_keys($directives)), array_values($directives));
+        return $directives;
     }
 
     public function getHeadersRemoveDirectives(string $provider): array

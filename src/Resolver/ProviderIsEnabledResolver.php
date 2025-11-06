@@ -7,7 +7,7 @@ final class ProviderIsEnabledResolver
     {
         foreach ($providers as &$config) {
 
-            dd($config['enabled']);
+            // dd($config['enabled']);
             
             if (!isset($config['enabled']) || $config['enabled'] === null) {
                 $config['enabled'] = true;

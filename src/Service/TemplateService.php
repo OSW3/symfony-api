@@ -84,8 +84,8 @@ final class TemplateService
         // $context = $this->configuration->getContext();
         $provider = $context['provider'] ?? null;
 
-
         if (!$provider) {
+            // return '';
             throw new \Exception("No provider defined in context");
         }
 
@@ -137,6 +137,7 @@ final class TemplateService
     public function load(string $path) 
     {
         if (!file_exists($path)) {
+            // return [];
             throw new \Exception("Template file does not exist: $path");
         }
 

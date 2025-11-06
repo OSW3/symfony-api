@@ -9,8 +9,8 @@ version:
   number: 1
   prefix: v
   location: path
-  header_format: application/vnd.{vendor}.{version}+json
-  deprecated: false
+  directive: Accept
+  pattern: application/vnd.{vendor}.{version}+json
 ```
 
 

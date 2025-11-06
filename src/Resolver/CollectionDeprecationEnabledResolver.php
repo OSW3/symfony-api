@@ -1,15 +1,15 @@
 <?php 
 namespace OSW3\Api\Resolver;
 
-final class CollectionRateLimitIncludeHeadersResolver
+final class CollectionDeprecationEnabledResolver
 {
     public static function default(array &$providers): array 
     {
         foreach ($providers as &$provider) {
             foreach ($provider['collections'] as &$collection) {
 
-                if (!isset($collection['rate_limit']['include_headers'])) {
-                    $collection['rate_limit']['include_headers'] = $provider['rate_limit']['include_headers'] ?? false;
+                if (!isset($collection['deprecation']['enabled'])) {
+                    $collection['deprecation']['enabled'] = $provider['deprecation']['enabled'] ?? false;
                 }
 
             }

@@ -26,6 +26,7 @@ use OSW3\Api\Resolver\CollectionRateLimitByIpResolver;
 use OSW3\Api\Resolver\EndpointPaginationLimitResolver;
 use OSW3\Api\Resolver\EndpointRateLimitByRoleResolver;
 use OSW3\Api\Resolver\EndpointRateLimitByUserResolver;
+use OSW3\Api\Resolver\EndpointRouteControllerResolver;
 use OSW3\Api\Resolver\CollectionRateLimitLimitResolver;
 use OSW3\Api\Resolver\EndpointRateLimitEnabledResolver;
 use OSW3\Api\Resolver\CollectionPaginationLimitResolver;
@@ -34,18 +35,25 @@ use OSW3\Api\Resolver\CollectionRateLimitByUserResolver;
 use OSW3\Api\Resolver\EndpointPaginationEnabledResolver;
 use OSW3\Api\Resolver\EndpointRouteRequirementsResolver;
 use OSW3\Api\Resolver\CollectionRateLimitEnabledResolver;
+use OSW3\Api\Resolver\EndpointDeprecationEnabledResolver;
 use OSW3\Api\Resolver\EndpointPaginationMaxLimitResolver;
 use OSW3\Api\Resolver\CollectionPaginationEnabledResolver;
+use OSW3\Api\Resolver\CollectionDeprecationEnabledResolver;
 use OSW3\Api\Resolver\CollectionPaginationMaxLimitResolver;
+use OSW3\Api\Resolver\EndpointDeprecationSinceDateResolver;
+use OSW3\Api\Resolver\ProviderDeprecationSinceDateResolver;
+use OSW3\Api\Resolver\CollectionDeprecationSinceDateResolver;
+use OSW3\Api\Resolver\EndpointDeprecationRemovalDateResolver;
 use OSW3\Api\Resolver\EndpointRateLimitByApplicationResolver;
+use OSW3\Api\Resolver\ProviderDeprecationRemovalDateResolver;
 use OSW3\Api\Resolver\EndpointRateLimitIncludeHeadersResolver;
+use OSW3\Api\Resolver\CollectionDeprecationRemovalDateResolver;
 use OSW3\Api\Resolver\CollectionRateLimitByApplicationResolver;
 use OSW3\Api\Resolver\CollectionRateLimitIncludeHeadersResolver;
 use OSW3\Api\Resolver\EndpointPaginationAllowLimitOverrideResolver;
 use OSW3\Api\Resolver\CollectionPaginationAllowLimitOverrideResolver;
-use OSW3\Api\Resolver\EndpointRouteControllerResolver;
 
-return static function($definition)
+return static function($definition): void
 {
     $definition->rootNode()
         ->info('Configure all API providers and their behavior.')
@@ -68,12 +76,51 @@ return static function($definition)
             ->end()
 
             // ──────────────────────────────
-            // Deprecated
+            // Deprecation
             // ──────────────────────────────
-            ->booleanNode('deprecated')
-                ->info('Whether this provider is deprecated.')
-                ->defaultFalse()
-                ->treatNullLike(false)
+			->arrayNode('deprecation')
+                ->info('API deprecation notices')
+                ->addDefaultsIfNotSet()->children()
+
+                    ->booleanNode('enabled')
+                        ->info('Enable or disable the deprecation for this API provider.')
+                        ->defaultFalse()
+                        ->treatNullLike(false)
+                    ->end()
+
+                    ->scalarNode('since_date')
+                        ->info('Deprecation since date')
+                        ->defaultNull()
+                    ->end()
+
+                    ->scalarNode('removal_date')
+                        ->info('Deprecation removal date')
+                        ->defaultNull()
+                    ->end()
+
+                    ->scalarNode('link')
+                        ->info('Deprecation link')
+                        ->defaultNull()
+                    ->end()
+
+                    ->scalarNode('reason')
+                        ->info('Deprecation reason')
+                        ->defaultNull()
+                    ->end()
+
+                    ->scalarNode('message')
+                        ->info('Deprecation message')
+                        ->defaultNull()
+                    ->end()
+
+                    ->enumNode('sunset_behavior')
+                        ->info('Behavior when deprecation removal date is reached')
+                        ->values(['warn', 'block', 'ignore'])
+                        ->defaultValue('block')
+                        ->treatNullLike('block')
+                    ->end()
+
+                ->end()
             ->end()
 
             // ──────────────────────────────
@@ -121,22 +168,22 @@ return static function($definition)
                         ->treatNullLike('path')
                     ->end()
 
-                    ->scalarNode('header_format')
-                        ->info('Defines the MIME type format used for API versioning via HTTP headers. Placeholders {vendor} and {version} will be replaced dynamically.')
-                        ->defaultValue("application/vnd.{vendor}.{version}+json")
-                        ->treatNullLike('application/vnd.{vendor}.{version}+json')
-                    ->end()
-
                     ->booleanNode('beta')
                         ->info('Indicates whether this API version is in beta. If true, clients should be aware that the API may change.')
                         ->defaultFalse()
                         ->treatNullLike(false)
                     ->end()
 
-                    ->booleanNode('deprecated')
-                        ->info('Indicates whether this API version is deprecated. If true, clients should migrate to a newer version.')
-                        ->defaultFalse()
-                        ->treatNullLike(false)
+                    ->scalarNode('directive')
+                        ->info('Defines the HTTP header used for API versioning.')
+                        ->defaultValue("Accept")
+                        ->treatNullLike('Accept')
+                    ->end()
+
+                    ->scalarNode('pattern')
+                        ->info('Defines the pattern used for API versioning via HTTP headers. Placeholders {vendor} and {version} will be replaced dynamically.')
+                        ->defaultValue("application/vnd.{vendor}.{version}+json")
+                        ->treatNullLike('application/vnd.{vendor}.{version}+json')
                     ->end()
                     
                 ->end()
@@ -874,61 +921,6 @@ return static function($definition)
                                 ->end()
                             ->end()
 
-                            // ->arrayNode('hooks')
-                            //     ->info('Defines callable hooks to be executed before and after the registration action.')
-                            //     ->addDefaultsIfNotSet()->children()
-
-                            //         ->enumNode('merge')
-                            //             ->info('Defines how to handle merging hooks: "replace" to overwrite existing hooks, "append" to add to them, or "prepend" to add them at the beginning.')
-                            //             ->values(['replace', 'append', 'prepend'])
-                            //             ->defaultValue('append')
-                            //             ->treatNullLike('append')
-                            //         ->end()
-
-                            //         ->arrayNode('before')
-                            //             ->info('List of callable listeners to execute **before** the registration action is run.')
-                            //             ->scalarPrototype()->end()
-                            //             ->defaultValue([])
-                            //         ->end()
-
-                            //         ->arrayNode('after')
-                            //             ->info('List of callable listeners to execute **after** the registration action has completed.')
-                            //             ->scalarPrototype()->end()
-                            //             ->defaultValue([])
-                            //         ->end()
-
-                            //         ->arrayNode('around')
-                            //             ->info('List of callable listeners to execute **around** the registration action.')
-                            //             ->scalarPrototype()->end()
-                            //             ->defaultValue([])
-                            //         ->end()
-
-                            //         ->arrayNode('on_success')
-                            //             ->info('List of callable listeners to execute on success action.')
-                            //             ->scalarPrototype()->end()
-                            //             ->defaultValue([])
-                            //         ->end()
-
-                            //         ->arrayNode('on_failure')
-                            //             ->info('List of callable listeners to execute on failure action.')
-                            //             ->scalarPrototype()->end()
-                            //             ->defaultValue([])
-                            //         ->end()
-
-                            //         ->arrayNode('on_complete')
-                            //             ->info('List of callable listeners to execute on complete action.')
-                            //             ->scalarPrototype()->end()
-                            //             ->defaultValue([])
-                            //         ->end()
-
-                            //     ->end()
-
-                            //     ->validate()
-                            //         ->ifTrue(fn($hooks) => !HooksValidator::validate($hooks))
-                            //         ->thenInvalid('One or more hooks (before/after) are invalid. They must be valid callables (Class::method or callable).')
-                            //     ->end()
-                            // ->end()
-
                         ->end()
                     ->end()
 
@@ -1074,16 +1066,6 @@ return static function($definition)
 
                                 ->end()
                             ->end()
-
-                            // ->arrayNode('properties')
-                            //     ->info('Maps request properties to entity fields during login.')
-                            //     ->normalizeKeys(false)
-                            //     ->scalarPrototype()->end()
-                            //     ->defaultValue([
-                            //         'username' => 'email', 
-                            //         'password' => 'password',
-                            //     ])
-                            // ->end()
 
                         ->end()
                     ->end()
@@ -1249,6 +1231,7 @@ return static function($definition)
 			->arrayNode('collections')
                 ->info('List of Doctrine entity classes to expose as REST collections.')
                 ->useAttributeAsKey('entity')
+                ->requiresAtLeastOneElement()
                 ->arrayPrototype()
                 // ->ignoreExtraKeys(false)
                     ->children()
@@ -1259,17 +1242,52 @@ return static function($definition)
                         ->booleanNode('enabled')
                             ->info('Enable or disable this provider.')
                             ->defaultNull()
-                            // ->defaultTrue()
-                            // ->treatNullLike(null)
                         ->end()
 
                         // ──────────────────────────────
-                        // Deprecated
+                        // Deprecation
                         // ──────────────────────────────
-                        ->booleanNode('deprecated')
-                            ->info('Whether this collection is deprecated.')
-                            ->defaultFalse()
-                            ->treatNullLike(false)
+                        ->arrayNode('deprecation')
+                            ->info('API deprecation notices')
+                            ->addDefaultsIfNotSet()->children()
+
+                                ->booleanNode('enabled')
+                                    ->info('Enable or disable the deprecation for this collection.')
+                                    ->defaultNull()
+                                    ->treatNullLike(false)
+                                ->end()
+
+                                ->scalarNode('since_date')
+                                    ->info('Deprecation since date')
+                                    ->defaultNull()
+                                ->end()
+
+                                ->scalarNode('removal_date')
+                                    ->info('Deprecation removal date')
+                                    ->defaultNull()
+                                ->end()
+
+                                ->scalarNode('link')
+                                    ->info('Deprecation link')
+                                    ->defaultNull()
+                                ->end()
+
+                                ->scalarNode('reason')
+                                    ->info('Deprecation reason')
+                                    ->defaultNull()
+                                ->end()
+
+                                ->scalarNode('message')
+                                    ->info('Deprecation message')
+                                    ->defaultNull()
+                                ->end()
+
+                                ->scalarNode('sunset_behavior')
+                                    ->info('Behavior when deprecation removal date is reached')
+                                    ->defaultNull()
+                                ->end()
+
+                            ->end()
                         ->end()
 
                         // ──────────────────────────────
@@ -1609,7 +1627,7 @@ return static function($definition)
                         // ──────────────────────────────
                         ->arrayNode('endpoints')
                             ->info('Configure the endpoints available for this collection. Default: index, create, read, update, delete.')
-                            ->useAttributeAsKey('endpoint')  
+                            ->useAttributeAsKey('endpoint')
                             ->requiresAtLeastOneElement()
                             ->arrayPrototype()
                                 ->children()
@@ -1623,14 +1641,51 @@ return static function($definition)
                                         // ->defaultTrue()
                                         // ->treatNullLike(true)
                                     ->end()
+                                    
+                                    // ──────────────────────────────
+                                    // Deprecation
+                                    // ──────────────────────────────
+                                    ->arrayNode('deprecation')
+                                        ->info('API deprecation notices')
+                                        ->addDefaultsIfNotSet()->children()
 
-                                    // ──────────────────────────────
-                                    // Deprecated
-                                    // ──────────────────────────────
-                                    ->booleanNode('deprecated')
-                                        ->info('Whether this endpoint is deprecated.')
-                                        ->defaultFalse()
-                                        ->treatNullLike(false)
+                                            ->booleanNode('enabled')
+                                                ->info('Enable or disable the deprecation for this endpoint.')
+                                                ->defaultNull()
+                                                ->treatNullLike(false)
+                                            ->end()
+
+                                            ->scalarNode('since_date')
+                                                ->info('Deprecation since date')
+                                                ->defaultNull()
+                                            ->end()
+
+                                            ->scalarNode('removal_date')
+                                                ->info('Deprecation removal date')
+                                                ->defaultNull()
+                                            ->end()
+
+                                            ->scalarNode('link')
+                                                ->info('Deprecation link')
+                                                ->defaultNull()
+                                            ->end()
+
+                                            ->scalarNode('reason')
+                                                ->info('Deprecation reason')
+                                                ->defaultNull()
+                                            ->end()
+
+                                            ->scalarNode('message')
+                                                ->info('Deprecation message')
+                                                ->defaultNull()
+                                            ->end()
+
+                                            ->scalarNode('sunset_behavior')
+                                                ->info('Behavior when deprecation removal date is reached')
+                                                ->defaultNull()
+                                            ->end()
+
+                                        ->end()
                                     ->end()
 
                                     // ──────────────────────────────
@@ -2057,6 +2112,10 @@ return static function($definition)
             ApiVersionNumberResolver::resolve($providers);
             ApiVersionHeaderFormatResolver::resolve($providers);
 
+            // Deprecation
+            ProviderDeprecationSinceDateResolver::resolve($providers);
+            ProviderDeprecationRemovalDateResolver::resolve($providers);
+
 
             // ──────────────────────────────
             // Collections (Doctrine Entities)
@@ -2064,6 +2123,13 @@ return static function($definition)
 
             // Enabled
             CollectionIsEnabledResolver::default($providers);
+
+            // Deprecation
+            CollectionDeprecationEnabledResolver::default($providers);
+            CollectionDeprecationSinceDateResolver::default($providers);
+            CollectionDeprecationSinceDateResolver::resolve($providers);
+            CollectionDeprecationRemovalDateResolver::default($providers);
+            CollectionDeprecationRemovalDateResolver::resolve($providers);
 
             // Name
             CollectionNameResolver::resolve($providers);
@@ -2101,6 +2167,13 @@ return static function($definition)
 
             // Enabled
             // EndpointEnabledResolver::default($providers);
+
+            // Deprecation
+            EndpointDeprecationEnabledResolver::default($providers);
+            EndpointDeprecationSinceDateResolver::default($providers);
+            EndpointDeprecationSinceDateResolver::resolve($providers);
+            EndpointDeprecationRemovalDateResolver::default($providers);
+            EndpointDeprecationRemovalDateResolver::resolve($providers);
 
             // Route
             EndpointRouteNameResolver::default($providers);

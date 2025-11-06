@@ -54,6 +54,9 @@ final class DefaultController extends AbstractController
         $offset           = $this->paginationService->getOffset();
 
         // Get data from repository
+        $count            = $this->repository->count($criteria);
+                            $this->paginationService->setTotal($count); 
+                            
         $raw              = $this->repository->$method($criteria, $order, $limit, $offset);
         $normalized       = $this->serializeService->normalize($raw);
                             $this->responseService->setData($normalized);

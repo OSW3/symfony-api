@@ -7,7 +7,7 @@ use Symfony\Component\Config\Definition\ArrayNode;
 use Symfony\Component\Config\Definition\ScalarNode;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\PrototypedArrayNode;
-use OSW3\Api\DependencyInjection\DefinitionConfigurator;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 
 class Configuration implements ConfigurationInterface
@@ -42,6 +42,12 @@ class Configuration implements ConfigurationInterface
 		return $builder;
     }
 
+	/**
+	 * Generate the bundle configuration file in the project directory
+	 * 
+	 * @param string $projectDir
+	 * @return void
+	 */
 	public function generateProjectConfig(string $projectDir): void
 	{
         $configFile = Path::join($projectDir, "config/packages", static::NAME.".yaml");
@@ -57,6 +63,12 @@ class Configuration implements ConfigurationInterface
 		}
 	}
 
+	/**
+	 * Generate the configuration array from the given configuration.
+	 *
+	 * @param ConfigurationInterface $configuration
+	 * @return array
+	 */
     private function generateArray(ConfigurationInterface $configuration): array
     {
         $treeBuilder = $configuration->getConfigTreeBuilder();
@@ -65,6 +77,12 @@ class Configuration implements ConfigurationInterface
         return $this->processNode($rootNode);
     }
 
+	/**
+	 * Process a configuration node recursively to build the configuration array.
+	 * 
+	 * @param mixed $node
+	 * @return mixed
+	 */
     private function processNode($node)
     {
         $result = [];

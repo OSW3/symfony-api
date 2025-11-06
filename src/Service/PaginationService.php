@@ -7,6 +7,16 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 final class PaginationService
 {
+    public const HEADER_TOTAL_COUNT   = 'X-Total-Count';
+    public const HEADER_TOTAL_PAGES   = 'X-Total-Pages';
+    public const HEADER_PER_PAGE      = 'X-Per-Page';
+    public const HEADER_CURRENT_PAGE  = 'X-Current-Page';
+    public const HEADER_NEXT_PAGE     = 'X-Next-Page';
+    public const HEADER_PREVIOUS_PAGE = 'X-Previous-Page';
+    public const HEADER_SELF_PAGE     = 'X-Self-Page';
+    public const HEADER_FIRST_PAGE    = 'X-First-Page';
+    public const HEADER_LAST_PAGE     = 'X-Last-Page';
+
     private int $total = 0;
 
     public function __construct(
@@ -16,7 +26,6 @@ final class PaginationService
         private readonly UrlGeneratorInterface $urlGenerator,
     ){}
     
-
     public function isEnabled(): bool 
     {
         $provider   = $this->contextService->getProvider();

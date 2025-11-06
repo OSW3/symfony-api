@@ -51,24 +51,21 @@ final class AuthenticationSubscriber implements EventSubscriberInterface
             $security['password'] ?? [], 
         ));
 
-        $roles = $this->configurationService->getAccessControlRoles(
-            $provider,
-            $collection,
-            $endpoint
-        );
-
         $granted = false;
 
         if (!$event->isMainRequest()) {
             return;
         }
 
-        // $context = $this->routeService->getContext();
-
-
         if (in_array($endpoint, $securityEndpoints, true)) {
             return;
         }
+
+        $roles = $this->configurationService->getAccessControlRoles(
+            $provider,
+            $collection,
+            $endpoint
+        );
 
         if (empty($roles)) {
             return;

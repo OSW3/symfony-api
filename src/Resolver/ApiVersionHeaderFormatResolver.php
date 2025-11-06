@@ -25,8 +25,8 @@ final class ApiVersionHeaderFormatResolver
             $versionNumber = $config['version']['number'];
             $versionPrefix = $config['version']['prefix'];
             $fullVersion   = "{$versionPrefix}{$versionNumber}";
-            $config['version']['header_format'] = preg_replace("/{vendor}/", $vendor, $config['version']['header_format']);
-            $config['version']['header_format'] = preg_replace("/{version}/", $fullVersion, $config['version']['header_format']);
+            $config['version']['pattern'] = preg_replace("/{vendor}/", $vendor, $config['version']['pattern']);
+            $config['version']['pattern'] = preg_replace("/{version}/", $fullVersion, $config['version']['pattern']);
         }
 
         return $providers;

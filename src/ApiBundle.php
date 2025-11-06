@@ -1,9 +1,11 @@
 <?php 
 namespace OSW3\Api;
 
+use Symfony\Component\Routing\RouterInterface;
 use OSW3\Api\DependencyInjection\Configuration;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 class ApiBundle extends Bundle
 {

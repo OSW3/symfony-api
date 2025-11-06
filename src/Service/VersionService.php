@@ -31,6 +31,58 @@ final class VersionService
     }
 
     /**
+     * Get the full version string for a specific API provider
+     * 
+     * @param string|null $provider
+     * @return string
+     */
+    public function getLabel(?string $provider = null): string 
+    {
+        if (!$provider || !$this->configurationService->hasProvider($provider)) {
+            $provider = $this->contextService->getProvider();
+        }
+
+        $prefix   = $this->configurationService->getVersionPrefix($provider);
+        $number   = $this->configurationService->getVersionNumber($provider);
+        $beta     = $this->isBeta($provider);
+        
+        return "{$prefix}{$number}" . ($beta ? '-beta' : '');
+    }
+
+    /**
+     * Get the version location header value
+     * 
+     * @return string
+     */
+    public function getLocation(): string 
+    {
+        $provider = $this->contextService->getProvider();
+        return $this->configurationService->getVersionLocation($provider);
+    }
+
+    /**
+     * Get the version header directive
+     * 
+     * @return string
+     */
+    public function getHeaderDirective(): string 
+    {
+        $provider = $this->contextService->getProvider();
+        return $this->configurationService->getVersionHeaderDirective($provider);
+    }
+
+    /**
+     * Get the version header pattern
+     * 
+     * @return string
+     */
+    public function getHeaderPattern(): string 
+    {
+        $provider = $this->contextService->getProvider();
+        return $this->configurationService->getVersionHeaderPattern($provider);
+    }
+
+    /**
      * Get all available API versions
      * 
      * @return array<string>
@@ -92,25 +144,6 @@ final class VersionService
     }
 
     /**
-     * Get the full version string for a specific API provider
-     * 
-     * @param string|null $provider
-     * @return string
-     */
-    public function getLabel(?string $provider = null): string 
-    {
-        if (!$provider || !$this->configurationService->hasProvider($provider)) {
-            $provider = $this->contextService->getProvider();
-        }
-
-        $prefix   = $this->configurationService->getVersionPrefix($provider);
-        $number   = $this->configurationService->getVersionNumber($provider);
-        $beta     = $this->isBeta($provider);
-        
-        return "{$prefix}{$number}" . ($beta ? '-beta' : '');
-    }
-
-    /**
      * Check if the API provider is beta
      * 
      * @return bool
@@ -135,6 +168,6 @@ final class VersionService
             $provider = $this->contextService->getProvider();
         }
 
-        return $this->configurationService->isVersionDeprecated($provider);
+        return $this->configurationService->isDeprecationEnabled($provider);
     }
 }
