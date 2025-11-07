@@ -81,6 +81,11 @@ final class ServerService
      */
     public function getSoftware(): string
     {
+        return $_SERVER['SERVER_SOFTWARE'] ?? 'Unknown';
+    }
+    
+    public function getSoftwareName(): string
+    {
         $name = $_SERVER['SERVER_SOFTWARE'] ?? '';
         if (preg_match('/^[a-zA-Z]+/', $name, $matches)) {
             return $matches[0];

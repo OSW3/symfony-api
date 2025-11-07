@@ -258,6 +258,25 @@ return static function($definition): void
                         ->treatNullLike(true)
                     ->end()
 
+                    ->arrayNode('parameters')
+                        ->info('Query parameter names for pagination.')
+                        ->addDefaultsIfNotSet()->children()
+
+                            ->scalarNode('page')
+                                ->info('Parameter name for the page number.')
+                                ->defaultValue('page')
+                                ->treatNullLike('page')
+                            ->end()
+
+                            ->scalarNode('limit')
+                                ->info('Parameter name for the number of items per page.')
+                                ->defaultValue('limit')
+                                ->treatNullLike('limit')
+                            ->end()
+
+                        ->end()
+                    ->end()
+
                 ->end()
             ->end()
 
@@ -413,7 +432,7 @@ return static function($definition): void
 
                             ->enumNode('type')
                                 ->info('Type of the response format.')
-                                ->values(['json', 'xml', 'yaml', 'csv'])
+                                ->values(['json', 'xml', 'yaml', 'csv', 'toon'])
                                 ->defaultValue('json')
                                 ->treatNullLike('json')
                             ->end()
@@ -496,13 +515,6 @@ return static function($definition): void
                         ->info('HTTP headers to include in API responses.')
                         ->addDefaultsIfNotSet()->children()
 
-                            ->enumNode('merge')
-                                ->info('Defines how to handle merging headers: "replace" to overwrite existing headers, "append" to add to them.')
-                                ->values(['replace', 'append', 'ignore', 'prepend'])
-                                ->defaultValue('append')
-                                ->treatNullLike('append')
-                            ->end()
-
                             ->booleanNode('strip_x_prefix')
                                 ->info('If true, strips "X-" prefix from headers when exposing them.')
                                 ->defaultTrue()
@@ -515,7 +527,7 @@ return static function($definition): void
                                 ->treatNullLike(true)
                             ->end()
 
-                            ->arrayNode('expose')
+                            ->arrayNode('exposed')
                                 ->info('List of headers to expose in CORS requests.')
                                 ->scalarPrototype()->end()
                                 ->defaultValue([])

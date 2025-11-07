@@ -35,6 +35,18 @@ final class PaginationService
         return $this->configurationService->isPaginationEnabled($provider, $collection, $endpoint);
     }
 
+    public function getParameterPage(): string
+    {
+        $provider = $this->contextService->getProvider();
+        return $this->configurationService->getParameterPage($provider);
+    }
+
+    public function getParameterLimit(): string
+    {
+        $provider = $this->contextService->getProvider();
+        return $this->configurationService->getParameterLimit($provider);
+    }
+
 
     // ──────────────────────────────
     // Pages
@@ -69,8 +81,9 @@ final class PaginationService
             return 1;
         }
 
-        $params = $this->requestService->getQueryParams();
-        $page   = (int) ($params['page'] ?? 1);
+        $params = $this->requestService->getQueryParameters();
+        $key    = $this->getParameterPage();
+        $page   = (int) ($params[$key] ?? 1);
 
         return max(1, $page);
     }
@@ -156,7 +169,8 @@ final class PaginationService
 
         if ($this->configurationService->isPaginationLimitOverrideAllowed($provider)) {
             $params = $this->requestService->getQueryParameters();
-            $limit = (int) ($params['limit'] ?? $default);
+            $key    = $this->getParameterLimit();
+            $limit = (int) ($params[$key] ?? $default);
             return max(1, $limit);
         }
 
@@ -329,12 +343,13 @@ final class PaginationService
      */
     public function replacePageInUrl(int $newPage): string
     {
-        $params = $this->requestService->getQueryParams();
+        $params = $this->requestService->getQueryParameters();
+        $key    = $this->getParameterPage();
 
-        if (isset($params['page'])) {
-            $params['page'] = $newPage;
+        if (isset($params[$key])) {
+            $params[$key] = $newPage;
         } else {
-            $params = array_merge($params, ['page' => $newPage]);
+            $params = array_merge($params, [$key => $newPage]);
         }
 
         return $this->urlGenerator->generate(

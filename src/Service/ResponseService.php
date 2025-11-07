@@ -2,6 +2,8 @@
 namespace OSW3\Api\Service;
 
 use Symfony\Component\Yaml\Yaml;
+use OSW3\Api\Service\ContextService;
+use OSW3\Api\Service\RequestService;
 use OSW3\Api\HttpFoundation\XmlResponse;
 use OSW3\Api\Service\ConfigurationService;
 use OSW3\Api\Service\ResponseStatusService;
@@ -15,9 +17,11 @@ final class ResponseService
     private int $size = 0;
 
     public function __construct(
-        private readonly ResponseStatusService $status,
-        private readonly ConfigurationService $configuration,
         private readonly RouteService $routeService,
+        private readonly ResponseStatusService $status,
+        private readonly ContextService $contextService,
+        private readonly ConfigurationService $configuration,
+        private readonly RequestService $requestService,
     ){}
 
     public function setContent(array $content): static 
@@ -45,6 +49,29 @@ final class ResponseService
     public function getData(): array 
     {
         return $this->data;
+    }
+
+    public function getFormat(): string
+    {
+        $provider = $this->contextService->getProvider();
+        $default = $this->configuration->getResponseType($provider);
+        $format = $default;
+
+        $canOverrideResponseType = $this->configuration->canOverrideResponseType($provider);
+
+        if ($canOverrideResponseType) {
+            $request = $this->requestService->getCurrentRequest();
+            $param = $this->configuration->getResponseFormatParameter($provider);
+            $requestedFormat = $request->query->get($param);
+
+            $validFormats = ['json', 'xml', 'yaml', 'csv', 'toon'];
+
+            if (in_array($requestedFormat, $validFormats, true)) {
+                $format = $requestedFormat;
+            }
+        }
+
+        return $format;
     }
 
 

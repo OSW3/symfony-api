@@ -1159,6 +1159,26 @@ class ConfigurationService
         return $config['pagination']['enabled'] ?? null;
     }
 
+    public function getParameterPage(string $provider): string
+    {
+        if (! $this->hasProvider($provider)) {
+            return 'page';
+        }
+
+        $options = $this->getPagination($provider);
+        return $options['parameters']['page'] ?? 'page';
+    }
+
+    public function getParameterLimit(string $provider): string
+    {
+        if (! $this->hasProvider($provider)) {
+            return 'limit';
+        }
+
+        $options = $this->getPagination($provider);
+        return $options['parameters']['limit'] ?? 'limit';
+    }
+
 
 
     // ──────────────────────────────
@@ -2025,16 +2045,6 @@ class ConfigurationService
         return $providerOptions['response']['headers'] ?? [];
     }
 
-    public function getHeadersMergeStrategy(string $provider): string
-    {
-        if (! $this->hasProvider($provider)) {
-            return '';
-        }
-
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['response']['headers']['merge'] ?? '';
-    }
-
     public function isHeadersStripXPrefix(string $provider): bool
     {
         if (! $this->hasProvider($provider)) {
@@ -2062,7 +2072,7 @@ class ConfigurationService
         }
 
         $providerOptions = $this->getProvider($provider);
-        return $providerOptions['response']['headers']['expose'] ?? [];
+        return $providerOptions['response']['headers']['exposed'] ?? [];
     }
 
     public function getHeadersVaryDirectives(string $provider): array

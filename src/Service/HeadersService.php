@@ -1,7 +1,9 @@
 <?php 
 namespace OSW3\Api\Service;
 
+use OSW3\Api\Service\ServerService;
 use OSW3\Api\Service\ContextService;
+use OSW3\Api\Service\ResponseService;
 use OSW3\Api\Service\ConfigurationService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -10,7 +12,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
 
 final class HeadersService 
 {
-    private array $headers = [];
+    // private array $headers = [];
     private array $excludes = [];
     
     private readonly Request $request;
@@ -21,6 +23,8 @@ final class HeadersService
         private readonly VersionService $versionService,
         private readonly ContextService $contextService,
         private readonly ConfigurationService $configurationService,
+        private readonly ServerService $serverService,
+        private readonly ResponseService $responseService,
     ){
         $this->request = $requestStack->getCurrentRequest();
     }
@@ -28,18 +32,6 @@ final class HeadersService
 
     // Configuration
     // ───────────────
-
-    /**
-     * Get the headers merge strategy for the current provider.
-     * 
-     * @return string Merge strategy ('override' or 'merge')
-     */
-    public function mergeStrategy(): string 
-    {
-        $provider = $this->configurationService->getContext('provider');
-        $strategy = $this->configurationService->getHeadersMergeStrategy($provider) ?? 'append';
-        return strtolower($strategy);
-    }
 
     /**
      * Determine if the 'X-' prefix should be stripped from headers.
@@ -84,39 +76,87 @@ final class HeadersService
         return $directives;
     }
 
+    /**
+     * Get the exposed header directives.
+     * and force true or false values.
+     * 
+     * @return array The exposed header directives
+     */
+    public function getExposedDirectives(): array 
+    {
+        $directives = $this->getDirectivesList('exposed');
+
+        foreach ($directives as $key => $value) {
+            unset($directives[$key]);
+            $key = $this->normalizeDirectiveName($key);
+            $value = $value !== false;
+
+            $directives[$key] = $value;
+        }
+
+        return $directives;
+    }
+
+    public function getCustomDirectives(): array 
+    {
+        $directives = $this->getDirectivesList('custom');
+
+        foreach ($directives as $key => $value) {
+            $key  = $this->normalizeDirectiveName($key);
+            $value = $this->normalizeDirectiveValue($value);
+
+            $directives[$key] = !empty($value) ? $value : false;
+        }
+
+        return $directives;
+    }
+
 
     // Builder
     // ───────────────
     
-    public function addHeader(string $name, string|array $value): void 
-    {
-        $name  = $this->normalizeDirectiveName($name);
-        $value = $this->normalizeDirectiveValue($value);
+    // public function addHeader(string $name, mixed $value): void 
+    // {
+    //     $name  = $this->normalizeDirectiveName($name);
+    //     $value = $this->normalizeDirectiveValue($value);
 
-        $this->headers[$name] = $value;
-    }
+    //     $this->headers[$name] = $value;
+    // }
     
 
     public function buildHeaders(): array 
     {
-        $headers = $this->headers;
-        // dd($headers);
+        // Step 1: Retrieve existing headers
+        // --
 
-        // Step 1: Normalize current headers
-        // $headers = $this->normalize($headers);
+        // $headers = $this->headers;
+        
 
         // Step 2: Merge exposed headers
-        $exposed = $this->getDirectivesList('exposed');
-        $exposed = $this->normalize($exposed);
-        $headers = $this->merge($headers, $exposed, $this->mergeStrategy());
+        // unset if the exposed directive is false
+        // --
+
+        // foreach ($this->getExposedDirectives() as $key => $value) 
+        // {
+        //     $key = $this->normalizeDirectiveName($key);
+
+        //     if ($value === false && isset($headers[$key])) {
+        //         unset($headers[$key]);
+        //     }
+        //     elseif ($value === true && !isset($headers[$key])) {
+        //         $headers[$key] = $value;
+        //     }
+        // }
+
 
         // Step 3: Merge custom headers
-        $custom  = $this->getDirectivesList('custom');
-        $custom  = $this->normalize($custom);
-        $headers = $this->merge($headers, $custom, $this->mergeStrategy());
+        // --
+
+        // $custom  = $this->getCustomDirectives();
+        // $headers = array_merge($headers, $custom);
 
 
-        // Step 6: Resolve directives and injection
+        // Step 4: Resolve directives and injection
         // --
 
         foreach ($headers as $key => $value) 
@@ -124,6 +164,10 @@ final class HeadersService
             $xStrippedKey = strtolower(preg_replace('/^X-/i', '', $key));
 
             $headers[$key] = match($xStrippedKey) {
+
+                'server' => $this->serverService->getSoftware(),
+                // 'content-length' => $this->responseService->getSize(),
+
                 // App
                 'app-name'           => $this->appService->getName(),
                 'app-vendor'         => $this->appService->getVendor(),
@@ -145,30 +189,32 @@ final class HeadersService
         }
 
         // Step 5: Strip 'X-' prefix if configured
-        foreach ($headers as $key => $value) 
-        {
-            unset($headers[$key]);
+        // foreach ($headers as $key => $value) 
+        // {
+        //     unset($headers[$key]);
 
-            $originalKey = $key;
-            $normalizedKey = $key;
+        //     $originalKey = $key;
+        //     $normalizedKey = $key;
 
-            if (empty($value)) {
-                continue;
-            }
+        //     if (empty($value)) {
+        //         continue;
+        //     }
 
-            if ($this->stripXPrefix() && str_starts_with($key, 'x-')) {
-                $normalizedKey = substr($key, 2);
-            }
+        //     if ($this->stripXPrefix() && str_starts_with($key, 'x-')) {
+        //         $normalizedKey = substr($key, 2);
+        //     }
 
-            if ($this->keepLegacy() && $originalKey !== $normalizedKey) {
-                $headers[$originalKey] = $value;
-            }
+        //     if ($this->keepLegacy() && $originalKey !== $normalizedKey) {
+        //         $headers[$originalKey] = $value;
+        //     }
 
-            $headers[$normalizedKey] = $value;
-        }
+        //     $headers[$normalizedKey] = $value;
+        // }
 
-        // Step 4: Remove excluded headers
-        $headers = $this->excludes($headers);
+        // Step 6: Remove excluded headers
+        // $headers = $this->excludes($headers);
+
+        // $headers = $this->normalize($headers);
 
         // dd( $headers );
 
@@ -206,7 +252,7 @@ final class HeadersService
         return $normalized;
     }
 
-    private function normalizeDirectiveName(string $name): string 
+    public function normalizeDirectiveName(string $name): string 
     {
         $name = str_replace('_', '-', $name);
         $name = str_replace(' ', '-', $name);
@@ -215,7 +261,7 @@ final class HeadersService
 
         return $name;
     }
-    private function normalizeDirectiveValue(string|array $value): string 
+    private function normalizeDirectiveValue(mixed $value): mixed 
     {
         $value = is_array($value) ? implode(', ', $value) : $value;
         $value = is_string($value) ? trim($value) : $value;
@@ -223,60 +269,60 @@ final class HeadersService
         return $value;
     }
 
-    public function merge(array $base, array $extra, string $strategy = 'append'): array 
-    {
-        switch ($strategy) {
-            case 'replace':
-                return $extra;
+    // public function merge(array $base, array $extra, string $strategy = 'append'): array 
+    // {
+    //     switch ($strategy) {
+    //         case 'replace':
+    //             return $extra;
 
-            case 'ignore':
-                return $base;
+    //         case 'ignore':
+    //             return $base;
 
-            case 'prepend':
-                return $this->mergeUnique($extra, $base);
+    //         case 'prepend':
+    //             return $this->mergeUnique($extra, $base);
 
-            case 'append':
-            default:
-                return $this->mergeUnique($base, $extra);
-        }
-    }
-    private function mergeUnique(array $base, array $extra): array
-    {
-        foreach ($extra as $key => $value) {
-            if (!array_key_exists($key, $base)) {
-                $base[$key] = $value;
-            }
-        }
-        return $base;
-    }
+    //         case 'append':
+    //         default:
+    //             return $this->mergeUnique($base, $extra);
+    //     }
+    // }
+    // private function mergeUnique(array $base, array $extra): array
+    // {
+    //     foreach ($extra as $key => $value) {
+    //         if (!array_key_exists($key, $base)) {
+    //             $base[$key] = $value;
+    //         }
+    //     }
+    //     return $base;
+    // }
 
-    public function excludes(array $headers): array
-    {
-        $excludes = array_values(array_unique(array_filter(array_merge(
-            $this->excludes,
-            $this->getDirectivesList('remove')
-        ))));
+    // public function excludes(array $headers): array
+    // {
+    //     $excludes = array_values(array_unique(array_filter(array_merge(
+    //         $this->excludes,
+    //         $this->getDirectivesList('remove')
+    //     ))));
 
-        foreach ($excludes as $index => $key) {
-            unset($excludes[$index]);
-            $key = str_replace('_', '-', $key);
-            $key = str_replace(' ', '-', $key);
-            $key = strtolower($key);
-            $xStrippedKey = preg_replace('/^x-/i', '', $key);
+    //     foreach ($excludes as $index => $key) {
+    //         unset($excludes[$index]);
+    //         $key = str_replace('_', '-', $key);
+    //         $key = str_replace(' ', '-', $key);
+    //         $key = strtolower($key);
+    //         $xStrippedKey = preg_replace('/^x-/i', '', $key);
 
-            $excludes[] = $key;
-            $excludes[] = $xStrippedKey;
-        }
+    //         $excludes[] = $key;
+    //         $excludes[] = $xStrippedKey;
+    //     }
 
-        return array_filter($headers, function($key) use ($excludes) {
-            $key = str_replace('_', '-', $key);
-            $key = str_replace(' ', '-', $key);
-            $key = strtolower($key);
-            $xStrippedKey = preg_replace('/^x-/i', '', $key);
+    //     return array_filter($headers, function($key) use ($excludes) {
+    //         $key = str_replace('_', '-', $key);
+    //         $key = str_replace(' ', '-', $key);
+    //         $key = strtolower($key);
+    //         $xStrippedKey = preg_replace('/^x-/i', '', $key);
             
-            return !in_array($xStrippedKey, $excludes, true);
-        }, ARRAY_FILTER_USE_KEY);
-    }
+    //         return !in_array($xStrippedKey, $excludes, true);
+    //     }, ARRAY_FILTER_USE_KEY);
+    // }
 
 
     // Resolvers

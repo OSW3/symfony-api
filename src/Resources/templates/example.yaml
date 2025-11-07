@@ -1,64 +1,67 @@
 ## Custom callable
 ## --
 
-# callable_method: App\Callable\TestCallable::myCustomData
-# callable_method_static: App\Callable\TestCallable::myCustomStaticData
+callable: 
+    method: App\Callable\TestCallable::myCustomData
+    static: App\Callable\TestCallable::myCustomStaticData
 
 
 
 ## APP
 ## --
 
-## App Name
-## Need to define the "name" property in composer.json
-## 
-## @var string
-# app.name: "{app.name}"
+app:
 
-## App Vendor
-## Need to define the "name" property in composer.json
-## 
-# ## @var string
-# app.vendor: "{app.vendor}"
+    ## App Name
+    ## Need to define the "name" property in composer.json
+    ## 
+    ## @var string
+    name: "{app.name}"
 
-## App Version
-## Need to define the "version" property in composer.json
-## 
-## @var string
-# app.version: "{app.version}"
+    ## App Vendor
+    ## Need to define the "name" property in composer.json
+    ## 
+    ## @var string
+    vendor: "{app.vendor}"
 
-## App Description
-## Need to define the "description" property in composer.json
-## 
-## @var string
-# app.description: "{app.description}"
+    ## App Version
+    ## Need to define the "version" property in composer.json
+    ## 
+    ## @var string
+    version: "{app.version}"
 
-## App License
-## Need to define the "license" property in composer.json
-##
-## @var string
-# app.license: "{app.license}"
+    ## App Description
+    ## Need to define the "description" property in composer.json
+    ## 
+    ## @var string
+    description: "{app.description}"
 
-
+    ## App License
+    ## Need to define the "license" property in composer.json
+    ##
+    ## @var string
+    license: "{app.license}"
 
 
 ## Context
 ## --
 
-## Current Provider name
-## 
-## @var string
-# context.provider: "{context.provider}"
+context:
 
-## Current Collection name
-##
-## @var string
-# context.collection: "{context.collection}"
+    ## Current Provider name
+    ## 
+    ## @var string
+    provider: "{context.provider}"
 
-## Current Endpoint name
-##
-## @var string
-# context.endpoint: "{context.endpoint}"
+    ## Current Collection name
+    ##
+    ## @var string
+    collection: "{context.collection}"
+
+    ## Current Endpoint name
+    ##
+    ## @var string
+    endpoint: "{context.endpoint}"
 
 
 
@@ -66,54 +69,53 @@
 ## Versioning
 ## --
 
-## Version label
-## e.g. "v1.0", "v2.1-beta"
-## 
-## @var string
-# version.label: "{version.label}"
+versioning: 
 
-## API Version Number
-## 
-## @var int
-# version.number: "{version.number}"
+    ## Version label
+    ## e.g. "v1.0", "v2.1-beta"
+    ## 
+    ## @var string
+    label: "{version.label}"
 
-## API Version Prefix
-## 
-## @var string
-# version.prefix: "{version.prefix}"
+    ## API Version Number
+    ## 
+    ## @var int
+    number: "{version.number}"
 
-## API Versions
-## List of all API Version
-## 
-## @var array
-# version.all: "{version.all}"
+    ## API Version Prefix
+    ## 
+    ## @var string
+    prefix: "{version.prefix}"
 
-## API Supported Versions
-## List of supported API Version
-## 
-## @var array
-# version.supported: "{version.supported}"
+    ## API Versions
+    ## List of all API Version
+    ## 
+    ## @var array
+    all: "{version.all}"
 
-## API Deprecated Versions
-## List of deprecated API Version
-##
-## @var array
-# version.deprecated: "{version.deprecated}"
+    ## API Supported Versions
+    ## List of supported API Version
+    ## 
+    ## @var array
+    supported: "{version.supported}"
 
-## API Is Deprecated
-## Indicate if the API version is deprecated
-## 
-## @var bool
-# version.is_deprecated: "{version.is_deprecated}"
+    ## API Deprecated Versions
+    ## List of deprecated API Version
+    ##
+    ## @var array
+    deprecated: "{version.deprecated}"
 
-## API Is Beta
-## Indicate if the API version is in beta
-## 
-## @var bool
-# version.is_beta: "{version.is_beta}"
+    ## API Is Deprecated
+    ## Indicate if the API version is deprecated
+    ## 
+    ## @var bool
+    is_deprecated: "{version.is_deprecated}"
 
-
-
+    ## API Is Beta
+    ## Indicate if the API version is in beta
+    ## 
+    ## @var bool
+    is_beta: "{version.is_beta}"
 
 
 ## Documentation
@@ -126,46 +128,45 @@
 # documentation.url: "{documentation.url}"
 
 
-
-
 ## Status
 ## --
 
-## Status HTTP Code
-## The HTTP response code
-## 
-## @var int
-# status.code: "{status.code}"
+status:
+    ## Status HTTP Code
+    ## The HTTP response code
+    ## 
+    ## @var int
+    code: "{status.code}"
 
-## Status HTTP state message
-## The message associated to the HTTP Code ex. "OK")
-## 
-## @var string
-# status.text: "{status.text}"
+    ## Status HTTP state message
+    ## The message associated to the HTTP Code ex. "OK")
+    ## 
+    ## @var string
+    text: "{status.text}"
 
-## Status state
-## success, failed, error
-## 
-## @var string
-# status.state: "{status.state}"
+    ## Status state
+    ## success, failed, error
+    ## 
+    ## @var string
+    state: "{status.state}"
 
-## Is Success
-## True if status is 2xx
-##
-## @var bool
-# status.is_success: "{status.is_success}"
+    ## Is Success
+    ## True if status is 2xx
+    ##
+    ## @var bool
+    is_success: "{status.is_success}"
 
-## Is Failed
-## True if status is 4xx
-##
-## @var bool
-# status.is_failed: "{status.is_failed}"
+    ## Is Failed
+    ## True if status is 4xx
+    ##
+    ## @var bool
+    is_failed: "{status.is_failed}"
 
-## Is Error
-## True if status is 5xx
-##
-## @var bool
-# status.is_error: "{status.is_error}"
+    ## Is Error
+    ## True if status is 5xx
+    ##
+    ## @var bool
+    is_error: "{status.is_error}"
 
 
 
@@ -679,17 +680,18 @@
 ## Rate Limit
 ## --
 
-## Maximum number of requests allowed in the current time window
-##
-## @var int
-# rate_limit.limit: "{rate_limit.limit}"
+rate_limit:
+    ## Maximum number of requests allowed in the current time window
+    ##
+    ## @var int
+    limit: "{rate_limit.limit}"
 
-## Number of requests remaining in the current time window
-##
-## @var int
-# rate_limit.remaining: "{rate_limit.remaining}"
+    ## Number of requests remaining in the current time window
+    ##
+    ## @var int
+    remaining: "{rate_limit.remaining}"
 
-## Time at which the current rate limit window resets in UTC epoch seconds
-##
-## @var int
-# rate_limit.reset: "{rate_limit.reset}"
+    ## Time at which the current rate limit window resets in UTC epoch seconds
+    ##
+    ## @var int
+    reset: "{rate_limit.reset}"

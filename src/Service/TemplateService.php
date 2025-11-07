@@ -291,6 +291,7 @@ final class TemplateService
                 'server.symfony_version' => $this->server->getSymfonyVersion(),
                 'server.name'            => $this->server->getName(),
                 'server.software'        => $this->server->getSoftware(),
+                'server.software_name'   => $this->server->getSoftwareName(),
                 'server.software_version'=> $this->server->getSoftwareVersion(),
                 'server.software_release'=> $this->server->getSoftwareRelease(),
                 'server.os'              => $this->server->getOs(),
