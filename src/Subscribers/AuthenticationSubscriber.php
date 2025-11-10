@@ -33,12 +33,14 @@ final class AuthenticationSubscriber implements EventSubscriberInterface
     public static function getSubscribedEvents(): array
     {
         return [
-            // KernelEvents::REQUEST => ['onRequest', 32]
+            KernelEvents::REQUEST => ['onRequest', 31]
         ];
     }
 
     public function onRequest(RequestEvent $event): void
     {
+        dump('2 - AuthenticationSubscriber');
+
         $provider   = $this->contextService->getProvider();
         $collection = $this->contextService->getCollection();
         $endpoint   = $this->contextService->getEndpoint();
@@ -66,7 +68,7 @@ final class AuthenticationSubscriber implements EventSubscriberInterface
             $collection,
             $endpoint
         );
-
+        
         if (empty($roles)) {
             return;
         }

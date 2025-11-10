@@ -1,6 +1,6 @@
 success: "{status.is_success}"
 status: "{status.code}"
-message: "{status.text}"
+message: "{status.text,ddd}"
 errors: "{response.data}"
 meta:
     request_id: "{meta.operation_id}"

@@ -35,6 +35,9 @@ class DeprecationSubscriber implements EventSubscriberInterface
             return;
         }
 
+        $this->templateService->setType('error');
+        
+
         // Retrieve the response
         $response = $event->getResponse();
 
@@ -78,35 +81,39 @@ class DeprecationSubscriber implements EventSubscriberInterface
 
     private function applyDeprecationHeaders(Response $response): void
     {
-        $start   = $this->deprecationService->getStartDate();
-        $sunset  = $this->deprecationService->getSunsetDate();
-        $link    = $this->deprecationService->getLink();
-        $message = $this->deprecationService->getMessage();
+        $start     = $this->deprecationService->getStartAt();
+        $sunset    = $this->deprecationService->getSunsetAt();
+        $link      = $this->deprecationService->getLink();
+        $successor = $this->deprecationService->getSuccessor();
+        $message   = $this->deprecationService->getMessage();
+        $links     = [];
 
         $response->headers->set(
             DeprecationService::HEADER_DEPRECATION,
-            $start ? $start->format(DATE_RFC7231) : 'true'
+            !$start || !$sunset || $start > $sunset
+                ? 'true'
+                : $start->format(DATE_RFC7231)
         );
 
         if ($sunset) {
-            $response->headers->set(
-                DeprecationService::HEADER_SUNSET,
-                $sunset->format(DATE_RFC7231)
-            );
+            $response->headers->set(DeprecationService::HEADER_SUNSET, $sunset->format(DATE_RFC7231));
         }
 
         if ($link) {
-            $response->headers->set(
-                DeprecationService::HEADER_LINK,
-                sprintf('<%s>; rel="successor-version"', $link)
-            );
+            $links[] = sprintf('<%s>; rel="deprecation"', $link);
+        }
+
+        if ($successor) {
+            $links[] = sprintf('<%s>; rel="successor-version"', $successor);
+        }
+
+        if ($links) {
+            $response->headers->set(DeprecationService::HEADER_LINK, implode(', ', $links));
+            // $response->headers->set(DeprecationService::HEADER_LINK, $links);
         }
 
         if ($message) {
-            $response->headers->set(
-                DeprecationService::HEADER_MESSAGE,
-                $message
-            );
+            $response->headers->set(DeprecationService::HEADER_MESSAGE, $message);
         }
     }
 }

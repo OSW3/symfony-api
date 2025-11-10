@@ -18,7 +18,7 @@ final class IsEnabledSubscriber implements EventSubscriberInterface
     public static function getSubscribedEvents(): array
     {
         return [
-            KernelEvents::REQUEST => ['onRequest', 32]
+            // KernelEvents::REQUEST => ['onRequest', 32]
         ];
     }
 
@@ -29,6 +29,7 @@ final class IsEnabledSubscriber implements EventSubscriberInterface
         $endpoint   = $this->contextService->getEndpoint();
         $routeName  = $event->getRequest()->attributes->get('_route');
         
+        // dd($event->isMainRequest(), $provider, $collection, $endpoint, $routeName, !in_array(null, [$provider, $collection, $endpoint, $routeName], true));
         // If all are defined, we cannot determine the isEnabled status
         if (!in_array(null, [$provider, $collection, $endpoint, $routeName], true)) {
             return;

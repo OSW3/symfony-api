@@ -37,18 +37,18 @@ use OSW3\Api\Resolver\EndpointPaginationEnabledResolver;
 use OSW3\Api\Resolver\EndpointRouteRequirementsResolver;
 use OSW3\Api\Resolver\CollectionRateLimitEnabledResolver;
 use OSW3\Api\Resolver\EndpointDeprecationEnabledResolver;
+use OSW3\Api\Resolver\EndpointDeprecationStartAtResolver;
 use OSW3\Api\Resolver\EndpointPaginationMaxLimitResolver;
+use OSW3\Api\Resolver\ProviderDeprecationStartAtResolver;
 use OSW3\Api\Resolver\CollectionPaginationEnabledResolver;
+use OSW3\Api\Resolver\EndpointDeprecationSunsetAtResolver;
+use OSW3\Api\Resolver\ProviderDeprecationSunsetAtResolver;
 use OSW3\Api\Resolver\CollectionDeprecationEnabledResolver;
+use OSW3\Api\Resolver\CollectionDeprecationStartAtResolver;
 use OSW3\Api\Resolver\CollectionPaginationMaxLimitResolver;
-use OSW3\Api\Resolver\EndpointDeprecationSinceDateResolver;
-use OSW3\Api\Resolver\ProviderDeprecationSinceDateResolver;
-use OSW3\Api\Resolver\CollectionDeprecationSinceDateResolver;
-use OSW3\Api\Resolver\EndpointDeprecationRemovalDateResolver;
+use OSW3\Api\Resolver\CollectionDeprecationSunsetAtResolver;
 use OSW3\Api\Resolver\EndpointRateLimitByApplicationResolver;
-use OSW3\Api\Resolver\ProviderDeprecationRemovalDateResolver;
 use OSW3\Api\Resolver\EndpointRateLimitIncludeHeadersResolver;
-use OSW3\Api\Resolver\CollectionDeprecationRemovalDateResolver;
 use OSW3\Api\Resolver\CollectionRateLimitByApplicationResolver;
 use OSW3\Api\Resolver\CollectionRateLimitIncludeHeadersResolver;
 use OSW3\Api\Resolver\EndpointPaginationAllowLimitOverrideResolver;
@@ -89,18 +89,23 @@ return static function($definition): void
                         ->treatNullLike(false)
                     ->end()
 
-                    ->scalarNode('since_date')
+                    ->scalarNode('start_at')
                         ->info('Deprecation since date')
                         ->defaultNull()
                     ->end()
 
-                    ->scalarNode('removal_date')
+                    ->scalarNode('sunset_at')
                         ->info('Deprecation removal date')
                         ->defaultNull()
                     ->end()
 
                     ->scalarNode('link')
                         ->info('Deprecation link')
+                        ->defaultNull()
+                    ->end()
+
+                    ->scalarNode('successor')
+                        ->info('Deprecation successor link')
                         ->defaultNull()
                     ->end()
 
@@ -268,22 +273,6 @@ return static function($definition): void
 
                 ->end()
             ->end()
-
-            // ──────────────────────────────
-            // Search support
-            // ──────────────────────────────
-			// ->arrayNode('search')
-            //     ->info('Global search configuration for all collections.')
-            //     ->addDefaultsIfNotSet()->children()
-
-            //         ->booleanNode('enabled')
-            //             ->info('Enable or disable search globally for all collections.')
-            //             ->defaultFalse()
-            //             ->treatNullLike(false)
-            //         ->end()
-
-			//     ->end()
-            // ->end()
 
             // ──────────────────────────────
             // URL support
@@ -832,15 +821,34 @@ return static function($definition): void
                                         ->end()
                                     ->end()
 
+                                    // ->arrayNode('fields')
+                                    //     ->info('Registration fields mapping.')
+                                    //     ->normalizeKeys(false)
+                                    //     ->scalarPrototype()->end()
+                                    //     ->defaultValue([
+                                    //         'username' => 'email',
+                                    //         'password' => 'password',
+                                    //         'confirm'  => 'confirmPassword',
+                                    //     ])
+                                    // ->end()
+
                                     ->arrayNode('fields')
                                         ->info('Registration fields mapping.')
-                                        ->normalizeKeys(false)
-                                        ->scalarPrototype()->end()
-                                        ->defaultValue([
-                                            'username' => 'email',
-                                            'password' => 'password',
-                                            'confirm'  => 'confirmPassword',
-                                        ])
+                                        ->addDefaultsIfNotSet()->children()
+                                        
+                                            ->scalarNode('username')
+                                                ->info('')
+                                                ->defaultValue('email')
+                                                ->treatNullLike('email')
+                                            ->end()
+                                        
+                                            ->scalarNode('password')
+                                                ->info('')
+                                                ->defaultValue('password')
+                                                ->treatNullLike('password')
+                                            ->end()
+
+                                        ->end()
                                     ->end()
                                 
                                 ->end()
@@ -1268,18 +1276,23 @@ return static function($definition): void
                                     ->treatNullLike(false)
                                 ->end()
 
-                                ->scalarNode('since_date')
+                                ->scalarNode('start_at')
                                     ->info('Deprecation since date')
                                     ->defaultNull()
                                 ->end()
 
-                                ->scalarNode('removal_date')
-                                    ->info('Deprecation removal date')
+                                ->scalarNode('sunset_at')
+                                    ->info('Deprecation sunset date')
                                     ->defaultNull()
                                 ->end()
 
                                 ->scalarNode('link')
                                     ->info('Deprecation link')
+                                    ->defaultNull()
+                                ->end()
+
+                                ->scalarNode('successor')
+                                    ->info('Deprecation successor link')
                                     ->defaultNull()
                                 ->end()
 
@@ -1332,28 +1345,6 @@ return static function($definition): void
                             
                             ->end()
                         ->end()
-
-                        // ──────────────────────────────
-                        // Search
-                        // ──────────────────────────────
-                        // ->arrayNode('search')
-                        //     ->info('Search configuration for this collection. Allows enabling search and specifying searchable fields.')
-                        //     ->addDefaultsIfNotSet()
-                        //     ->children()
-
-                        //         ->booleanNode('enabled')
-                        //             ->info('Enable or disable search for this collection.')
-                        //             ->defaultNull()
-                        //         ->end()
-
-                        //         ->arrayNode('fields')
-                        //             ->info('List of entity fields that are searchable. Only used if search is enabled.')
-                        //             ->scalarPrototype()->end()
-                        //             ->defaultValue([])
-                        //         ->end()
-
-                        //     ->end()
-                        // ->end()
 
                         // ──────────────────────────────
                         // Pagination
@@ -1656,18 +1647,23 @@ return static function($definition): void
                                                 ->treatNullLike(false)
                                             ->end()
 
-                                            ->scalarNode('since_date')
+                                            ->scalarNode('start_at')
                                                 ->info('Deprecation since date')
                                                 ->defaultNull()
                                             ->end()
 
-                                            ->scalarNode('removal_date')
-                                                ->info('Deprecation removal date')
+                                            ->scalarNode('sunset_at')
+                                                ->info('Deprecation sunset date')
                                                 ->defaultNull()
                                             ->end()
 
                                             ->scalarNode('link')
                                                 ->info('Deprecation link')
+                                                ->defaultNull()
+                                            ->end()
+
+                                            ->scalarNode('successor')
+                                                ->info('Deprecation successor link')
                                                 ->defaultNull()
                                             ->end()
 
@@ -2104,8 +2100,8 @@ return static function($definition): void
             ApiVersionHeaderFormatResolver::resolve($providers);
 
             // Deprecation
-            ProviderDeprecationSinceDateResolver::resolve($providers);
-            ProviderDeprecationRemovalDateResolver::resolve($providers);
+            ProviderDeprecationStartAtResolver::resolve($providers);
+            ProviderDeprecationSunsetAtResolver::resolve($providers);
 
 
             // ──────────────────────────────
@@ -2117,10 +2113,10 @@ return static function($definition): void
 
             // Deprecation
             CollectionDeprecationEnabledResolver::default($providers);
-            CollectionDeprecationSinceDateResolver::default($providers);
-            CollectionDeprecationSinceDateResolver::resolve($providers);
-            CollectionDeprecationRemovalDateResolver::default($providers);
-            CollectionDeprecationRemovalDateResolver::resolve($providers);
+            CollectionDeprecationStartAtResolver::default($providers);
+            CollectionDeprecationStartAtResolver::resolve($providers);
+            CollectionDeprecationSunsetAtResolver::default($providers);
+            CollectionDeprecationSunsetAtResolver::resolve($providers);
 
             // Name
             CollectionNameResolver::resolve($providers);
@@ -2129,9 +2125,6 @@ return static function($definition): void
             CollectionRoutePatternResolver::default($providers);
             CollectionRoutePrefixResolver::default($providers);
             CollectionRoutePrefixResolver::resolve($providers);
-
-            // Search
-            // CollectionSearchStatusResolver::default($providers);
 
             // Pagination
             CollectionPaginationEnabledResolver::default($providers);
@@ -2161,10 +2154,10 @@ return static function($definition): void
 
             // Deprecation
             EndpointDeprecationEnabledResolver::default($providers);
-            EndpointDeprecationSinceDateResolver::default($providers);
-            EndpointDeprecationSinceDateResolver::resolve($providers);
-            EndpointDeprecationRemovalDateResolver::default($providers);
-            EndpointDeprecationRemovalDateResolver::resolve($providers);
+            EndpointDeprecationStartAtResolver::default($providers);
+            EndpointDeprecationStartAtResolver::resolve($providers);
+            EndpointDeprecationSunsetAtResolver::default($providers);
+            EndpointDeprecationSunsetAtResolver::resolve($providers);
 
             // Route
             EndpointRouteNameResolver::default($providers);

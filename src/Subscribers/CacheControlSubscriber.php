@@ -2,8 +2,8 @@
 namespace OSW3\Api\Subscribers;
 
 use OSW3\Api\Service\HeadersService;
-use OSW3\Api\Service\ChecksumService;
 use OSW3\Api\Service\ResponseService;
+use OSW3\Api\Service\IntegrityService;
 use OSW3\Api\Service\CacheControlService;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
@@ -13,8 +13,8 @@ class CacheControlSubscriber implements EventSubscriberInterface
 {
     public function __construct(
         private readonly HeadersService $headersService,
-        private readonly ChecksumService $checksumService,
         private readonly ResponseService $responseService,
+        private readonly IntegrityService $integrityService,
         private readonly CacheControlService $cacheControlService,
     ){}
     
@@ -43,13 +43,10 @@ class CacheControlSubscriber implements EventSubscriberInterface
         }
         
         if (isset($exposed['ETag']) && $exposed['ETag'] === true) {
-            $data = $this->responseService->getData();
-            $data = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '';
-            $md5  = $this->checksumService->computeHash($data, 'md5');
-            $response->headers->set(
-                'ETag', 
-                "W/\"{$md5}\""
-            );
+            $response->headers->set('ETag', sprintf(
+                "W/\"%s\"",
+                $this->integrityService->getHash('md5')
+            ));
         }
     }
 }

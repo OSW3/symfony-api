@@ -466,7 +466,7 @@ class ConfigurationService
         return false;
     }
 
-    public function getDeprecationSinceDate(string $provider, ?string $collection = null, ?string $endpoint = null): ?string
+    public function getDeprecationStartAt(string $provider, ?string $collection = null, ?string $endpoint = null): ?string
     {
         if (! $this->hasProvider($provider)) {
             return null;
@@ -479,30 +479,30 @@ class ConfigurationService
         // 1. Endpoint-level deprecation since date
         if ($collection && $endpoint) {
             $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
-            if (isset($endpointOptions['deprecation']['since_date'])) {
-                return $endpointOptions['deprecation']['since_date'];
+            if (isset($endpointOptions['deprecation']['start_at'])) {
+                return $endpointOptions['deprecation']['start_at'];
             }
         }
 
         // 2. Collection-level deprecation since date
         if ($collection) {
             $collectionOptions = $this->getCollection($provider, $collection);
-            if (isset($collectionOptions['deprecation']['since_date'])) {
-                return $collectionOptions['deprecation']['since_date'];
+            if (isset($collectionOptions['deprecation']['start_at'])) {
+                return $collectionOptions['deprecation']['start_at'];
             }
         }
 
         // 3. Provider-level deprecation since date
         $providerOptions = $this->getProvider($provider);
-        if (isset($providerOptions['deprecation']['since_date'])) {
-            return $providerOptions['deprecation']['since_date'];
+        if (isset($providerOptions['deprecation']['start_at'])) {
+            return $providerOptions['deprecation']['start_at'];
         }
 
         // 4. Default
         return null;
     }
 
-    public function getDeprecationRemovalDate(string $provider, ?string $collection = null, ?string $endpoint = null): ?string
+    public function getDeprecationSunsetAt(string $provider, ?string $collection = null, ?string $endpoint = null): ?string
     {
         if (! $this->hasProvider($provider)) {
             return null;
@@ -515,23 +515,23 @@ class ConfigurationService
         // 1. Endpoint-level deprecation removal date
         if ($collection && $endpoint) {
             $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
-            if (isset($endpointOptions['deprecation']['removal_date'])) {
-                return $endpointOptions['deprecation']['removal_date'];
+            if (isset($endpointOptions['deprecation']['sunset_at'])) {
+                return $endpointOptions['deprecation']['sunset_at'];
             }
         }
 
         // 2. Collection-level deprecation removal date
         if ($collection) {
             $collectionOptions = $this->getCollection($provider, $collection);
-            if (isset($collectionOptions['deprecation']['removal_date'])) {
-                return $collectionOptions['deprecation']['removal_date'];
+            if (isset($collectionOptions['deprecation']['sunset_at'])) {
+                return $collectionOptions['deprecation']['sunset_at'];
             }
         }
 
         // 3. Provider-level deprecation removal date
         $providerOptions = $this->getProvider($provider);
-        if (isset($providerOptions['deprecation']['removal_date'])) {
-            return $providerOptions['deprecation']['removal_date'];
+        if (isset($providerOptions['deprecation']['sunset_at'])) {
+            return $providerOptions['deprecation']['sunset_at'];
         }
 
         // 4. Default
@@ -573,6 +573,43 @@ class ConfigurationService
         // 4. Default
         return null;
     }
+
+    public function getDeprecationSuccessor(string $provider, ?string $collection = null, ?string $endpoint = null): ?string
+    {
+        if (! $this->hasProvider($provider)) {
+            return null;
+        }
+
+        if (!$this->isDeprecationEnabled($provider, $collection, $endpoint)) {
+            return null;
+        }
+
+        // 1. Endpoint-level deprecation successor link
+        if ($collection && $endpoint) {
+            $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
+            if (isset($endpointOptions['deprecation']['successor'])) {
+                return $this->resolveDeprecationLink($endpointOptions['deprecation']['successor']);
+            }
+        }
+
+        // 2. Collection-level deprecation successor link
+        if ($collection) {
+            $collectionOptions = $this->getCollection($provider, $collection);
+            if (isset($collectionOptions['deprecation']['successor'])) {
+                return $this->resolveDeprecationLink($collectionOptions['deprecation']['successor']);
+            }
+        }
+
+        // 3. Provider-level deprecation successor link
+        $providerOptions = $this->getProvider($provider);
+        if (isset($providerOptions['deprecation']['successor'])) {
+            return $this->resolveDeprecationLink($providerOptions['deprecation']['successor']);
+        }
+
+        // 4. Default
+        return null;
+    }
+
     private function resolveDeprecationLink(string $input): ?string
     {
         if (preg_match('#^https?://#i', $input)) {
@@ -2775,7 +2812,6 @@ class ConfigurationService
         $security = $this->getSecurity($provider);
         return $security['registration'] ?? [];
     }
-
 
     public function isRegistrationEnabled(string $provider): bool
     {

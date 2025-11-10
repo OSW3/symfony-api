@@ -2,17 +2,17 @@
 namespace OSW3\Api\Subscribers;
 
 use OSW3\Api\Service\HeadersService;
-use OSW3\Api\Service\ChecksumService;
 use OSW3\Api\Service\ResponseService;
+use OSW3\Api\Service\IntegrityService;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
-class ChecksumSubscriber implements EventSubscriberInterface
+class IntegritySubscriber implements EventSubscriberInterface
 {
     public function __construct(
         private readonly HeadersService $headersService,
-        private readonly ChecksumService $checksumService,
+        private readonly IntegrityService $integrityService,
         private readonly ResponseService $responseService,
     ){}
     
@@ -32,19 +32,13 @@ class ChecksumSubscriber implements EventSubscriberInterface
         // Get current response
         $response  = $event->getResponse();
 
-        $isEnabled = $this->checksumService->isEnabled();
-        $algorithm = $this->checksumService->getAlgorithm();
-        $data      = $this->responseService->getData();
-        $data      = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '';
-        
+        $isEnabled = $this->integrityService->isEnabled();
+        $algorithm = $this->integrityService->getAlgorithm();
+        $hash      = $this->integrityService->getHash($algorithm);
+        $base64    = base64_encode(hex2bin($hash) ?: '');
+
         if ($isEnabled) {
-            $hash       = $this->checksumService->computeHash($data, $algorithm);
-            $base64Hash = base64_encode(hex2bin($hash) ?: '');
-            
-            $response->headers->set(
-                'Digest', 
-                "{$algorithm}={$base64Hash}"
-            );
+            $response->headers->set('Digest', "{$algorithm}={$base64}");
         }
     }
 }

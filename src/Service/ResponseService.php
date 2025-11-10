@@ -20,6 +20,7 @@ final class ResponseService
     private array $content = [];
     private array $data = [];
     private int $size = 0;
+    private int $count = 0;
     private array $hashCache = [];
 
     public function __construct(
@@ -31,51 +32,37 @@ final class ResponseService
         private readonly ToonEncoder $toonEncoder,
     ){}
 
-    public function setContent(array $content): static 
-    {
-        $this->content = $content;
+    // Configuration
 
-        return $this;
-    }
-    public function getContent(): array 
-    {
-        return $this->content;
-    }
-
-    public function setData(array $data): static 
-    {
-        // Set data 
-        $this->data = $data;
-
-        // Compute size
-        $jsonData = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        $this->size = $jsonData !== false ? strlen($jsonData) : 0;
-
-        return $this;
-    }
-    public function getData(): array 
-    {
-        return $this->data;
-    }
-
+    /**
+     * Get the response format
+     * Gets the default format from configuration
+     * Allows override via query parameter if enabled
+     * 
+     * @return string
+     */
     public function getFormat(): string
     {
         $provider = $this->contextService->getProvider();
-        $default = $this->configuration->getResponseType($provider);
-        $format = $default;
 
-        $canOverrideResponseType = $this->configuration->canOverrideResponseType($provider);
+        // Get the format from configuration
+        $format = $this->configuration->getResponseType($provider);
 
-        
-        if ($canOverrideResponseType) {
+        // Check if format override is allowed
+        if ($this->configuration->canOverrideResponseType($provider)) 
+        {
+            // Get the current request
             $request = $this->requestService->getCurrentRequest();
-            $param = $this->configuration->getResponseFormatParameter($provider);
-            $requestedFormat = $request->query->get($param);
-            
-            $validFormats = array_keys(MimeType::toArray(true));
 
-            if (in_array($requestedFormat, $validFormats, true)) {
-                $format = $requestedFormat;
+            // Get the parameter name for format override
+            $param = $this->configuration->getResponseFormatParameter($provider);
+
+            // Retrieve the custom format from query parameters
+            $custom = $request->query->get($param);
+            
+            // Validate and set the custom format if it's valid
+            if (in_array($custom, array_keys(MimeType::toArray(true)), true)) {
+                $format = $custom;
             }
         }
 
@@ -96,37 +83,33 @@ final class ResponseService
     }
 
 
+    // Getter / Setter
 
-    // ──────────────────────────────
-    // Count & Size
-    // ──────────────────────────────
-
-    public function getCount(): int 
+    public function setSize(int $size): static 
     {
-        return is_countable($this->data) ? count($this->data) : 1;
+        $this->size = $size;
+
+        return $this;
     }
-    
     public function getSize(): int 
     {
         return $this->size;
     }
 
-
-
-    // ──────────────────────────────
-    // Hash
-    // ──────────────────────────────
-
-    public function computeHash(string $algorithm): string 
+    public function setCount(int $count): static 
     {
-        if (!isset($this->hashCache[$algorithm])) {
-            $data = $this->data;
-            $data = json_encode($data);
-            $this->hashCache[$algorithm] = hash($algorithm, $data);
-        }
+        $this->count = $count;
 
-        return $this->hashCache[$algorithm];
+        return $this;
     }
+    public function getCount(): int 
+    {
+        return $this->count;
+    }
+
+
+
+
 
 
 

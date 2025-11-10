@@ -29,13 +29,13 @@ final class DeprecationService
         return $this->configurationService->isDeprecationEnabled($provider, $collection, $endpoint);
     }
 
-    public function getStartDate(): ?\DateTimeImmutable
+    public function getStartAt(): ?\DateTimeImmutable
     {
         $provider   = $this->contextService->getProvider();
         $collection = $this->contextService->getCollection();
         $endpoint   = $this->contextService->getEndpoint();
 
-        $date = $this->configurationService->getDeprecationSinceDate(
+        $date = $this->configurationService->getDeprecationStartAt(
             $provider,
             $collection,
             $endpoint
@@ -44,13 +44,13 @@ final class DeprecationService
         return $date ? new \DateTimeImmutable($date) : null;
     }
 
-    public function getSunsetDate(): ?\DateTimeImmutable
+    public function getSunsetAt(): ?\DateTimeImmutable
     {
         $provider   = $this->contextService->getProvider();
         $collection = $this->contextService->getCollection();
         $endpoint   = $this->contextService->getEndpoint();
 
-        $date = $this->configurationService->getDeprecationRemovalDate(
+        $date = $this->configurationService->getDeprecationSunsetAt(
             $provider,
             $collection,
             $endpoint
@@ -66,6 +66,19 @@ final class DeprecationService
         $endpoint   = $this->contextService->getEndpoint();
 
         return $this->configurationService->getDeprecationLink(
+            $provider,
+            $collection,
+            $endpoint
+        );
+    }
+
+    public function getSuccessor(): ?string
+    {
+        $provider   = $this->contextService->getProvider();
+        $collection = $this->contextService->getCollection();
+        $endpoint   = $this->contextService->getEndpoint();
+
+        return $this->configurationService->getDeprecationSuccessor(
             $provider,
             $collection,
             $endpoint
@@ -98,19 +111,6 @@ final class DeprecationService
         );
     }
 
-    // public function getMode(): ?string
-    // {
-    //     $provider   = $this->contextService->getProvider();
-    //     $collection = $this->contextService->getCollection();
-    //     $endpoint   = $this->contextService->getEndpoint();
-
-    //     return $this->configurationService->getDeprecationMode(
-    //         $provider,
-    //         $collection,
-    //         $endpoint
-    //     );
-    // }
-
 
     // State
 
@@ -119,6 +119,16 @@ final class DeprecationService
         return !$this->isEnabled() && !$this->isRemoved();
     }
 
+    /**
+     * API is deprecated
+     * 
+     * An API is considered deprecated if:
+     * - Deprecation is enabled
+     * - It is not removed
+     * - The current date is after the start date (if provided)
+     * 
+     * @return bool
+     */
     public function isDeprecated(): bool
     {
         if (!$this->isEnabled() || $this->isRemoved()) {
@@ -126,7 +136,7 @@ final class DeprecationService
         }
 
         $now = new \DateTimeImmutable();
-        $startDate = $this->getStartDate();
+        $startDate = $this->getStartAt();
 
         if ($startDate) {
             if ($startDate > $now) {
@@ -144,7 +154,7 @@ final class DeprecationService
         }
 
         $now = new \DateTimeImmutable();
-        $sunsetDate = $this->getSunsetDate();
+        $sunsetDate = $this->getSunsetAt();
 
         if ($sunsetDate) {
             if ($sunsetDate <= $now) {

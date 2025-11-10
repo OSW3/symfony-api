@@ -26,7 +26,6 @@ final class RegistrationController
         private readonly VersionService $versionService,
     ){}
 
-
     /**
      * Find the provider name based on the current route and action.
      *
@@ -57,7 +56,7 @@ final class RegistrationController
         $action = $this->configuration->getContext('endpoint');
         $data   = json_decode($request->getContent(), true) ?? [];
 
-
+        
         // --- 2. Retrieve the provider name from the route
         $providers = $this->configuration->getProviders();
         $providerName = $this->findMatchingProvider($providers, $route, $action);
@@ -76,6 +75,7 @@ final class RegistrationController
         // --- 4. Retrieve the provider configuration
         $entityClass = $this->configuration->getSecurityClass($providerName);
         $properties  = $this->configuration->getRegistrationFieldsMapping($providerName);
+
 
         if (empty($entityClass)) {
             return new JsonResponse(['error' => 'No security entity defined'], 500);
@@ -99,7 +99,7 @@ final class RegistrationController
             $propertyUsername => $username,
         ]);
 
-        if ($existingUser) {
+        if (!empty($existingUser)) {
             throw new UserAlreadyExistsException();
         }
 

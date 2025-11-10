@@ -19,13 +19,15 @@ class HeadersSubscriber implements EventSubscriberInterface
     public static function getSubscribedEvents(): array
     {
         return [
-            KernelEvents::RESPONSE => ['onResponse', -10],
+            // KernelEvents::RESPONSE => ['onResponse', -100],
             // KernelEvents::RESPONSE => ['onResponse', 0],
         ];
     }
 
     public function onResponse(ResponseEvent $event): void
     {
+        dump('FINAL - HeadersSubscriber::onResponse');
+        
         if (!$event->isMainRequest()) {
             return;
         }
@@ -106,11 +108,11 @@ class HeadersSubscriber implements EventSubscriberInterface
 
         $h = $response->headers->all();
         // unset($h['cache-control']);
-        unset($h['date']);
+        // unset($h['date']);
 
         // unset($h['content-type']);
         dump($response->getStatusCode());
-        dump($h);
+        // dump($h);
         dd($response->getContent());
     }
 }

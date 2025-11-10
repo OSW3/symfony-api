@@ -44,6 +44,8 @@ final class DefaultController extends AbstractController
 
     public function index(): JsonResponse
     {
+        $this->templateService->setType('list');
+
         // Get repository method
         $method           = $this->method ?? 'findBy';
 
@@ -59,13 +61,16 @@ final class DefaultController extends AbstractController
                             
         $raw              = $this->repository->$method($criteria, $order, $limit, $offset);
         $normalized       = $this->serializeService->normalize($raw);
-                            $this->responseService->setData($normalized);
+                            // $this->responseService->setData($normalized);
 
         // Get template and parse content
-        $template         = $this->templateService->getTemplate('list');
-        $content          = $this->templateService->parse($template);
+        // $template         = $this->templateService->getTemplate('list');
+        // $content          = $this->templateService->parse($template);
 
-        return $this->json($content);
+        // dump('DATA - DefaultController::index');
+        // dump($normalized);
+
+        return $this->json($normalized);
     }
 
     public function create(): JsonResponse
@@ -168,11 +173,15 @@ final class DefaultController extends AbstractController
         $template = $this->templateService->getTemplate('item');
         $content  = $this->templateService->parse($template);
 
+        dump('DATA - DefaultController::create');
+        
         return $this->json($content);
     }
 
     public function read(int|string $id): JsonResponse
     {
+        $this->templateService->setType('item');
+
         // Get identifier from request
         $identifier       = $id;
 
@@ -182,13 +191,15 @@ final class DefaultController extends AbstractController
         // Get data from repository
         $raw              = $this->repository->$method($identifier);
         $normalized       = $this->serializeService->normalize($raw);
-                            $this->responseService->setData($normalized);
+        //                     $this->responseService->setData($normalized);
 
-        // Get template and parse content
-        $template         = $this->templateService->getTemplate('item');
-        $content          = $this->templateService->parse($template);
+        // // Get template and parse content
+        // $template         = $this->templateService->getTemplate('item');
+        // $content          = $this->templateService->parse($template);
 
-        return $this->json($content);
+        // dump('DATA - DefaultController::read');
+
+        return $this->json($normalized);
     }
 
     public function update(int|string $id): JsonResponse

@@ -14,14 +14,6 @@ use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
 use Lexik\Bundle\JWTAuthenticationBundle\Exception\JWTDecodeFailureException;
 
-/**
- * Handles exception-related tasks during the request lifecycle.
- * 
- * @stage 0
- * @priority 0
- * @before -
- * @after -
- */
 class ExceptionSubscriber implements EventSubscriberInterface
 {
     public function __construct(
@@ -40,6 +32,8 @@ class ExceptionSubscriber implements EventSubscriberInterface
 
     public function onKernelException(ExceptionEvent $event): void
     {
+        // dump('0 - ExceptionSubscriber::onKernelException');
+
         if (!$event->isMainRequest()) {
             return;
         }
@@ -49,17 +43,19 @@ class ExceptionSubscriber implements EventSubscriberInterface
 
         // Retrieve the exception object from the event
         $exception = $event->getThrowable();
-
-        dd($exception);
-
-
-        // Determine the status code and status text
-        $statusCode = $exception->getStatusCode() ?? Response::HTTP_INTERNAL_SERVER_ERROR;
-        $statusText = $exception->getMessage() ?: Response::$statusTexts[$statusCode];
         
+        // Determine the status code and status text
+        $statusCode = method_exists($exception, 'getStatusCode')
+            ? $exception->getStatusCode()
+            : Response::HTTP_INTERNAL_SERVER_ERROR;
+
+        $statusText = method_exists($exception, 'getMessage')
+            ? $exception->getMessage()
+            : Response::$statusTexts[$statusCode];
+
         // Only handle client errors (4xx)
         if ($statusCode < 400 || $statusCode >= 500) {
-            return;
+            // return;
         }
 
 
@@ -67,20 +63,27 @@ class ExceptionSubscriber implements EventSubscriberInterface
         $response = new JsonResponse();
         
         // Set the response status code
-        // $response->setStatusCode($statusCode);
+        $response->setStatusCode($statusCode);
 
 
-        // $template = $this->templateService->getTemplate('error');
-
-
-
-
-
-        dd($template, $response, $statusText);
+        $template = $this->templateService->getTemplate('error');
 
 
 
 
+
+        // Set the response content
+        $content = '{"error": "' . $statusText . '"}';
+        $response->setContent($content);
+
+        // Stop the event propagation
+        $event->setResponse($response);
+        $event->stopPropagation();
+
+
+
+
+        // dd($template, $response, $statusText);
         // // dd($event->getRequest()->attributes);
         // // $this->statusService->setCode($statusCode);
 

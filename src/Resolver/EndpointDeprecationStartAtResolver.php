@@ -3,7 +3,7 @@ namespace OSW3\Api\Resolver;
 
 use OSW3\Api\Service\UtilsService;
 
-final class EndpointDeprecationRemovalDateResolver
+final class EndpointDeprecationStartAtResolver
 {
     public static function default(array &$providers): array
     {
@@ -11,8 +11,8 @@ final class EndpointDeprecationRemovalDateResolver
             foreach ($provider['collections'] as $collectionName => &$collection) {
                 foreach ($collection['endpoints'] as $endpointName => &$endpoint) {
 
-                    if (empty($endpoint['deprecation']['removal_date'])) {
-                        $endpoint['deprecation']['removal_date'] = $collection['deprecation']['removal_date'] ?? null;
+                    if (empty($endpoint['deprecation']['start_at'])) {
+                        $endpoint['deprecation']['start_at'] = $collection['deprecation']['start_at'] ?? null;
                     }
 
                 }
@@ -28,8 +28,8 @@ final class EndpointDeprecationRemovalDateResolver
             foreach ($provider['collections'] as $collectionName => &$collection) {
                 foreach ($collection['endpoints'] as $endpointName => &$endpoint) {
 
-                    if (UtilsService::is_date($endpoint['deprecation']['removal_date'])) {
-                        $endpoint['deprecation']['removal_date'] = UtilsService::to_http_date($endpoint['deprecation']['removal_date']);
+                    if (UtilsService::is_date($endpoint['deprecation']['start_at'])) {
+                        $endpoint['deprecation']['start_at'] = UtilsService::to_http_date($endpoint['deprecation']['start_at']);
                     }
 
                 }

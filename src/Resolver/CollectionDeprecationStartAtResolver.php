@@ -3,15 +3,15 @@ namespace OSW3\Api\Resolver;
 
 use OSW3\Api\Service\UtilsService;
 
-final class CollectionDeprecationSinceDateResolver
+final class CollectionDeprecationStartAtResolver
 {
     public static function default(array &$providers): array
     {
         foreach ($providers as &$provider) {
             foreach ($provider['collections'] as $collectionName => &$collection) {
 
-                if (empty($collection['deprecation']['since_date'])) {
-                    $collection['deprecation']['since_date'] = $provider['deprecation']['since_date'] ?? null;
+                if (empty($collection['deprecation']['start_at'])) {
+                    $collection['deprecation']['start_at'] = $provider['deprecation']['start_at'] ?? null;
                 }
 
             }
@@ -25,8 +25,8 @@ final class CollectionDeprecationSinceDateResolver
         foreach ($providers as &$provider) {
             foreach ($provider['collections'] as $collectionName => &$collection) {
 
-                if (UtilsService::is_date($collection['deprecation']['since_date'])) {
-                    $collection['deprecation']['since_date'] = UtilsService::to_http_date($collection['deprecation']['since_date']);
+                if (UtilsService::is_date($collection['deprecation']['start_at'])) {
+                    $collection['deprecation']['start_at'] = UtilsService::to_http_date($collection['deprecation']['start_at']);
                 }
 
             }

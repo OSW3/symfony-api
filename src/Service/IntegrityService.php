@@ -4,7 +4,7 @@ namespace OSW3\Api\Service;
 use OSW3\Api\Service\ContextService;
 use OSW3\Api\Service\ConfigurationService;
 
-final class ChecksumService 
+final class IntegrityService 
 {
     private array $hashCache = [];
 
@@ -23,6 +23,11 @@ final class ChecksumService
     {
         $provider = $this->contextService->getProvider();
         return $this->configurationService->getChecksumAlgorithm($provider);
+    }
+
+    public function getHash(string $algorithm): string 
+    {
+        return $this->hashCache[$algorithm] ?? '';
     }
 
     public function computeHash(string $data, string $algorithm): string 

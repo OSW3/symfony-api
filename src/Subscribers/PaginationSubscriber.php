@@ -23,7 +23,6 @@ use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
-
 class PaginationSubscriber implements EventSubscriberInterface 
 {
     public function __construct(
