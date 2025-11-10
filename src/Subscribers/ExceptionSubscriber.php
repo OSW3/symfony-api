@@ -7,6 +7,7 @@ use OSW3\Api\Service\ConfigurationService;
 use OSW3\Api\Service\ResponseStatusService;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\KernelEvents;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
@@ -33,7 +34,7 @@ class ExceptionSubscriber implements EventSubscriberInterface
     public static function getSubscribedEvents(): array
     {
         return [
-            KernelEvents::EXCEPTION => ['onKernelException', 0]
+            // KernelEvents::EXCEPTION => ['onKernelException', 0]
         ];
     }
 
@@ -43,38 +44,63 @@ class ExceptionSubscriber implements EventSubscriberInterface
             return;
         }
 
+        // Get current response
+        // $response = $event->getResponse();
+
+        // Retrieve the exception object from the event
         $exception = $event->getThrowable();
 
-        $statusCode = $exception instanceof HttpExceptionInterface
-            ? $exception->getStatusCode()
-            : Response::HTTP_INTERNAL_SERVER_ERROR;
+        dd($exception);
 
+
+        // Determine the status code and status text
+        $statusCode = $exception->getStatusCode() ?? Response::HTTP_INTERNAL_SERVER_ERROR;
         $statusText = $exception->getMessage() ?: Response::$statusTexts[$statusCode];
-
-        // if (!in_array($statusCode, [Response::HTTP_NOT_FOUND, Response::HTTP_FORBIDDEN], true)) {
-        //     return;
-        // }
+        
+        // Only handle client errors (4xx)
         if ($statusCode < 400 || $statusCode >= 500) {
-        // if ($statusCode < 400) {
             return;
         }
 
 
-        // dd($event->getRequest()->attributes);
-        $this->statusService->setCode($statusCode);
 
-        // Prepare data for the response
-        $data            = [];
-        $data['code']    = $statusCode;
-        $data['message'] = $statusText;
-        $this->responseService->setData($data);
+        $response = new JsonResponse();
+        
+        // Set the response status code
+        // $response->setStatusCode($statusCode);
 
-        // Prepare the response using templates
-        $template        = $this->templateService->getTemplate('error');
-        $content         = $this->templateService->parse($template, $data);
-        $this->responseService->setContent($content);
+
+        // $template = $this->templateService->getTemplate('error');
+
+
+
+
+
+        dd($template, $response, $statusText);
+
+
+
+
+        // // dd($event->getRequest()->attributes);
+        // // $this->statusService->setCode($statusCode);
+
+        // // Prepare data for the response
+        // $data            = [];
+        // $data['code']    = $statusCode;
+        // $data['message'] = $statusText;
+        // $this->responseService->setData($data);
+
+        // // Prepare the response using templates
+        // $template        = $this->templateService->getTemplate('error');
+        // $content         = $this->templateService->parse($template, $data);
+        // $this->responseService->setContent($content);
+
+
+
+
+
 
         // Set the response in the event
-        $event->setResponse($this->responseService->build());
+        // $event->setResponse($this->responseService->build());
     }
 }

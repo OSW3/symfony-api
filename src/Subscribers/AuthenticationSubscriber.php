@@ -1,10 +1,10 @@
 <?php
 namespace OSW3\Api\Subscribers;
 
-use OSW3\Api\Service\ConfigurationService;
+use OSW3\Api\Service\RouteService;
 use OSW3\Api\Service\ContextService;
 use OSW3\Api\Service\RequestService;
-use OSW3\Api\Service\RouteService;
+use OSW3\Api\Service\ConfigurationService;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -33,7 +33,7 @@ final class AuthenticationSubscriber implements EventSubscriberInterface
     public static function getSubscribedEvents(): array
     {
         return [
-            KernelEvents::REQUEST => ['onRequest', 32]
+            // KernelEvents::REQUEST => ['onRequest', 32]
         ];
     }
 
@@ -44,7 +44,7 @@ final class AuthenticationSubscriber implements EventSubscriberInterface
         $endpoint   = $this->contextService->getEndpoint();
         $security   = $this->configurationService->getSecurity($provider);
         $routeName  = $event->getRequest()->attributes->get('_route');
-        
+
         $securityEndpoints = array_keys(array_merge(
             $security['registration'] ?? [], 
             $security['authentication'] ?? [], 

@@ -31,7 +31,7 @@ class LoggerSubscriber implements EventSubscriberInterface
             // KernelEvents::RESPONSE => ['onResponse', -9], 
 
             // Lowest priority to log the end after all other subscribers
-            KernelEvents::TERMINATE => ['onTerminate'],
+            // KernelEvents::TERMINATE => ['onTerminate'],
         ];
     }
 

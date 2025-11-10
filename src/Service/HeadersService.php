@@ -88,7 +88,7 @@ final class HeadersService
 
         foreach ($directives as $key => $value) {
             unset($directives[$key]);
-            $key = $this->normalizeDirectiveName($key);
+            $key = $this->toHeaderCase($key);
             $value = $value !== false;
 
             $directives[$key] = $value;
@@ -102,8 +102,8 @@ final class HeadersService
         $directives = $this->getDirectivesList('custom');
 
         foreach ($directives as $key => $value) {
-            $key  = $this->normalizeDirectiveName($key);
-            $value = $this->normalizeDirectiveValue($value);
+            $key  = $this->toHeaderCase($key);
+            $value = $this->toHeaderValue($value);
 
             $directives[$key] = !empty($value) ? $value : false;
         }
@@ -117,8 +117,8 @@ final class HeadersService
     
     // public function addHeader(string $name, mixed $value): void 
     // {
-    //     $name  = $this->normalizeDirectiveName($name);
-    //     $value = $this->normalizeDirectiveValue($value);
+    //     $name  = $this->toHeaderCase($name);
+    //     $value = $this->toHeaderValue($value);
 
     //     $this->headers[$name] = $value;
     // }
@@ -138,7 +138,7 @@ final class HeadersService
 
         // foreach ($this->getExposedDirectives() as $key => $value) 
         // {
-        //     $key = $this->normalizeDirectiveName($key);
+        //     $key = $this->toHeaderCase($key);
 
         //     if ($value === false && isset($headers[$key])) {
         //         unset($headers[$key]);
@@ -159,7 +159,7 @@ final class HeadersService
         // Step 4: Resolve directives and injection
         // --
 
-        foreach ($headers as $key => $value) 
+        // foreach ($headers as $key => $value) 
         {
             $xStrippedKey = strtolower(preg_replace('/^X-/i', '', $key));
 
@@ -176,10 +176,10 @@ final class HeadersService
                 'app-license'        => $this->appService->getLicense(),
                 
                 // API Version
-                'api-version'            => $this->normalizeDirectiveValue($this->versionService->getLabel()),
-                'api-all-versions'        => $this->normalizeDirectiveValue($this->versionService->getAllVersions()),
-                'api-supported-versions'  => $this->normalizeDirectiveValue($this->versionService->getSupportedVersions()),
-                'api-deprecated-versions' => $this->normalizeDirectiveValue($this->versionService->getDeprecatedVersions()),
+                'api-version'            => $this->toHeaderValue($this->versionService->getLabel()),
+                'api-all-versions'        => $this->toHeaderValue($this->versionService->getAllVersions()),
+                'api-supported-versions'  => $this->toHeaderValue($this->versionService->getSupportedVersions()),
+                'api-deprecated-versions' => $this->toHeaderValue($this->versionService->getDeprecatedVersions()),
 
 
                 // 'Content_Type'  => $value === true ? $this->getContentType() : $value,
@@ -242,8 +242,8 @@ final class HeadersService
 
         foreach ($input as $key => $value) {
             if (is_string($key)) {
-                $key   = $this->normalizeDirectiveName($key);
-                $value = $this->normalizeDirectiveValue($value);
+                $key   = $this->toHeaderCase($key);
+                $value = $this->toHeaderValue($value);
 
                 $normalized[$key] = $value;
             }
@@ -252,16 +252,15 @@ final class HeadersService
         return $normalized;
     }
 
-    public function normalizeDirectiveName(string $name): string 
+    public function toHeaderCase(string $string): string 
     {
-        $name = str_replace('_', '-', $name);
-        $name = str_replace(' ', '-', $name);
-        $name = strtolower($name);
-        $name = implode('-', array_map('ucfirst', explode('-', $name)));
-
-        return $name;
+        $string = str_replace(['_', ' '], '-', $string);
+        $string = implode('-', array_map('ucfirst', explode('-', $string)));
+        return $string;
     }
-    private function normalizeDirectiveValue(mixed $value): mixed 
+
+
+    public function toHeaderValue(mixed $value): mixed 
     {
         $value = is_array($value) ? implode(', ', $value) : $value;
         $value = is_string($value) ? trim($value) : $value;

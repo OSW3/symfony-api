@@ -590,42 +590,6 @@ class ConfigurationService
         return null;
     }
 
-    public function getDeprecationReason(string $provider, ?string $collection = null, ?string $endpoint = null): ?string
-    {
-        if (! $this->hasProvider($provider)) {
-            return null;
-        }
-
-        if (!$this->isDeprecationEnabled($provider, $collection, $endpoint)) {
-            return null;
-        }
-
-        // 1. Endpoint-level deprecation reason
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
-            if (isset($endpointOptions['deprecation']['reason'])) {
-                return $endpointOptions['deprecation']['reason'];
-            }
-        }
-
-        // 2. Collection-level deprecation reason
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $collection);
-            if (isset($collectionOptions['deprecation']['reason'])) {
-                return $collectionOptions['deprecation']['reason'];
-            }
-        }
-
-        // 3. Provider-level deprecation reason
-        $providerOptions = $this->getProvider($provider);
-        if (isset($providerOptions['deprecation']['reason'])) {
-            return $providerOptions['deprecation']['reason'];
-        }
-
-        // 4. Default
-        return null;
-    }
-
     public function getDeprecationMessage(string $provider, ?string $collection = null, ?string $endpoint = null): ?string
     {
         if (! $this->hasProvider($provider)) {
@@ -661,42 +625,6 @@ class ConfigurationService
         // 4. Default
         return null;
     }
-
-    // public function getDeprecationMode(string $provider, ?string $collection = null, ?string $endpoint = null): ?string
-    // {
-    //     if (! $this->hasProvider($provider)) {
-    //         return null;
-    //     }
-
-    //     if (!$this->isDeprecationEnabled($provider, $collection, $endpoint)) {
-    //         return null;
-    //     }
-
-    //     // 1. Endpoint-level deprecation mode
-    //     if ($collection && $endpoint) {
-    //         $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
-    //         if (isset($endpointOptions['deprecation']['mode'])) {
-    //             return $endpointOptions['deprecation']['mode'];
-    //         }
-    //     }
-
-    //     // 2. Collection-level deprecation mode
-    //     if ($collection) {
-    //         $collectionOptions = $this->getCollection($provider, $collection);
-    //         if (isset($collectionOptions['deprecation']['mode'])) {
-    //             return $collectionOptions['deprecation']['mode'];
-    //         }
-    //     }
-
-    //     // 3. Provider-level deprecation mode
-    //     $providerOptions = $this->getProvider($provider);
-    //     if (isset($providerOptions['deprecation']['mode'])) {
-    //         return $providerOptions['deprecation']['mode'];
-    //     }
-
-    //     // 4. Default
-    //     return null;
-    // }
 
 
 
@@ -1870,6 +1798,16 @@ class ConfigurationService
 
         $responseOptions = $this->getResponse($provider);
         return $responseOptions['format']['type'] ?? 'json';
+    }
+
+    public function getResponseMimeType(string $provider): ?string
+    {
+        if (! $this->hasProvider($provider)) {
+            return null;
+        }
+
+        $responseOptions = $this->getResponse($provider);
+        return $responseOptions['format']['mime_type'] ?? null;
     }
 
     /**

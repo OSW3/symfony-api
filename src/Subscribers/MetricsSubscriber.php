@@ -25,11 +25,11 @@ class MetricsSubscriber implements EventSubscriberInterface
     {
         return [
             // High priority to log the start early
-            KernelEvents::REQUEST => ['onRequest', 1000],
+            // KernelEvents::REQUEST => ['onRequest', 1000],
 
             // Low priority to log the end late, just before ResponseSubscriber
             // KernelEvents::RESPONSE => ['onResponse', 0], 
-            KernelEvents::RESPONSE => ['onResponse', -9], 
+            // KernelEvents::RESPONSE => ['onResponse', -9], 
         ];
     }
 

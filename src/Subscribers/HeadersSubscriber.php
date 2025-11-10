@@ -38,52 +38,52 @@ class HeadersSubscriber implements EventSubscriberInterface
 
 
         // Keep exposed headers
-        foreach ($exposed as $key => $value) 
-        {
-            $key = $this->headersService->normalizeDirectiveName($key);
+        // foreach ($exposed as $key => $value) 
+        // {
+        //     $key = $this->headersService->toHeaderCase($key);
 
-            if ($value === false) {
-                $response->headers->remove($key);
-            }
-            elseif ($value === true) {
-                $xStrippedKey = strtolower(preg_replace('/^X-/i', '', $key));
+        //     if ($value === false) {
+        //         $response->headers->remove($key);
+        //     }
+        //     elseif ($value === true) {
+        //         $xStrippedKey = strtolower(preg_replace('/^X-/i', '', $key));
 
-                $value = match($xStrippedKey) {
+        //         $value = match($xStrippedKey) {
 
-                    'server' => $this->serverService->getSoftware(),
-                    // 'content-length' => $this->responseService->getSize(),
+        //             'server' => $this->serverService->getSoftware(),
+        //             // 'content-length' => $this->responseService->getSize(),
 
-                    // App
-                    'app-name'           => $this->appService->getName(),
-                    'app-vendor'         => $this->appService->getVendor(),
-                    'app-version'        => $this->appService->getVersion(),
-                    'app-description'    => $this->appService->getDescription(),
-                    'app-license'        => $this->appService->getLicense(),
+        //             // App
+        //             'app-name'           => $this->appService->getName(),
+        //             'app-vendor'         => $this->appService->getVendor(),
+        //             'app-version'        => $this->appService->getVersion(),
+        //             'app-description'    => $this->appService->getDescription(),
+        //             'app-license'        => $this->appService->getLicense(),
                     
-                    // API Version
-                    'api-version'             => $this->headersService->normalizeDirectiveValue($this->versionService->getLabel()),
-                    'api-all-versions'        => $this->headersService->normalizeDirectiveValue($this->versionService->getAllVersions()),
-                    'api-supported-versions'  => $this->headersService->normalizeDirectiveValue($this->versionService->getSupportedVersions()),
-                    'api-deprecated-versions' => $this->headersService->normalizeDirectiveValue($this->versionService->getDeprecatedVersions()),
+        //             // API Version
+        //             // 'api-version'             => $this->headersService->toHeaderValue($this->versionService->getLabel()),
+        //             // 'api-all-versions'        => $this->headersService->toHeaderValue($this->versionService->getAllVersions()),
+        //             // 'api-supported-versions'  => $this->headersService->toHeaderValue($this->versionService->getSupportedVersions()),
+        //             // 'api-deprecated-versions' => $this->headersService->toHeaderValue($this->versionService->getDeprecatedVersions()),
 
-                    default         => $value,
-                };
+        //             default         => $value,
+        //         };
 
-                $response->headers->set($key, $value);
-            }
-        }
+        //         $response->headers->set($key, $value);
+        //     }
+        // }
 
         // Add custom headers
         foreach ($custom as $key => $value) 
         {
-            $key = $this->headersService->normalizeDirectiveName($key);
+            $key = $this->headersService->toHeaderCase($key);
             $response->headers->set($key, $value);
         }
 
         // Remove headers
         foreach ($removed as $key) 
         {
-            $key = $this->headersService->normalizeDirectiveName($key);
+            $key = $this->headersService->toHeaderCase($key);
             $response->headers->remove($key);
         }
 
@@ -93,9 +93,10 @@ class HeadersSubscriber implements EventSubscriberInterface
 
             if ($this->headersService->stripXPrefix() &&  str_starts_with(strtolower($key), 'x-')) 
             {
+                
                 $newKey = substr($key, 2);
-                $response->headers->set($newKey, $value);
                 $response->headers->remove($key);
+                $response->headers->set($newKey, $value);
             }
 
             if ($this->headersService->keepLegacy() && $key !== $newKey) {
@@ -103,6 +104,13 @@ class HeadersSubscriber implements EventSubscriberInterface
             }
         }
 
-        // dd($response->headers->all());
+        $h = $response->headers->all();
+        // unset($h['cache-control']);
+        unset($h['date']);
+
+        // unset($h['content-type']);
+        dump($response->getStatusCode());
+        dump($h);
+        dd($response->getContent());
     }
 }

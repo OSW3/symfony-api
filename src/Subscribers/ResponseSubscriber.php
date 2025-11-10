@@ -1,7 +1,7 @@
 <?php
 namespace OSW3\Api\Subscribers;
 
-use OSW3\Api\Encoder\ToonEncoder;
+use OSW3\Api\Enum\MimeType;
 use OSW3\Api\Service\ContextService;
 use OSW3\Api\Service\HeadersService;
 use OSW3\Api\Service\ResponseService;
@@ -17,7 +17,6 @@ class ResponseSubscriber implements EventSubscriberInterface
         private readonly ResponseService $responseService,
         private readonly HeadersService $headersService,
         private readonly ConfigurationService $configurationService,
-        private readonly ToonEncoder $toonEncoder,
     ){}
     
     public static function getSubscribedEvents(): array
@@ -37,16 +36,27 @@ class ResponseSubscriber implements EventSubscriberInterface
         // Get current response
         $response = $event->getResponse();
 
+        // Get current content
+        $content  = $response->getContent();
 
-        // $format = $this->responseService->getFormat();
+        // Get the output format
+        $format   = $this->responseService->getFormat();
 
-        // if ($format === 'toon') {
-        //     $content = $this->toonEncoder->encode($response->getContent());
-        //     $response->setContent($content);
-        //     $response->headers->set('Content-Type', 'application/toon');
-        // }
-        // dd($format);
-        // dd($response);
+        // Get the output mime type
+        $mimeType = $this->responseService->getMimeType();
+
+        // Set the Header Content-Type
+        $response->headers->set('Content-Type', $mimeType);
+
+        // Set the formatted content
+        $response->setContent(match ($mimeType) {
+            MimeType::XML->value  => $this->responseService->getXmlResponse($content),
+            MimeType::YAML->value => $this->responseService->getYamlResponse($content),
+            MimeType::CSV->value  => $this->responseService->getCsvResponse($content),
+            MimeType::TOON->value => $this->responseService->getToonResponse($content),
+            default               => $content,
+        });
+        
 
         // dd($response->headers->all());
     }

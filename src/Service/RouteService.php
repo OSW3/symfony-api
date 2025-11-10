@@ -35,6 +35,8 @@ final class RouteService
         // Iterate over each provider
         foreach ($providers as $provider => $providerOptions) {
 
+            if (!$this->configuration->isProviderEnabled($provider)) continue;
+
             // Add security routes if enabled
             // --
 
@@ -115,8 +117,6 @@ final class RouteService
                 }
             }
         }
-
-        // dd($routes);
 
         return $routes;
     }
@@ -430,21 +430,4 @@ final class RouteService
             ];
         }
     }
-
-
-
-
-
-
-
-
-    // public function getRoutePathByProvider(string $provider, string $action): string|null 
-    // {
-    //     $prefix  = $this->configuration->getRoutePrefix($provider);
-    //     $prefix  = preg_replace("#/$#", "", $prefix);
-    //     $version = $this->versionService->getLabel($provider);
-
-    //     return "{$prefix}/{$version}/{$action}";
-    // }
-
 }

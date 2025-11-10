@@ -3,6 +3,7 @@ namespace OSW3\Api\Service;
 
 use OSW3\Api\Service\ContextService;
 use OSW3\Api\Service\ConfigurationService;
+use Symfony\Component\HttpFoundation\Response;
 
 final class DeprecationService
 {
@@ -10,7 +11,7 @@ final class DeprecationService
     public const HEADER_SUNSET      = 'Sunset';
     public const HEADER_LINK        = 'Link';
     public const HEADER_MESSAGE     = 'X-Message';
-    public const HEADER_WARNING     = 'Warning';
+    // public const HEADER_WARNING     = 'Warning';
 
     public function __construct(
         private readonly ContextService $contextService,
@@ -166,4 +167,5 @@ final class DeprecationService
 
         return 'active';
     }
+
 }

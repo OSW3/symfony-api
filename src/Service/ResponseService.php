@@ -1,20 +1,26 @@
 <?php 
 namespace OSW3\Api\Service;
 
+use OSW3\Api\Enum\MimeType;
 use Symfony\Component\Yaml\Yaml;
+use OSW3\Api\Encoder\ToonEncoder;
 use OSW3\Api\Service\ContextService;
 use OSW3\Api\Service\RequestService;
-use OSW3\Api\HttpFoundation\XmlResponse;
 use OSW3\Api\Service\ConfigurationService;
 use OSW3\Api\Service\ResponseStatusService;
+use Symfony\Component\Serializer\Serializer;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\Serializer\Encoder\CsvEncoder;
+use Symfony\Component\Serializer\Encoder\XmlEncoder;
+use Symfony\Component\Serializer\Encoder\YamlEncoder;
 
 final class ResponseService 
 {
     private array $content = [];
     private array $data = [];
     private int $size = 0;
+    private array $hashCache = [];
 
     public function __construct(
         private readonly RouteService $routeService,
@@ -22,6 +28,7 @@ final class ResponseService
         private readonly ContextService $contextService,
         private readonly ConfigurationService $configuration,
         private readonly RequestService $requestService,
+        private readonly ToonEncoder $toonEncoder,
     ){}
 
     public function setContent(array $content): static 
@@ -59,12 +66,13 @@ final class ResponseService
 
         $canOverrideResponseType = $this->configuration->canOverrideResponseType($provider);
 
+        
         if ($canOverrideResponseType) {
             $request = $this->requestService->getCurrentRequest();
             $param = $this->configuration->getResponseFormatParameter($provider);
             $requestedFormat = $request->query->get($param);
-
-            $validFormats = ['json', 'xml', 'yaml', 'csv', 'toon'];
+            
+            $validFormats = array_keys(MimeType::toArray(true));
 
             if (in_array($requestedFormat, $validFormats, true)) {
                 $format = $requestedFormat;
@@ -72,6 +80,19 @@ final class ResponseService
         }
 
         return $format;
+    }
+
+    public function getMimeType(): string
+    {
+        $provider = $this->contextService->getProvider();
+
+        $configuredMimeType = $this->configuration->getResponseMimeType($provider);
+        if ($configuredMimeType !== null) {
+            return $configuredMimeType;
+        }
+
+        $format = $this->getFormat();
+        return MimeType::fromFormat($format)->value;
     }
 
 
@@ -98,9 +119,13 @@ final class ResponseService
 
     public function computeHash(string $algorithm): string 
     {
-        $data = $this->data;
-        $data = json_encode($data);
-        return hash($algorithm, $data);
+        if (!isset($this->hashCache[$algorithm])) {
+            $data = $this->data;
+            $data = json_encode($data);
+            $this->hashCache[$algorithm] = hash($algorithm, $data);
+        }
+
+        return $this->hashCache[$algorithm];
     }
 
 
@@ -156,98 +181,35 @@ final class ResponseService
 
     // ──────────────────────────────
     // Builder
+    // JSON, XML, YAML, CSV, TOON, TOML
     // ──────────────────────────────
 
-    public function buildJsonResponse(array $data, int $statusCode = 200): Response 
+
+    public function getXmlResponse(string $data): ?string
     {
-        return new JsonResponse($data, $statusCode);
+        $data       = json_decode($data, true);
+        $serializer = new Serializer([], [new XmlEncoder()]);
+
+        return $serializer->encode($data, 'xml');
     }
 
-    public function buildXmlResponse(array $data, int $statusCode = 200): Response
+    public function getYamlResponse(string $data): ?string 
     {
-        return XmlResponse::fromArray($data, $statusCode);
+        $data = json_decode($data, true);
+        return Yaml::dump($data, 2, 4, Yaml::DUMP_OBJECT_AS_MAP);
     }
 
-    public function buildYamlResponse(array $data, int $statusCode = 200): Response 
+    public function getCsvResponse(string $data): ?string
     {
-        $response = new Response();
-        $response->headers->set('Content-Type', 'application/x-yaml');
-        $response->setContent(Yaml::dump($data, 4, 2, Yaml::DUMP_OBJECT_AS_MAP));
-        $response->setStatusCode($statusCode);
-        return $response;
+        $data       = json_decode($data, true);
+        $serializer = new Serializer([], [new CsvEncoder()]);
+        
+        return $serializer->encode($data, 'csv');
     }
 
-    public function buildCsvResponse(array $data, int $statusCode = 200): Response 
+    public function getToonResponse(string $data): ?string
     {
-        // CSV response building logic would go here
-        $response = new Response();
-        $response->headers->set('Content-Type', 'text/csv');
-        // Convert $data to CSV format and set as content
-        $response->setContent(''); // Placeholder
-        $response->setStatusCode($statusCode);
-        return $response;
-    }
-
-
-    public function build(): Response
-    {
-        $currentRoute = $this->routeService->getCurrentRoute();
-        $context      = $currentRoute ? $currentRoute['options']['context'] : [];
-        // $context    = $this->configuration->getContext();
-        $provider   = $context['provider'] ?? null;
-
-        $statusCode = $this->status->getCode();
-        $content    = $this->getContent();
-
-
-        // Build the response by format (with $content and $statusCode)
-        // --
-
-        $response = match ($this->configuration->getResponseType($provider)) {
-            'csv'   => $this->buildCsvResponse($content, $statusCode),
-            'json'  => $this->buildJsonResponse($content, $statusCode),
-            'xml'   => $this->buildXmlResponse($content, $statusCode),
-            'yaml'  => $this->buildYamlResponse($content, $statusCode),
-            default => $this->buildJsonResponse($content, $statusCode),
-        };
-
-
-        // Add and modify headers
-        // --
-
-        // $this->headers->init($response->headers);
-
-        // if ($this->configuration->getVersionHeaderFormat($provider) === 'header') 
-        // {
-        //     $this->headers->addApiVersion();
-        // }
-
-
-        // $this->headers->addCacheControl();
-
-
-        // dump($response->headers->all());
-
-        // foreach ($this->headers->all() as $key => $value) 
-        // {
-        //     $response->headers->set($key, $value);
-        // }
-        // dd($response->headers->all());
-
-
-        // $response->headers->set('X-App-Version', '1.2.3');
-        // $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate');
-        // $response->headers->set('Access-Control-Allow-Origin', '*');
-
-        // $response->setContent(json_encode($payload));
-        // $response->setStatusCode($statusCode);
-
-
-        if ($this->isCompressed()) {
-            $this->getCompressed();
-            $response->headers->set('Content-Encoding', $this->getCompressionFormat());
-        }
-
-        return $response;
+        $data       = json_decode($data, true);
+        return $this->toonEncoder->encode($data, 'toon');
     }
 }

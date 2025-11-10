@@ -1,5 +1,6 @@
 <?php
 
+use OSW3\Api\Enum\MimeType;
 use OSW3\Api\Validator\HooksValidator;
 use OSW3\Api\Validator\EntityValidator;
 use OSW3\Api\Validator\ControllerValidator;
@@ -103,21 +104,9 @@ return static function($definition): void
                         ->defaultNull()
                     ->end()
 
-                    ->scalarNode('reason')
-                        ->info('Deprecation reason')
-                        ->defaultNull()
-                    ->end()
-
                     ->scalarNode('message')
                         ->info('Deprecation message')
                         ->defaultNull()
-                    ->end()
-
-                    ->enumNode('sunset_behavior')
-                        ->info('Behavior when deprecation removal date is reached')
-                        ->values(['warn', 'block', 'ignore'])
-                        ->defaultValue('block')
-                        ->treatNullLike('block')
                     ->end()
 
                 ->end()
@@ -283,18 +272,18 @@ return static function($definition): void
             // ──────────────────────────────
             // Search support
             // ──────────────────────────────
-			->arrayNode('search')
-                ->info('Global search configuration for all collections.')
-                ->addDefaultsIfNotSet()->children()
+			// ->arrayNode('search')
+            //     ->info('Global search configuration for all collections.')
+            //     ->addDefaultsIfNotSet()->children()
 
-                    ->booleanNode('enabled')
-                        ->info('Enable or disable search globally for all collections.')
-                        ->defaultFalse()
-                        ->treatNullLike(false)
-                    ->end()
+            //         ->booleanNode('enabled')
+            //             ->info('Enable or disable search globally for all collections.')
+            //             ->defaultFalse()
+            //             ->treatNullLike(false)
+            //         ->end()
 
-			    ->end()
-            ->end()
+			//     ->end()
+            // ->end()
 
             // ──────────────────────────────
             // URL support
@@ -432,9 +421,19 @@ return static function($definition): void
 
                             ->enumNode('type')
                                 ->info('Type of the response format.')
-                                ->values(['json', 'xml', 'yaml', 'csv', 'toon'])
+                                // ->values(['json', 'xml', 'yaml', 'csv', 'toon'])
+                                ->values(array_keys(MimeType::toArray(true)))
                                 ->defaultValue('json')
                                 ->treatNullLike('json')
+                                ->beforeNormalization()
+                                    ->ifString()
+                                    ->then(fn($v) => strtolower($v))
+                                ->end()
+                            ->end()
+
+                            ->scalarNode('mime_type')
+                                ->info('Override the MIME type of the response format.')
+                                ->defaultNull()
                             ->end()
 
                             ->booleanNode('override')
@@ -464,7 +463,7 @@ return static function($definition): void
 
                             ->enumNode('algorithm')
                                 ->info('Hash algorithm to use for response hashing. Options include "md5", "sha1", "sha256", etc.')
-                                ->values(['md5', 'sha1', 'sha256', 'sha512'])
+                                ->values(['sha1', 'sha256', 'sha512'])
                                 ->defaultValue('sha256')
                                 ->treatNullLike('sha256')
                             ->end()
@@ -478,8 +477,8 @@ return static function($definition): void
 
                             ->booleanNode('enabled')
                                 ->info('If true, enables Cache-Control headers.')
-                                ->defaultTrue()
-                                ->treatNullLike(true)
+                                ->defaultFalse()
+                                ->treatNullLike(false)
                             ->end()
 
                             ->booleanNode('public')
@@ -1284,18 +1283,8 @@ return static function($definition): void
                                     ->defaultNull()
                                 ->end()
 
-                                ->scalarNode('reason')
-                                    ->info('Deprecation reason')
-                                    ->defaultNull()
-                                ->end()
-
                                 ->scalarNode('message')
                                     ->info('Deprecation message')
-                                    ->defaultNull()
-                                ->end()
-
-                                ->scalarNode('sunset_behavior')
-                                    ->info('Behavior when deprecation removal date is reached')
                                     ->defaultNull()
                                 ->end()
 
@@ -1347,24 +1336,24 @@ return static function($definition): void
                         // ──────────────────────────────
                         // Search
                         // ──────────────────────────────
-                        ->arrayNode('search')
-                            ->info('Search configuration for this collection. Allows enabling search and specifying searchable fields.')
-                            ->addDefaultsIfNotSet()
-                            ->children()
+                        // ->arrayNode('search')
+                        //     ->info('Search configuration for this collection. Allows enabling search and specifying searchable fields.')
+                        //     ->addDefaultsIfNotSet()
+                        //     ->children()
 
-                                ->booleanNode('enabled')
-                                    ->info('Enable or disable search for this collection.')
-                                    ->defaultNull()
-                                ->end()
+                        //         ->booleanNode('enabled')
+                        //             ->info('Enable or disable search for this collection.')
+                        //             ->defaultNull()
+                        //         ->end()
 
-                                ->arrayNode('fields')
-                                    ->info('List of entity fields that are searchable. Only used if search is enabled.')
-                                    ->scalarPrototype()->end()
-                                    ->defaultValue([])
-                                ->end()
+                        //         ->arrayNode('fields')
+                        //             ->info('List of entity fields that are searchable. Only used if search is enabled.')
+                        //             ->scalarPrototype()->end()
+                        //             ->defaultValue([])
+                        //         ->end()
 
-                            ->end()
-                        ->end()
+                        //     ->end()
+                        // ->end()
 
                         // ──────────────────────────────
                         // Pagination
@@ -1682,18 +1671,8 @@ return static function($definition): void
                                                 ->defaultNull()
                                             ->end()
 
-                                            ->scalarNode('reason')
-                                                ->info('Deprecation reason')
-                                                ->defaultNull()
-                                            ->end()
-
                                             ->scalarNode('message')
                                                 ->info('Deprecation message')
-                                                ->defaultNull()
-                                            ->end()
-
-                                            ->scalarNode('sunset_behavior')
-                                                ->info('Behavior when deprecation removal date is reached')
                                                 ->defaultNull()
                                             ->end()
 
@@ -2152,7 +2131,7 @@ return static function($definition): void
             CollectionRoutePrefixResolver::resolve($providers);
 
             // Search
-            CollectionSearchStatusResolver::default($providers);
+            // CollectionSearchStatusResolver::default($providers);
 
             // Pagination
             CollectionPaginationEnabledResolver::default($providers);

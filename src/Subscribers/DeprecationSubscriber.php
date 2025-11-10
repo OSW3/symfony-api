@@ -1,6 +1,7 @@
 <?php 
 namespace OSW3\Api\Subscribers;
 
+use OSW3\Api\Service\TemplateService;
 use OSW3\Api\Service\DeprecationService;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\KernelEvents;
@@ -12,6 +13,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 class DeprecationSubscriber implements EventSubscriberInterface
 {
     public function __construct(
+        private readonly TemplateService $templateService,
         private readonly DeprecationService $deprecationService,
     ){}
 
@@ -23,33 +25,51 @@ class DeprecationSubscriber implements EventSubscriberInterface
         ];
     }
     
+    /**
+     * API is removed
+     * stop the event propagation and return 410 Gone response.
+     */
     public function onRequest(RequestEvent $event): void 
     {
         if (!$event->isMainRequest() || !$this->deprecationService->isRemoved()) {
             return;
         }
 
+        // Retrieve the response
+        $response = $event->getResponse();
+
+        // Create a new response
         $response = new JsonResponse();
 
+        // Set the response status code
         $response->setStatusCode(Response::HTTP_GONE);
 
-        $response->setContent('{"error": "This endpoint has been removed."}');
-
+        // Apply deprecation headers
         $this->applyDeprecationHeaders($response);
 
+        // Set the response content
+        $content = '{"error": "This endpoint has been removed."}';
+        $response->setContent($content);
+
+        // Stop the event propagation
         $event->setResponse($response);
         $event->stopPropagation();
-        return;
     }
     
+    /**
+     * API is deprecated
+     * add deprecation headers to the response.
+     */
     public function onResponse(ResponseEvent $event): void 
     {
         if (!$event->isMainRequest() || !$this->deprecationService->isDeprecated()) {
             return;
         }
 
+        // Retrieve the response
         $response = $event->getResponse();
 
+        // Set the response status code
         // $response->setStatusCode(Response::HTTP_UPGRADE_REQUIRED);
         $response->setStatusCode(Response::HTTP_OK);
 
@@ -62,7 +82,6 @@ class DeprecationSubscriber implements EventSubscriberInterface
         $sunset  = $this->deprecationService->getSunsetDate();
         $link    = $this->deprecationService->getLink();
         $message = $this->deprecationService->getMessage();
-        $reason  = $this->deprecationService->getReason();
 
         $response->headers->set(
             DeprecationService::HEADER_DEPRECATION,
@@ -80,13 +99,6 @@ class DeprecationSubscriber implements EventSubscriberInterface
             $response->headers->set(
                 DeprecationService::HEADER_LINK,
                 sprintf('<%s>; rel="successor-version"', $link)
-            );
-        }
-
-        if ($reason) {
-            $response->headers->set(
-                DeprecationService::HEADER_WARNING,
-                sprintf('299 - "%s"', $reason)
             );
         }
 

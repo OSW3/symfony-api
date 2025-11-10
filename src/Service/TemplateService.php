@@ -42,6 +42,7 @@ final class TemplateService
         private readonly ResponseService $responseService,
         private readonly RouteService $routeService,
         private readonly ContextService $contextService,
+        private readonly ChecksumService $checksumService,
         #[Autowire(service: 'service_container')] private readonly ContainerInterface $container,
     ){}
 

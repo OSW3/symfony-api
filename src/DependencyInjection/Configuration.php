@@ -18,14 +18,14 @@ class Configuration implements ConfigurationInterface
 	 *
 	 * @var string
 	 */
-	public const string NAME = "api";
+	public const NAME = 'api';
 
 	/**
 	 * Define the translation domain
 	 *
 	 * @var string
 	 */
-	public const string DOMAIN = 'api';
+	public const DOMAIN = 'api';
 
 	/**
 	 * Update and return the Configuration Builder
