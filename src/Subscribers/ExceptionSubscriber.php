@@ -32,6 +32,8 @@ class ExceptionSubscriber implements EventSubscriberInterface
 
     public function onKernelException(ExceptionEvent $event): void
     {
+        // TODO: Prise ne charge des erreur 404 si le provider n'est pas activé
+        
         // dump('0 - ExceptionSubscriber::onKernelException');
 
         if (!$event->isMainRequest()) {

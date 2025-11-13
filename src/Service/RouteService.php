@@ -59,6 +59,7 @@ final class RouteService
                 $methods      = [Request::METHOD_POST];
                 $condition    = '';
 
+                $name = preg_replace('/-/', '_', $name);
                 
                 // TODO: Fix host to support multiple hosts
                 $host = $host[0] ?? null;
@@ -100,6 +101,8 @@ final class RouteService
                     $methods      = $this->getMethods($provider, $collection, $endpoint);
                     $condition    = $this->getCondition($provider, $collection, $endpoint);
 
+                    $name = preg_replace('/-/', '_', $name);
+                    
                     // TODO: Fix host to support multiple hosts
                     $host = $host[0] ?? null;
 

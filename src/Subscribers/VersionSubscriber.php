@@ -25,7 +25,7 @@ class VersionSubscriber implements EventSubscriberInterface
     public static function getSubscribedEvents(): array
     {
         return [
-            // KernelEvents::RESPONSE => ['onResponse', 0]
+            KernelEvents::RESPONSE => ['onResponse', 0]
         ];
     }
     

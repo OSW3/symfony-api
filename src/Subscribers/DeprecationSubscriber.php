@@ -88,12 +88,14 @@ class DeprecationSubscriber implements EventSubscriberInterface
         $message   = $this->deprecationService->getMessage();
         $links     = [];
 
-        $response->headers->set(
-            DeprecationService::HEADER_DEPRECATION,
-            !$start || !$sunset || $start > $sunset
-                ? 'true'
-                : $start->format(DATE_RFC7231)
-        );
+
+        $value = 'true';
+        if ($start) {
+            if (!$sunset || $start <= $sunset) {
+                $value = $start->format(DATE_RFC7231);
+            }
+        }
+        $response->headers->set(DeprecationService::HEADER_DEPRECATION, $value);
 
         if ($sunset) {
             $response->headers->set(DeprecationService::HEADER_SUNSET, $sunset->format(DATE_RFC7231));

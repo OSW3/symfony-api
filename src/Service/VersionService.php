@@ -46,7 +46,16 @@ final class VersionService
         $number   = $this->configurationService->getVersionNumber($provider);
         $beta     = $this->isBeta($provider);
         
-        return "{$prefix}{$number}" . ($beta ? '-beta' : '');
+        
+        $label = $prefix;
+
+        $label .= $number;
+
+        if ($beta) {
+            $label .= '-beta';
+        }
+
+        return $label;
     }
 
     /**
