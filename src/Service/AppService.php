@@ -29,7 +29,13 @@ final class AppService
      */
     public function getName(): string 
     {
-        return explode('/', $this->getComposerData()['name'])[1] ?? 'app';
+        $appName = $this->getComposerData()['name'] ?? null;
+
+        if (empty($appName)) {
+            return 'app';
+        }
+
+        return explode('/', $appName)[1] ?? 'app';
     }
 
     /**
