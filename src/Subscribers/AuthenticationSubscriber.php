@@ -39,7 +39,7 @@ final class AuthenticationSubscriber implements EventSubscriberInterface
 
     public function onRequest(RequestEvent $event): void
     {
-        dump('2 - AuthenticationSubscriber');
+        // dump('2 - AuthenticationSubscriber');
 
         $provider   = $this->contextService->getProvider();
         $collection = $this->contextService->getCollection();

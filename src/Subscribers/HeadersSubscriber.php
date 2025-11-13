@@ -26,7 +26,7 @@ class HeadersSubscriber implements EventSubscriberInterface
 
     public function onResponse(ResponseEvent $event): void
     {
-        dump('FINAL - HeadersSubscriber::onResponse');
+        // dump('FINAL - HeadersSubscriber::onResponse');
         
         if (!$event->isMainRequest()) {
             return;
