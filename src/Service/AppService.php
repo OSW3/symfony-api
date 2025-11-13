@@ -45,7 +45,13 @@ final class AppService
      */
     public function getVendor(): string 
     {
-        return explode('/', $this->getComposerData()['name'])[0] ?? 'vendor';
+        $appName = $this->getComposerData()['name'] ?? null;
+
+        if (empty($appName)) {
+            return 'vendor';
+        }
+        
+        return explode('/', $appName)[0] ?? 'vendor';
     }
 
     /**
