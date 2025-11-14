@@ -167,15 +167,15 @@ final class DefaultController extends AbstractController
 
         // Normalize data and set response
         $normalized = $this->serializeService->normalize($entity);
-        $this->responseService->setData($normalized);
+        // $this->responseService->setData($normalized);
 
         // Get template and parse content
-        $template = $this->templateService->getTemplate('item');
-        $content  = $this->templateService->parse($template);
+        // $template = $this->templateService->getTemplate('item');
+        // $content  = $this->templateService->parse($template);
 
-        dump('DATA - DefaultController::create');
+        // dump('DATA - DefaultController::create');
         
-        return $this->json($content);
+        return $this->json($normalized);
     }
 
     public function read(int|string $id): JsonResponse
