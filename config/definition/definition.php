@@ -21,7 +21,6 @@ use OSW3\Api\Resolver\CollectionRoutePrefixResolver;
 use OSW3\Api\Resolver\EndpointRateLimitByIpResolver;
 use OSW3\Api\Resolver\ApiVersionHeaderFormatResolver;
 use OSW3\Api\Resolver\CollectionRoutePatternResolver;
-use OSW3\Api\Resolver\CollectionSearchStatusResolver;
 use OSW3\Api\Resolver\EndpointRateLimitLimitResolver;
 use OSW3\Api\Resolver\CollectionRateLimitByIpResolver;
 use OSW3\Api\Resolver\EndpointPaginationLimitResolver;
@@ -370,10 +369,10 @@ return static function($definition): void
                         ->treatNullLike('Resources/templates/list.yaml')
                     ->end()
 
-                    ->scalarNode('item')
+                    ->scalarNode('single')
                         ->info('Path to the response template file used as a model for formatting the API output for single items.')
-                        ->defaultValue('Resources/templates/item.yaml')
-                        ->treatNullLike('Resources/templates/item.yaml')
+                        ->defaultValue('Resources/templates/single.yaml')
+                        ->treatNullLike('Resources/templates/single.yaml')
                     ->end()
 
                     ->scalarNode('delete')
@@ -1475,7 +1474,7 @@ return static function($definition): void
                                     ->defaultNull()
                                 ->end()
 
-                                ->scalarNode('item')
+                                ->scalarNode('single')
                                     ->info('Path to the response template file used as a model for formatting the API output for single items.')
                                     ->defaultNull()
                                 ->end()
@@ -1855,7 +1854,7 @@ return static function($definition): void
                                                 ->defaultNull()
                                             ->end()
 
-                                            ->scalarNode('item')
+                                            ->scalarNode('single')
                                                 ->info('Path to the response template file used as a model for formatting the API output for single items.')
                                                 ->defaultNull()
                                             ->end()

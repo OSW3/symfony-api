@@ -12,8 +12,8 @@ final class CollectionTemplatesResolver
                     $collection['templates']['list'] = $provider['templates']['list'];
                 }
 
-                if (!isset($collection['templates']['item']) || $collection['templates']['item'] === null) {
-                    $collection['templates']['item'] = $provider['templates']['item'];
+                if (!isset($collection['templates']['single']) || $collection['templates']['single'] === null) {
+                    $collection['templates']['single'] = $provider['templates']['single'];
                 }
 
                 if (!isset($collection['templates']['error']) || $collection['templates']['error'] === null) {

@@ -13,8 +13,8 @@ final class EndpointTemplatesResolver
                         $endpoint['templates']['list'] = $collection['templates']['list'];
                     }
 
-                    if (!isset($endpoint['templates']['item']) || $endpoint['templates']['item'] === null) {
-                        $endpoint['templates']['item'] = $collection['templates']['item'];
+                    if (!isset($endpoint['templates']['single']) || $endpoint['templates']['single'] === null) {
+                        $endpoint['templates']['single'] = $collection['templates']['single'];
                     }
 
                     if (!isset($endpoint['templates']['error']) || $endpoint['templates']['error'] === null) {
