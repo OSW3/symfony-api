@@ -109,7 +109,7 @@ final class TemplateService
         // Resolve the template path based on type
         $templatePath = match($type) {
             static::TEMPLATE_TYPE_LIST      => $this->configuration->getListTemplate($provider),
-            static::TEMPLATE_TYPE_SINGLE    => $this->configuration->getItemTemplate($provider),
+            static::TEMPLATE_TYPE_SINGLE    => $this->configuration->getSingleTemplate($provider),
             static::TEMPLATE_TYPE_DELETE    => $this->configuration->getDeleteTemplate($provider),
             static::TEMPLATE_TYPE_ERROR     => $this->configuration->getErrorTemplate($provider),
             static::TEMPLATE_TYPE_NOT_FOUND => $this->configuration->getNotFoundTemplate($provider),

@@ -1661,7 +1661,7 @@ class ConfigurationService
      * @param string|null $endpoint Name of the endpoint (optional)
      * @return string Not found template
      */
-    public function getItemTemplate(string $provider, ?string $collection = null, ?string $endpoint = null): string
+    public function getSingleTemplate(string $provider, ?string $collection = null, ?string $endpoint = null): string
     {
         if (! $this->hasProvider($provider)) {
             return '';
@@ -1670,22 +1670,22 @@ class ConfigurationService
         // 1. Endpoint-specific templates
         if ($collection && $endpoint) {
             $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
-            if ($endpointOptions && isset($endpointOptions['templates']['item'])) {
-                return $endpointOptions['templates']['item'];
+            if ($endpointOptions && isset($endpointOptions['templates']['single'])) {
+                return $endpointOptions['templates']['single'];
             }
         }
 
         // 2. Collection-level templates
         if ($collection) {
             $collectionOptions = $this->getCollection($provider, $collection);
-            if ($collectionOptions && isset($collectionOptions['templates']['item'])) {
-                return $collectionOptions['templates']['item'];
+            if ($collectionOptions && isset($collectionOptions['templates']['single'])) {
+                return $collectionOptions['templates']['single'];
             }
         }
 
         // 3. Global default templates
         $providerOptions = $this->getProvider($provider);
-        return $providerOptions['templates']['item'] ?? '';
+        return $providerOptions['templates']['single'] ?? '';
     }
 
     /**
