@@ -1,48 +1,27 @@
 <?php 
 namespace OSW3\Api\Service;
 
-use OSW3\Api\Service\AppService;
 use Symfony\Component\Yaml\Yaml;
-use OSW3\Api\Service\DebugService;
-use OSW3\Api\Service\ClientService;
-use OSW3\Api\Service\ServerService;
-use OSW3\Api\Service\RequestService;
-use OSW3\Api\Service\VersionService;
-use OSW3\Api\Service\SecurityService;
-use OSW3\Api\Service\RateLimitService;
 use Symfony\Component\Filesystem\Path;
-use OSW3\Api\Service\PaginationService;
 use OSW3\Api\Service\ConfigurationService;
-use OSW3\Api\Service\DocumentationService;
-use OSW3\Api\Service\ExecutionTimeService;
-use OSW3\Api\Service\ResponseStatusService;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 final class TemplateService 
 {
+    public const TEMPLATE_TYPE_LIST        = 'list';
+    public const TEMPLATE_TYPE_SINGLE      = 'single';
+    public const TEMPLATE_TYPE_DELETE      = 'delete';
+    public const TEMPLATE_TYPE_ERROR       = 'error';
+    public const TEMPLATE_TYPE_NOT_FOUND   = 'not_found';
+
     private string $type;
-    private array $data = [];
 
     public function __construct(
-        // private readonly AppService $app,
-        private readonly DebugService $debug,
-        private readonly ServerService $server,
-        private readonly ClientService $client,
-        private readonly VersionService $version,
-        private readonly RequestService $request,
         private readonly KernelInterface $kernel,
-        private readonly SecurityService $security,
-        private readonly RateLimitService $rateLimit,
-        private readonly ExecutionTimeService $timer,
-        private readonly ResponseStatusService $status,
-        private readonly PaginationService $pagination,
         private readonly ConfigurationService $configuration,
-        private readonly DocumentationService $documentation,
-        private readonly ResponseService $responseService,
         private readonly RouteService $routeService,
-        private readonly ContextService $contextService,
         #[Autowire(service: 'service_container')] private readonly ContainerInterface $container,
     ){}
 
@@ -129,12 +108,12 @@ final class TemplateService
 
         // Resolve the template path based on type
         $templatePath = match($type) {
-            'list'       => $this->configuration->getListTemplate($provider),
-            'item'       => $this->configuration->getItemTemplate($provider),
-            'delete'     => $this->configuration->getDeleteTemplate($provider),
-            'error'      => $this->configuration->getErrorTemplate($provider),
-            'no_content' => $this->configuration->getNotFoundTemplate($provider),
-            default      => throw new \Exception("Unknown template type"),
+            static::TEMPLATE_TYPE_LIST      => $this->configuration->getListTemplate($provider),
+            static::TEMPLATE_TYPE_SINGLE    => $this->configuration->getItemTemplate($provider),
+            static::TEMPLATE_TYPE_DELETE    => $this->configuration->getDeleteTemplate($provider),
+            static::TEMPLATE_TYPE_ERROR     => $this->configuration->getErrorTemplate($provider),
+            static::TEMPLATE_TYPE_NOT_FOUND => $this->configuration->getNotFoundTemplate($provider),
+            default => throw new \Exception("Unknown template type"),
         };
 
         // Candidate paths to check
@@ -234,8 +213,7 @@ final class TemplateService
         [$class, $method] = explode('::', $callableString, 2);
         // $instance = new $class();
         $instance = $this->container->get($class);
-        $result           = $instance->$method();
 
-        return $result;
+        return $instance->$method();
     }
 }

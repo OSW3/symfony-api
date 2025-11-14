@@ -11,7 +11,7 @@ final class EndpointRouteRequirementsResolver
 
                     if (
                         empty($endpoint['route']['requirements']) && 
-                        in_array(strtolower($endpointName), ['edit','delete', 'patch', 'put', 'read','show','update'], true  )
+                        in_array(strtolower($endpointName), ['edit','delete','patch','put','read','show','update'], true  )
                     ) {
                         $endpoint['route']['requirements'] = ['id' => '\d+|[\w-]+'];
                     }

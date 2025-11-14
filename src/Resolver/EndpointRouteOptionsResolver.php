@@ -11,7 +11,7 @@ final class EndpointRouteOptionsResolver
 
                     if (
                         empty($endpoint['route']['options']) && 
-                        in_array(strtolower($endpointName), ['edit','delete', 'patch', 'put', 'read','show','update'], true  )
+                        in_array(strtolower($endpointName), ['edit','delete','patch','put','read','show','update'], true  )
                     ) {
                         $endpoint['route']['options'] = ['id'];
                     }

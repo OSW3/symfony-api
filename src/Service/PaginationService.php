@@ -32,6 +32,10 @@ final class PaginationService
         $collection = $this->contextService->getCollection();
         $endpoint   = $this->contextService->getEndpoint();
 
+        if (in_array(strtolower($endpoint), ['edit','delete','patch','put','read','show','update'], true  )) {
+            return false;
+        }
+
         return $this->configurationService->isPaginationEnabled($provider, $collection, $endpoint);
     }
 

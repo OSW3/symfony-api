@@ -44,40 +44,53 @@ final class DefaultController extends AbstractController
 
     public function index(): JsonResponse
     {
-        $this->templateService->setType('list');
-
         // Get repository method
-        $method           = $this->method ?? 'findBy';
+        $method = $this->method ?? 'findBy';
 
-        // Get pagination parameters
-        $criteria         = $this->configurationService->getCriteria($this->provider, $this->collection, $this->endpoint);
-        $order            = $this->configurationService->getOrderBy($this->provider, $this->collection, $this->endpoint);
-        $limit            = $this->paginationService->getLimit();
-        $offset           = $this->paginationService->getOffset();
+        // Get criteria
+        $criteria = $this->configurationService->getCriteria(
+            $this->provider, 
+            $this->collection, 
+            $this->endpoint
+        );
+
+        // Get order
+        $order = $this->configurationService->getOrderBy(
+            $this->provider, 
+            $this->collection, 
+            $this->endpoint
+        );
+
+        // Get pagination limit
+        $limit = $this->paginationService->getLimit();
+
+        // Get pagination offset
+        $offset = $this->paginationService->getOffset();
+
+        // Set total items
+        $this->paginationService->setTotal($this->repository->count($criteria)); 
 
         // Get data from repository
-        $count            = $this->repository->count($criteria);
-                            $this->paginationService->setTotal($count); 
-                            
-        $raw              = $this->repository->$method($criteria, $order, $limit, $offset);
-        $normalized       = $this->serializeService->normalize($raw);
-                            // $this->responseService->setData($normalized);
+        $raw = $this->repository->$method(
+            $criteria, 
+            $order, 
+            $limit, 
+            $offset
+        );
 
-        // Get template and parse content
-        // $template         = $this->templateService->getTemplate('list');
-        // $content          = $this->templateService->parse($template);
+        // Normalize data
+        $normalized = $this->serializeService->normalize($raw);
 
-        // dump('DATA - DefaultController::index');
-        // dump($normalized);
+        // Define template type
+        $this->templateService->setType(TemplateService::TEMPLATE_TYPE_LIST);
 
+        // Return response
         return $this->json($normalized);
     }
 
     public function create(): JsonResponse
     {
-        $this->templateService->setType('item');
-        // $em = $this->doctrine->getManager();
-
+        // Get entity class
         $entityClass = $this->entityClass;
 
         // Get data from request
@@ -174,32 +187,29 @@ final class DefaultController extends AbstractController
         // $template = $this->templateService->getTemplate('item');
         // $content  = $this->templateService->parse($template);
 
-        // dump('DATA - DefaultController::create');
-        
+
+        // Set template type
+        $this->templateService->setType(TemplateService::TEMPLATE_TYPE_SINGLE);
+
+        // Return response
         return $this->json($normalized);
     }
 
     public function read(int|string $id): JsonResponse
     {
-        $this->templateService->setType('item');
-
-        // Get identifier from request
-        $identifier       = $id;
-
         // Get repository method
-        $method           = $this->method ?? 'find';
+        $method = $this->method ?? 'find';
 
         // Get data from repository
-        $raw              = $this->repository->$method($identifier);
-        $normalized       = $this->serializeService->normalize($raw);
-        //                     $this->responseService->setData($normalized);
+        $raw = $this->repository->$method($id);
 
-        // // Get template and parse content
-        // $template         = $this->templateService->getTemplate('item');
-        // $content          = $this->templateService->parse($template);
+        // Normalize data
+        $normalized = $this->serializeService->normalize($raw);
 
-        // dump('DATA - DefaultController::read');
+        // Define template type
+        $this->templateService->setType(TemplateService::TEMPLATE_TYPE_SINGLE);
 
+        // Return response
         return $this->json($normalized);
     }
 
@@ -259,12 +269,11 @@ final class DefaultController extends AbstractController
 
         // Réponse
         $normalized = $this->serializeService->normalize($entity);
-        $this->responseService->setData($normalized);
 
-        $template = $this->templateService->getTemplate('item');
-        $content  = $this->templateService->parse($template);
+        // Define template type
+        $this->templateService->setType(TemplateService::TEMPLATE_TYPE_SINGLE);
 
-        return $this->json($content);
+        return $this->json($normalized);
     }
 
     public function delete(int|string $id): JsonResponse
@@ -279,11 +288,8 @@ final class DefaultController extends AbstractController
         $this->em->remove($entity);
         $this->em->flush();
 
-        $this->responseService->setData(['success' => true, 'deleted_id' => $id]);
+        $this->templateService->setType(TemplateService::TEMPLATE_TYPE_DELETE);
 
-        $template = $this->templateService->getTemplate('delete');
-        $content  = $this->templateService->parse($template);
-
-        return $this->json($content);
+        return $this->json(['success' => true, 'deleted_id' => $id]);
     }
 }
