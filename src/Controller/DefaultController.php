@@ -75,6 +75,7 @@ final class DefaultController extends AbstractController
 
     public function create(): JsonResponse
     {
+        $this->templateService->setType('item');
         // $em = $this->doctrine->getManager();
 
         $entityClass = $this->entityClass;
