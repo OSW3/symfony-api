@@ -230,6 +230,7 @@ final class RequestService
     {
         $required = $this->routeService->getRequirements(
             provider: $this->contextService->getProvider(),
+            segment: $this->contextService->getSegment(),
             collection: $this->contextService->getCollection(),
             endpoint: $this->contextService->getEndpoint(),
         );

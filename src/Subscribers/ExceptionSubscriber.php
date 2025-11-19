@@ -6,13 +6,9 @@ use OSW3\Api\Service\TemplateService;
 use OSW3\Api\Service\ConfigurationService;
 use OSW3\Api\Service\ResponseStatusService;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
-use Symfony\Component\Security\Core\Exception\AuthenticationException;
-use Lexik\Bundle\JWTAuthenticationBundle\Exception\JWTDecodeFailureException;
 
 class ExceptionSubscriber implements EventSubscriberInterface
 {
@@ -68,7 +64,7 @@ class ExceptionSubscriber implements EventSubscriberInterface
         $response->setStatusCode($statusCode);
 
 
-        $template = $this->templateService->getTemplate('error');
+        // $template = $this->templateService->getTemplate('error');
 
 
 

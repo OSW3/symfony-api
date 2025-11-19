@@ -2,8 +2,6 @@
 namespace OSW3\Api\Service;
 
 use OSW3\Api\Service\ServerService;
-use OSW3\Api\Service\ContextService;
-use OSW3\Api\Service\ResponseService;
 use OSW3\Api\Service\ConfigurationService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -21,10 +19,8 @@ final class HeadersService
         private readonly AppService $appService,
         private readonly RequestStack $requestStack,
         private readonly VersionService $versionService,
-        private readonly ContextService $contextService,
         private readonly ConfigurationService $configurationService,
         private readonly ServerService $serverService,
-        private readonly ResponseService $responseService,
     ){
         $this->request = $requestStack->getCurrentRequest();
     }

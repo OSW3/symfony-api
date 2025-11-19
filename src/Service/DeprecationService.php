@@ -22,23 +22,21 @@ final class DeprecationService
 
     public function isEnabled(): bool
     {
-        $provider   = $this->contextService->getProvider();
-        $collection = $this->contextService->getCollection();
-        $endpoint   = $this->contextService->getEndpoint();
-
-        return $this->configurationService->isDeprecationEnabled($provider, $collection, $endpoint);
+        return $this->configurationService->isDeprecationEnabled(
+            provider  : $this->contextService->getProvider(),
+            segment   : $this->contextService->getSegment(),
+            collection: $this->contextService->getCollection(),
+            endpoint  : $this->contextService->getEndpoint(),
+        );
     }
 
     public function getStartAt(): ?\DateTimeImmutable
     {
-        $provider   = $this->contextService->getProvider();
-        $collection = $this->contextService->getCollection();
-        $endpoint   = $this->contextService->getEndpoint();
-
         $date = $this->configurationService->getDeprecationStartAt(
-            $provider,
-            $collection,
-            $endpoint
+            provider  : $this->contextService->getProvider(),
+            segment   : $this->contextService->getSegment(),
+            collection: $this->contextService->getCollection(),
+            endpoint  : $this->contextService->getEndpoint(),
         );
 
         return $date ? new \DateTimeImmutable($date) : null;
@@ -46,14 +44,11 @@ final class DeprecationService
 
     public function getSunsetAt(): ?\DateTimeImmutable
     {
-        $provider   = $this->contextService->getProvider();
-        $collection = $this->contextService->getCollection();
-        $endpoint   = $this->contextService->getEndpoint();
-
         $date = $this->configurationService->getDeprecationSunsetAt(
-            $provider,
-            $collection,
-            $endpoint
+            provider  : $this->contextService->getProvider(),
+            segment   : $this->contextService->getSegment(),
+            collection: $this->contextService->getCollection(),
+            endpoint  : $this->contextService->getEndpoint(),
         );
 
         return $date ? new \DateTimeImmutable($date) : null;
@@ -61,53 +56,31 @@ final class DeprecationService
 
     public function getLink(): ?string
     {
-        $provider   = $this->contextService->getProvider();
-        $collection = $this->contextService->getCollection();
-        $endpoint   = $this->contextService->getEndpoint();
-
         return $this->configurationService->getDeprecationLink(
-            $provider,
-            $collection,
-            $endpoint
+            provider  : $this->contextService->getProvider(),
+            segment   : $this->contextService->getSegment(),
+            collection: $this->contextService->getCollection(),
+            endpoint  : $this->contextService->getEndpoint(),
         );
     }
 
     public function getSuccessor(): ?string
     {
-        $provider   = $this->contextService->getProvider();
-        $collection = $this->contextService->getCollection();
-        $endpoint   = $this->contextService->getEndpoint();
-
         return $this->configurationService->getDeprecationSuccessor(
-            $provider,
-            $collection,
-            $endpoint
-        );
-    }
-
-    public function getReason(): ?string
-    {
-        $provider   = $this->contextService->getProvider();
-        $collection = $this->contextService->getCollection();
-        $endpoint   = $this->contextService->getEndpoint();
-
-        return $this->configurationService->getDeprecationReason(
-            $provider,
-            $collection,
-            $endpoint
+            provider  : $this->contextService->getProvider(),
+            segment   : $this->contextService->getSegment(),
+            collection: $this->contextService->getCollection(),
+            endpoint  : $this->contextService->getEndpoint(),
         );
     }
 
     public function getMessage(): ?string
     {
-        $provider   = $this->contextService->getProvider();
-        $collection = $this->contextService->getCollection();
-        $endpoint   = $this->contextService->getEndpoint();
-
         return $this->configurationService->getDeprecationMessage(
-            $provider,
-            $collection,
-            $endpoint
+            provider  : $this->contextService->getProvider(),
+            segment   : $this->contextService->getSegment(),
+            collection: $this->contextService->getCollection(),
+            endpoint  : $this->contextService->getEndpoint(),
         );
     }
 
@@ -177,5 +150,4 @@ final class DeprecationService
 
         return 'active';
     }
-
 }

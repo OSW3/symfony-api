@@ -16,6 +16,10 @@ final class CollectionTemplatesResolver
                     $collection['templates']['single'] = $provider['templates']['single'];
                 }
 
+                if (!isset($collection['templates']['delete']) || $collection['templates']['delete'] === null) {
+                    $collection['templates']['delete'] = $provider['templates']['delete'];
+                }
+
                 if (!isset($collection['templates']['error']) || $collection['templates']['error'] === null) {
                     $collection['templates']['error'] = $provider['templates']['error'];
                 }

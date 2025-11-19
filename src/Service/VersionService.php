@@ -1,6 +1,8 @@
 <?php 
 namespace OSW3\Api\Service;
 
+use OSW3\Api\Service\ContextService;
+
 final class VersionService 
 {
     public function __construct(
@@ -168,15 +170,18 @@ final class VersionService
 
     /**
      * Check if the API provider is deprecated
+     * e.g.: $this->isDeprecated('my_custom_api_v1', 'collections');
      * 
+     * @param string|null $provider
+     * @param string|null $segment
      * @return bool
      */
-    public function isDeprecated(?string $provider = null): bool
+    public function isDeprecated(?string $provider = null, string $segment = ContextService::SEGMENT_COLLECTION): bool
     {
         if (!$provider || !$this->configurationService->hasProvider($provider)) {
             $provider = $this->contextService->getProvider();
         }
 
-        return $this->configurationService->isDeprecationEnabled($provider);
+        return $this->configurationService->isDeprecationEnabled($provider, $segment);
     }
 }

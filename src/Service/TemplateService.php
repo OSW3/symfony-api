@@ -13,6 +13,7 @@ final class TemplateService
     public const TEMPLATE_TYPE_LIST        = 'list';
     public const TEMPLATE_TYPE_SINGLE      = 'single';
     public const TEMPLATE_TYPE_DELETE      = 'delete';
+    public const TEMPLATE_TYPE_ACCOUNT     = 'account';
     public const TEMPLATE_TYPE_ERROR       = 'error';
     public const TEMPLATE_TYPE_NOT_FOUND   = 'not_found';
 
@@ -96,6 +97,7 @@ final class TemplateService
         $context      = $currentRoute ? $currentRoute['options']['context'] : [];
         // $context = $this->configuration->getContext();
         $provider = $context['provider'] ?? null;
+        $segment = $context['segment'] ?? null;
 
         if (!$provider) {
             // return '';
@@ -108,11 +110,12 @@ final class TemplateService
 
         // Resolve the template path based on type
         $templatePath = match($type) {
-            static::TEMPLATE_TYPE_LIST      => $this->configuration->getListTemplate($provider),
-            static::TEMPLATE_TYPE_SINGLE    => $this->configuration->getSingleTemplate($provider),
-            static::TEMPLATE_TYPE_DELETE    => $this->configuration->getDeleteTemplate($provider),
-            static::TEMPLATE_TYPE_ERROR     => $this->configuration->getErrorTemplate($provider),
-            static::TEMPLATE_TYPE_NOT_FOUND => $this->configuration->getNotFoundTemplate($provider),
+            static::TEMPLATE_TYPE_LIST      => $this->configuration->getListTemplate($provider, $segment),
+            static::TEMPLATE_TYPE_SINGLE    => $this->configuration->getSingleTemplate($provider, $segment),
+            static::TEMPLATE_TYPE_DELETE    => $this->configuration->getDeleteTemplate($provider, $segment),
+            static::TEMPLATE_TYPE_ACCOUNT   => $this->configuration->getAccountTemplate($provider, $segment),
+            static::TEMPLATE_TYPE_ERROR     => $this->configuration->getErrorTemplate($provider, $segment),
+            static::TEMPLATE_TYPE_NOT_FOUND => $this->configuration->getNotFoundTemplate($provider, $segment),
             default => throw new \Exception("Unknown template type"),
         };
 

@@ -1,6 +1,7 @@
 <?php
 namespace OSW3\Api\Subscribers;
 
+// use OSW3\Api\Service\AuthenticationService;
 use OSW3\Api\Service\ConfigurationService;
 use OSW3\Api\Service\ExecutionTimeService;
 use Symfony\Component\HttpKernel\KernelEvents;
@@ -19,6 +20,7 @@ class LoggerSubscriber implements EventSubscriberInterface
     public function __construct(
         private readonly ExecutionTimeService $timer,
         private readonly ConfigurationService $configuration,
+        // private readonly AuthenticationService $authentication,
     ){}
 
     public static function getSubscribedEvents(): array
@@ -29,10 +31,30 @@ class LoggerSubscriber implements EventSubscriberInterface
 
             // Low priority to log the end late, just before ResponseSubscriber
             // KernelEvents::RESPONSE => ['onResponse', -9], 
+            // KernelEvents::RESPONSE => ['debug', 0], 
 
             // Lowest priority to log the end after all other subscribers
             // KernelEvents::TERMINATE => ['onTerminate'],
         ];
+    }
+
+    public function debug(): void
+    {
+        $section    = $this->configuration->getContext('section');
+        $provider   = $this->configuration->getContext('provider');
+        $collection = $this->configuration->getContext('collection');
+        $endpoint   = $this->configuration->getContext('endpoint');
+
+        $collections = $this->configuration->getCollections($provider, 'collections');
+        $authentications = $this->configuration->getCollections($provider, 'authentication');
+        // dd([
+        //     // 'section'    => $section,
+        //     // 'provider'   => $provider,
+        //     // 'collection' => $collection,
+        //     // 'endpoint'   => $endpoint,
+        //     'collections' => $collections,
+        //     'authentications' => $authentications,
+        // ]);
     }
 
     // public function onRequest(): void

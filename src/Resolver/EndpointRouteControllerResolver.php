@@ -1,7 +1,11 @@
 <?php 
 namespace OSW3\Api\Resolver;
 
-use OSW3\Api\Controller\DefaultController;
+use OSW3\Api\Controller\Crud\ReadController;
+use OSW3\Api\Controller\Crud\CreateController;
+use OSW3\Api\Controller\Crud\DeleteController;
+use OSW3\Api\Controller\Crud\UpdateController;
+use OSW3\Api\Controller\Crud\IndexController;
 
 final class EndpointRouteControllerResolver
 {
@@ -13,12 +17,12 @@ final class EndpointRouteControllerResolver
 
                     if (empty($endpoint['route']['controller'])) {
                         $endpoint['route']['controller'] = match (strtolower($endpointName)) {
-                            'index', 'list'         => DefaultController::class . '::index',
-                            'add', 'create', 'post' => DefaultController::class . '::create',
-                            'read', 'show'          => DefaultController::class . '::read',
-                            'put', 'update', 'edit' => DefaultController::class . '::update',
-                            'patch'                 => DefaultController::class . '::update',
-                            'delete'                => DefaultController::class . '::delete',
+                            'index', 'list'         => IndexController::class . '::execute',
+                            'add', 'create', 'post' => CreateController::class . '::execute',
+                            'read', 'show'          => ReadController::class . '::execute',
+                            'put', 'update', 'edit' => UpdateController::class . '::execute',
+                            'patch'                 => UpdateController::class . '::execute',
+                            'delete'                => DeleteController::class . '::execute',
                             default                 => null,
                         };
                     }

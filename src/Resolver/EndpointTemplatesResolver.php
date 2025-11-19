@@ -17,6 +17,10 @@ final class EndpointTemplatesResolver
                         $endpoint['templates']['single'] = $collection['templates']['single'];
                     }
 
+                    if (!isset($endpoint['templates']['delete']) || $endpoint['templates']['delete'] === null) {
+                        $endpoint['templates']['delete'] = $collection['templates']['delete'];
+                    }
+
                     if (!isset($endpoint['templates']['error']) || $endpoint['templates']['error'] === null) {
                         $endpoint['templates']['error'] = $collection['templates']['error'];
                     }

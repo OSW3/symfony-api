@@ -1,11 +1,11 @@
 <?php
 
 use OSW3\Api\Enum\MimeType;
-use OSW3\Api\Validator\HooksValidator;
 use OSW3\Api\Validator\EntityValidator;
 use OSW3\Api\Validator\ControllerValidator;
 use OSW3\Api\Validator\TransformerValidator;
 use OSW3\Api\Resolver\CollectionNameResolver;
+use Symfony\Component\HttpFoundation\Request;
 use OSW3\Api\Resolver\ApiVersionNumberResolver;
 use OSW3\Api\Resolver\EndpointRouteNameResolver;
 use OSW3\Api\Resolver\EndpointRoutePathResolver;
@@ -15,6 +15,7 @@ use OSW3\Api\Resolver\CollectionIsEnabledResolver;
 use OSW3\Api\Resolver\CollectionTemplatesResolver;
 use OSW3\Api\Resolver\EndpointUrlAbsoluteResolver;
 use OSW3\Api\Resolver\EndpointUrlPropertyResolver;
+use OSW3\Api\Resolver\ProviderRoutePrefixResolver;
 use OSW3\Api\Resolver\EndpointRouteMethodsResolver;
 use OSW3\Api\Resolver\EndpointRouteOptionsResolver;
 use OSW3\Api\Resolver\CollectionRoutePrefixResolver;
@@ -38,6 +39,7 @@ use OSW3\Api\Resolver\CollectionRateLimitEnabledResolver;
 use OSW3\Api\Resolver\EndpointDeprecationEnabledResolver;
 use OSW3\Api\Resolver\EndpointDeprecationStartAtResolver;
 use OSW3\Api\Resolver\EndpointPaginationMaxLimitResolver;
+use OSW3\Api\Resolver\ProviderAuthenticationNameResolver;
 use OSW3\Api\Resolver\ProviderDeprecationStartAtResolver;
 use OSW3\Api\Resolver\CollectionPaginationEnabledResolver;
 use OSW3\Api\Resolver\EndpointDeprecationSunsetAtResolver;
@@ -50,6 +52,7 @@ use OSW3\Api\Resolver\EndpointRateLimitByApplicationResolver;
 use OSW3\Api\Resolver\EndpointRateLimitIncludeHeadersResolver;
 use OSW3\Api\Resolver\CollectionRateLimitByApplicationResolver;
 use OSW3\Api\Resolver\CollectionRateLimitIncludeHeadersResolver;
+use OSW3\Api\Resolver\ProviderAuthenticationRoutePrefixResolver;
 use OSW3\Api\Resolver\EndpointPaginationAllowLimitOverrideResolver;
 use OSW3\Api\Resolver\CollectionPaginationAllowLimitOverrideResolver;
 
@@ -117,26 +120,6 @@ return static function($definition): void
             ->end()
 
             // ──────────────────────────────
-            // Documentation
-            // ──────────────────────────────
-			->arrayNode('documentation')
-                ->info('API documentation configuration')
-                ->addDefaultsIfNotSet()->children()
-
-                    ->booleanNode('enable')
-                        ->info('Enable or disable the documentation for this API provider.')
-                        ->defaultFalse()
-                    ->end()
-
-                    ->scalarNode('prefix')
-                        ->info('Path prefix')
-                        ->defaultValue('_documentation')
-                    ->end()
-
-                ->end()
-            ->end()
-
-            // ──────────────────────────────
             // Versioning
             // ──────────────────────────────
 			->arrayNode('version')
@@ -197,19 +180,19 @@ return static function($definition): void
 
                     ->scalarNode('prefix')
                         ->info('Default URL prefix for all routes in this API version.')
-                        ->defaultValue('/api/')
-                        ->treatNullLike('/api/')
+                        ->defaultValue('api')
+                        ->treatNullLike('api')
                     ->end()
 
                     ->arrayNode('hosts')
-                        ->info('.')
+                        ->info('List of hostnames for this API provider (e.g. api.example.com).')
                         ->normalizeKeys(false)
                         ->scalarPrototype()->end()
                         ->defaultValue([])
                     ->end()
 
                     ->arrayNode('schemes')
-                        ->info('.')
+                        ->info('List of schemes for this API provider (e.g. https, http).')
                         ->normalizeKeys(false)
                         ->scalarPrototype()->end()
                         ->defaultValue([])
@@ -381,6 +364,12 @@ return static function($definition): void
                         ->treatNullLike('Resources/templates/delete.yaml')
                     ->end()
 
+                    ->scalarNode('account')
+                        ->info('Path to the response template file used as a model for formatting the API output for account operations.')
+                        ->defaultValue('Resources/templates/account.yaml')
+                        ->treatNullLike('Resources/templates/account.yaml')
+                    ->end()
+
                     ->scalarNode('error')
                         ->info('Path to the response template file used as a model for formatting error responses.')
                         ->defaultValue('Resources/templates/error.yaml')
@@ -409,7 +398,6 @@ return static function($definition): void
 
                             ->enumNode('type')
                                 ->info('Type of the response format.')
-                                // ->values(['json', 'xml', 'yaml', 'csv', 'toon'])
                                 ->values(array_keys(MimeType::toArray(true)))
                                 ->defaultValue('json')
                                 ->treatNullLike('json')
@@ -650,64 +638,6 @@ return static function($definition): void
             ->end()
 
             // ──────────────────────────────
-            // HOOKS
-            // ──────────────────────────────
-            ->arrayNode('hooks')
-                ->info('Defines callable hooks to be executed before and after all actions.')
-                ->addDefaultsIfNotSet()->children()
-
-                    ->enumNode('merge')
-                        ->info('Defines how to handle merging hooks: "replace" to overwrite existing hooks, "append" to add to them, or "prepend" to add them at the beginning.')
-                        ->values(['replace', 'append', 'prepend'])
-                        ->defaultValue('append')
-                        ->treatNullLike('append')
-                    ->end()
-
-                    ->arrayNode('before')
-                        ->info('List of callable listeners to execute **before** the endpoint action is run.')
-                        ->scalarPrototype()->end()
-                        ->defaultValue([])
-                    ->end()
-
-                    ->arrayNode('after')
-                        ->info('List of callable listeners to execute **after** the endpoint action has completed.')
-                        ->scalarPrototype()->end()
-                        ->defaultValue([])
-                    ->end()
-
-                    ->arrayNode('around')
-                        ->info('List of callable listeners to execute **around** the endpoint action.')
-                        ->scalarPrototype()->end()
-                        ->defaultValue([])
-                    ->end()
-
-                    ->arrayNode('on_success')
-                        ->info('List of callable listeners to execute on success action.')
-                        ->scalarPrototype()->end()
-                        ->defaultValue([])
-                    ->end()
-
-                    ->arrayNode('on_failure')
-                        ->info('List of callable listeners to execute on failure action.')
-                        ->scalarPrototype()->end()
-                        ->defaultValue([])
-                    ->end()
-
-                    ->arrayNode('on_complete')
-                        ->info('List of callable listeners to execute on complete action.')
-                        ->scalarPrototype()->end()
-                        ->defaultValue([])
-                    ->end()
-
-                ->end()
-
-                ->validate()
-                    ->ifTrue(fn($hooks) => !HooksValidator::validate($hooks))
-                    ->thenInvalid('One or more hooks (before/after) are invalid. They must be valid callables (Class::method or callable).')
-                ->end()
-            ->end()
-
-            // ──────────────────────────────
             // Access control
             // ──────────────────────────────
             ->arrayNode('access_control')
@@ -736,511 +666,1657 @@ return static function($definition): void
             ->end()
 
             // ──────────────────────────────
-            // Security
+            // Authentication
             // ──────────────────────────────
-			->arrayNode('security')
-                ->info('Defines security settings for the API.')
-                ->addDefaultsIfNotSet()->children()
+			->arrayNode('authentication')
+                ->info('Defines authentication settings for the API.')
+                ->arrayPrototype()
+                ->ignoreExtraKeys(false)
+                    ->children()
 
-                    ->arrayNode('entity')
-                        ->info('Defines the user entity used for authentication and authorization.')
-                        ->addDefaultsIfNotSet()->children()
-
-                            ->scalarNode('class')
-                                ->info('Fully qualified class name of the User entity used for authentication and authorization.')
-                                ->defaultNull()
-                                ->validate()
-                                    ->ifTrue(fn($class) => $class !== null && !EntityValidator::isValid($class))
-                                    ->thenInvalid('Invalid entity class "%s".', 'entity.class')
-                                ->end()
-                            ->end()
-
-                            ->scalarNode('identifier')
-                                ->info('Identifier field for the User entity (e.g., "email").')
-                                ->defaultValue('email')
-                                ->treatNullLike('email')
-                            ->end()
-
-                            ->scalarNode('password')
-                                ->info('Password field for the User entity (e.g., "password").')
-                                ->defaultValue('password')
-                                ->treatNullLike('password')
-                            ->end()
-
+                        // ──────────────────────────────
+                        // Enabled
+                        // ──────────────────────────────
+                        ->booleanNode('enabled')
+                            ->info('Enable or disable this authentication provider.')
+                            ->defaultNull()
                         ->end()
-                    ->end()
 
-                    ->scalarNode('group')
-                        ->info('Route group for security-related endpoints (login, registration, etc.).')
-                        ->defaultValue('security')
-                        ->treatNullLike('security')
-                    ->end()
+                        // ──────────────────────────────
+                        // Deprecation
+                        // ──────────────────────────────
+                        ->arrayNode('deprecation')
+                            ->info('API deprecation notices for this authentication provider.')
+                            ->addDefaultsIfNotSet()->children()
 
-                    ->arrayNode('registration')
-                        ->info('Defines the registration settings for the API.')
-                        ->addDefaultsIfNotSet()->children()
+                                ->booleanNode('enabled')
+                                    ->info('Enable or disable the deprecation for this authentication provider.')
+                                    ->defaultNull()
+                                    ->treatNullLike(false)
+                                ->end()
 
-                            ->arrayNode('register')
-                                ->info('Defines the registration endpoint settings.')
-                                ->addDefaultsIfNotSet()->children()
- 
-                                    ->booleanNode('enabled')
-                                        ->info('Enable or disable registration.')
-                                        ->defaultFalse()
-                                        ->treatNullLike(false)
+                                ->scalarNode('start_at')
+                                    ->info('Deprecation since date')
+                                    ->defaultNull()
+                                ->end()
+
+                                ->scalarNode('sunset_at')
+                                    ->info('Deprecation sunset date')
+                                    ->defaultNull()
+                                ->end()
+
+                                ->scalarNode('link')
+                                    ->info('Deprecation link')
+                                    ->defaultNull()
+                                ->end()
+
+                                ->scalarNode('successor')
+                                    ->info('Deprecation successor link')
+                                    ->defaultNull()
+                                ->end()
+
+                                ->scalarNode('message')
+                                    ->info('Deprecation message')
+                                    ->defaultNull()
+                                ->end()
+
+                            ->end()
+                        ->end()
+
+                        // ──────────────────────────────
+                        // Collection name
+                        // ──────────────────────────────
+                        ->scalarNode('name')
+                            ->info('Name / Alias of the entity')
+                            ->defaultNull()
+                            ->treatNullLike(null)
+                        ->end()
+
+                        // ──────────────────────────────
+                        // Route
+                        // ──────────────────────────────
+                        ->arrayNode('route')
+                            ->info('Override default route name or URL prefix for security-related endpoints.')
+                            ->addDefaultsIfNotSet()->children()
+
+                                ->scalarNode('pattern')
+                                    ->info('Custom route name pattern. Falls back to global `routes.name` if null.')
+                                    ->defaultNull()
+                                ->end()
+
+                                ->scalarNode('prefix')
+                                    ->info('Route prefix for security-related endpoints (login, registration, etc.).')
+                                    ->defaultNull()
+                                ->end()
+
+                                ->scalarNode('additional_prefix')
+                                    ->info('Route prefix for security-related endpoints (login, registration, etc.).')
+                                    ->defaultValue('auth')
+                                    ->treatNullLike('auth')
+                                ->end()
+
+                                ->arrayNode('hosts')
+                                    ->info('Configure specific hosts for the endpoint routes.')
+                                    ->normalizeKeys(false)
+                                    ->scalarPrototype()->end()
+                                    ->defaultValue([])
+                                ->end()
+
+                                ->arrayNode('schemes')
+                                    ->info('Configure specific schemes (http, https) for the endpoint routes.')
+                                    ->normalizeKeys(false)
+                                    ->scalarPrototype()->end()
+                                    ->defaultValue([])
+                                ->end()
+
+                            ->end()
+                        ->end()
+
+                        // ──────────────────────────────
+                        // URL support
+                        // ──────────────────────────────
+                        ->arrayNode('url')
+                            ->info('URL Support (in response) for this authentication collection.')
+                            ->addDefaultsIfNotSet()->children()
+
+                                ->booleanNode('support')
+                                    ->info('Whether to include URL elements in API responses.')
+                                    ->defaultNull()
+                                ->end()
+
+                                ->booleanNode('absolute')
+                                    ->info('Generate absolute URLs if true, relative otherwise')
+                                    ->defaultNull()
+                                ->end()
+
+                                ->scalarNode('property')
+                                    ->info('The name of the URL property in response.')
+                                    ->defaultNull()
+                                ->end()
+
+                            ->end()
+                        ->end()
+
+                        // ──────────────────────────────
+                        // Template
+                        // ──────────────────────────────
+                        ->arrayNode('templates')
+                            ->info('Paths to the response template files used as models for formatting the API output for lists and single items.')
+                            ->addDefaultsIfNotSet()->children()
+
+                                ->scalarNode('account')
+                                    ->info('Path to the response template file used as a model for formatting the API output for account operations.')
+                                    ->defaultNull()
+                                ->end()
+
+                                ->scalarNode('delete')
+                                    ->info('Path to the response template file used as a model for formatting the API output for delete operations.')
+                                    ->defaultNull()
+                                ->end()
+
+                                ->scalarNode('error')
+                                    ->info('Path to the response template file used as a model for formatting error responses.')
+                                    ->defaultNull()
+                                ->end()
+
+                                ->scalarNode('not_found')
+                                    ->info('Path to the response template file used as a model for formatting not found responses (e.g. 404 Not Found).')
+                                    ->defaultNull()
+                                ->end()
+
+                            ->end()
+                        ->end()
+
+                        // ──────────────────────────────
+                        // Serialization
+                        // ──────────────────────────────
+                        ->arrayNode('serialization')
+                            ->info('Defines serialization settings applied to API responses, including ignored attributes, date formatting, and null value handling.')
+                            ->addDefaultsIfNotSet()
+                            ->children()
+
+                                ->arrayNode('groups')
+                                    ->info('List of Symfony serialization groups to apply when serializing the response for this endpoint.')
+                                    ->scalarPrototype()->end()
+                                    ->defaultValue([])
+                                ->end()
+
+                                ->arrayNode('ignore')
+                                    ->info('List of entity attributes or properties to explicitly exclude from serialization.')
+                                    ->scalarPrototype()->end()
+                                ->end()
+
+                                ->scalarNode('transformer')
+                                    ->info('Optional class FQCN of a transformer or DTO to convert the entity data before serialization.')
+                                    ->defaultNull()
+                                    ->validate()
+                                        ->ifTrue(fn($v) => !TransformerValidator::isValid($v))
+                                        ->thenInvalid('The transformer class "%s" does not exist or does not implement __invoke() or transform() method.')
                                     ->end()
+                                ->end()
 
-                                    ->scalarNode('path')
-                                        ->info('Path for the registration endpoint.')
-                                        ->defaultNull('/api/{version}/register')
-                                        ->treatNullLike('/api/{version}/register')    
-                                    ->end()
+                            ->end()
+                        ->end()
 
-                                    ->arrayNode('hosts')
-                                        ->info('Configure specific hosts for the register endpoint routes.')
-                                        ->normalizeKeys(false)
-                                        ->scalarPrototype()->end()
-                                        ->defaultValue([])
-                                    ->end()
+                        // ──────────────────────────────
+                        // REST endpoints
+                        // ──────────────────────────────
+                        ->arrayNode('endpoints')
+                            ->info('Configure the endpoints available for this collection. Default: index, create, read, update, delete.')
+                            ->addDefaultsIfNotSet()->children()
 
-                                    ->arrayNode('schemes')
-                                        ->info('Configure specific schemes (http, https) for the register endpoint routes.')
-                                        ->normalizeKeys(false)
-                                        ->scalarPrototype()->end()
-                                        ->defaultValue([])
-                                    ->end()
+                                // Register endpoint
+                                ->arrayNode('register')
+                                    ->info('Defines the registration endpoint settings.')
+                                    ->addDefaultsIfNotSet()->children()
 
-                                    ->scalarNode('controller')
-                                        ->info('Optional Symfony controller (FQCN::method) to handle registration. If not defined, the default RegistrationController will be used.')
-                                        ->defaultValue('OSW3\Api\Controller\RegistrationController::register')
-                                        ->treatNullLike('OSW3\Api\Controller\RegistrationController::register')
-                                        ->validate()
-                                            ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
-                                            ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.', 'register.controller')
+                                        // ──────────────────────────────
+                                        // Enabled
+                                        // ──────────────────────────────
+                                        ->booleanNode('enabled')
+                                            ->info('Enable or disable registration.')
+                                            ->defaultFalse()
+                                            ->treatNullLike(false)
                                         ->end()
-                                    ->end()
 
-                                    // ->arrayNode('fields')
-                                    //     ->info('Registration fields mapping.')
-                                    //     ->normalizeKeys(false)
-                                    //     ->scalarPrototype()->end()
-                                    //     ->defaultValue([
-                                    //         'username' => 'email',
-                                    //         'password' => 'password',
-                                    //         'confirm'  => 'confirmPassword',
-                                    //     ])
-                                    // ->end()
+                                        // ──────────────────────────────
+                                        // Route config
+                                        // ──────────────────────────────
+                                        ->arrayNode('route')
+                                            ->info('Defines the HTTP configuration for the endpoint: route name, path, HTTP methods, controller, constraints, and routing options.')
+                                            ->addDefaultsIfNotSet()
+                                            ->children()
 
-                                    ->arrayNode('fields')
-                                        ->info('Registration fields mapping.')
-                                        ->addDefaultsIfNotSet()->children()
-                                        
-                                            ->scalarNode('username')
-                                                ->info('')
-                                                ->defaultValue('email')
-                                                ->treatNullLike('email')
+                                                ->scalarNode('name')
+                                                    ->info('Route name. If not defined, it will be generated automatically based on the collection and endpoint name.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->scalarNode('path')
+                                                    ->info('Optional custom path for this endpoint.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->arrayNode('methods')
+                                                    ->info('Allowed HTTP methods. Must be explicitly defined to avoid accidental exposure.')
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([Request::METHOD_POST])
+                                                    ->treatNullLike([Request::METHOD_POST])
+                                                ->end()
+
+                                                ->scalarNode('controller')
+                                                    ->info('Optional Symfony controller (FQCN::method). If not defined, the endpoint will automatically use the configured "repository.method" to fetch and expose data.')
+                                                    ->defaultValue('OSW3\Api\Controller\Auth\RegisterController::register')
+                                                    ->treatNullLike('OSW3\Api\Controller\Auth\RegisterController::register')
+                                                    ->validate()
+                                                        ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                                                        ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.')
+                                                    ->end()
+                                                ->end()
+
+                                                ->arrayNode('options')
+                                                    ->info('Advanced route options used by the Symfony router. Common keys include "utf8" (true to support UTF-8 paths), "compiler_class" (custom RouteCompiler), or any custom metadata for route generation and matching.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('hosts')
+                                                    ->info('Configure specific hosts for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('schemes')
+                                                    ->info('Configure specific schemes (http, https) for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
                                             ->end()
-                                        
-                                            ->scalarNode('password')
-                                                ->info('')
-                                                ->defaultValue('password')
-                                                ->treatNullLike('password')
+                                        ->end()
+
+                                        // ──────────────────────────────
+                                        // Properties
+                                        // ──────────────────────────────
+                                        ->arrayNode('properties')
+                                            ->info('Registration fields mapping.')
+                                            ->addDefaultsIfNotSet()->children()
+
+                                                ->scalarNode('identifier')
+                                                    ->info('Identifier field for the User entity (e.g., "email").')
+                                                    ->defaultValue('email')
+                                                    ->treatNullLike('email')
+                                                ->end()
+
+                                                ->scalarNode('password')
+                                                    ->info('Password field for the User entity (e.g., "password").')
+                                                    ->defaultValue('password')
+                                                    ->treatNullLike('password')
+                                                ->end()
+
                                             ->end()
-
                                         ->end()
+
                                     ->end()
+                                ->end()
                                 
-                                ->end()
-                            ->end()
+                                // Login endpoint
+                                ->arrayNode('login')
+                                    ->info('Defines the login endpoint settings.')
+                                    ->addDefaultsIfNotSet()->children()
 
-                            ->arrayNode('verify_email')
-                                ->info('Defines the email verification settings for the API.')
-                                ->addDefaultsIfNotSet()->children()
- 
-                                    ->booleanNode('enabled')
-                                        ->info('Enable or disable email verification.')
-                                        ->defaultFalse()
-                                        ->treatNullLike(false)
-                                    ->end()
-
-                                    ->scalarNode('path')
-                                        ->info('Path for the email verification endpoint.')
-                                        ->defaultNull('/api/{version}/verify-email')
-                                        ->treatNullLike('/api/{version}/verify-email')
-                                    ->end()
-
-                                    ->arrayNode('hosts')
-                                        ->info('Configure specific hosts for the email verification endpoint routes.')
-                                        ->normalizeKeys(false)
-                                        ->scalarPrototype()->end()
-                                        ->defaultValue([])
-                                    ->end()
-
-                                    ->arrayNode('schemes')
-                                        ->info('Configure specific schemes (http, https) for the email verification endpoint routes.')
-                                        ->normalizeKeys(false)
-                                        ->scalarPrototype()->end()
-                                        ->defaultValue([])
-                                    ->end()
-
-                                    ->scalarNode('controller')
-                                        ->info('Optional Symfony controller (FQCN::method) to handle email verification. If not defined, the default RegistrationController will be used.')
-                                        ->defaultValue('OSW3\Api\Controller\RegistrationController::verifyEmail')
-                                        ->treatNullLike('OSW3\Api\Controller\RegistrationController::verifyEmail')
-                                        ->validate()
-                                            ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
-                                            ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.', 'verify_email.controller')
+                                        // ──────────────────────────────
+                                        // Enabled
+                                        // ──────────────────────────────
+                                        ->booleanNode('enabled')
+                                            ->info('Enable or disable login.')
+                                            ->defaultFalse()
+                                            ->treatNullLike(false)
                                         ->end()
+
+                                        // ──────────────────────────────
+                                        // Route config
+                                        // ──────────────────────────────
+                                        ->arrayNode('route')
+                                            ->info('Defines the HTTP configuration for the endpoint: route name, path, HTTP methods, controller, constraints, and routing options.')
+                                            ->addDefaultsIfNotSet()
+                                            ->children()
+
+                                                ->scalarNode('name')
+                                                    ->info('Route name. If not defined, it will be generated automatically based on the collection and endpoint name.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->scalarNode('path')
+                                                    ->info('Optional custom path for this endpoint.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->arrayNode('methods')
+                                                    ->info('Allowed HTTP methods. Must be explicitly defined to avoid accidental exposure.')
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([Request::METHOD_POST])
+                                                    ->treatNullLike([Request::METHOD_POST])
+                                                ->end()
+
+                                                ->scalarNode('controller')
+                                                    ->info('Optional Symfony controller (FQCN::method). If not defined, the endpoint will automatically use the configured "repository.method" to fetch and expose data.')
+                                                    ->defaultValue('OSW3\Api\Controller\Auth\LoginController::login')
+                                                    ->treatNullLike('OSW3\Api\Controller\Auth\LoginController::login')
+                                                    ->validate()
+                                                        ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                                                        ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.')
+                                                    ->end()
+                                                ->end()
+
+                                                ->arrayNode('options')
+                                                    ->info('Advanced route options used by the Symfony router. Common keys include "utf8" (true to support UTF-8 paths), "compiler_class" (custom RouteCompiler), or any custom metadata for route generation and matching.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('hosts')
+                                                    ->info('Configure specific hosts for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('schemes')
+                                                    ->info('Configure specific schemes (http, https) for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                            ->end()
+                                        ->end()
+
+                                        // ──────────────────────────────
+                                        // Properties
+                                        // ──────────────────────────────
+                                        ->arrayNode('properties')
+                                            ->info('Login fields mapping.')
+                                            ->addDefaultsIfNotSet()->children()
+
+                                                ->scalarNode('identifier')
+                                                    ->info('Identifier field for the User entity (e.g., "email").')
+                                                    ->defaultValue('email')
+                                                    ->treatNullLike('email')
+                                                ->end()
+
+                                                ->scalarNode('password')
+                                                    ->info('Password field for the User entity (e.g., "password").')
+                                                    ->defaultValue('password')
+                                                    ->treatNullLike('password')
+                                                ->end()
+
+                                                ->scalarNode('rememberMe')
+                                                    ->info('Remember Me field for the User entity (e.g., "rememberMe").')
+                                                    ->defaultValue('rememberMe')
+                                                    ->treatNullLike('rememberMe')
+                                                ->end()
+
+                                            ->end()
+                                        ->end()
+
                                     ->end()
+                                ->end()
                                 
-                                ->end()
-                            ->end()
+                                // Logout endpoint
+                                ->arrayNode('logout')
+                                    ->info('Defines the logout endpoint settings.')
+                                    ->addDefaultsIfNotSet()->children()
 
-                            ->arrayNode('resend_verification')
-                                ->info('Defines the resend email verification settings for the API.')
-                                ->addDefaultsIfNotSet()->children()
- 
-                                    ->booleanNode('enabled')
-                                        ->info('Enable or disable resend email verification.')
-                                        ->defaultFalse()
-                                        ->treatNullLike(false)
-                                    ->end()
-
-                                    ->scalarNode('path')
-                                        ->info('Path for the resend email verification endpoint.')
-                                        ->defaultNull('/api/{version}/resend-verification')
-                                        ->treatNullLike('/api/{version}/resend-verification')
-                                    ->end()
-
-                                    ->arrayNode('hosts')
-                                        ->info('Configure specific hosts for the resend email verification endpoint routes.')
-                                        ->normalizeKeys(false)
-                                        ->scalarPrototype()->end()
-                                        ->defaultValue([])
-                                    ->end()
-
-                                    ->arrayNode('schemes')
-                                        ->info('Configure specific schemes (http, https) for the resend email verification endpoint routes.')
-                                        ->normalizeKeys(false)
-                                        ->scalarPrototype()->end()
-                                        ->defaultValue([])
-                                    ->end()
-
-                                    ->scalarNode('controller')
-                                        ->info('Optional Symfony controller (FQCN::method) to handle registration. If not defined, the default RegistrationController will be used.')
-                                        ->defaultValue('OSW3\Api\Controller\RegistrationController::resendVerification')
-                                        ->treatNullLike('OSW3\Api\Controller\RegistrationController::resendVerification')
-                                        ->validate()
-                                            ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
-                                            ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.', 'resend_verification.controller')
+                                        // ──────────────────────────────
+                                        // Enabled
+                                        // ──────────────────────────────
+                                        ->booleanNode('enabled')
+                                            ->info('Enable or disable logout.')
+                                            ->defaultFalse()
+                                            ->treatNullLike(false)
                                         ->end()
+
+                                        // ──────────────────────────────
+                                        // Route config
+                                        // ──────────────────────────────
+                                        ->arrayNode('route')
+                                            ->info('Defines the HTTP configuration for the endpoint: route name, path, HTTP methods, controller, constraints, and routing options.')
+                                            ->addDefaultsIfNotSet()
+                                            ->children()
+
+                                                ->scalarNode('name')
+                                                    ->info('Route name. If not defined, it will be generated automatically based on the collection and endpoint name.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->scalarNode('path')
+                                                    ->info('Optional custom path for this endpoint.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->arrayNode('methods')
+                                                    ->info('Allowed HTTP methods. Must be explicitly defined to avoid accidental exposure.')
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([Request::METHOD_POST])
+                                                    ->treatNullLike([Request::METHOD_POST])
+                                                ->end()
+
+                                                ->scalarNode('controller')
+                                                    ->info('Optional Symfony controller (FQCN::method). If not defined, the endpoint will automatically use the configured "repository.method" to fetch and expose data.')
+                                                    ->defaultValue('OSW3\Api\Controller\Auth\LogoutController::logout')
+                                                    ->treatNullLike('OSW3\Api\Controller\Auth\LogoutController::logout')
+                                                    ->validate()
+                                                        ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                                                        ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.')
+                                                    ->end()
+                                                ->end()
+
+                                                ->arrayNode('options')
+                                                    ->info('Advanced route options used by the Symfony router. Common keys include "utf8" (true to support UTF-8 paths), "compiler_class" (custom RouteCompiler), or any custom metadata for route generation and matching.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('hosts')
+                                                    ->info('Configure specific hosts for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('schemes')
+                                                    ->info('Configure specific schemes (http, https) for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                            ->end()
+                                        ->end()
+
                                     ->end()
-
                                 ->end()
-                            ->end()
+                                
+                                // Logout all sessions endpoint
+                                ->arrayNode('logout_all')
+                                    ->info('Defines the logout all sessions endpoint settings.')
+                                    ->addDefaultsIfNotSet()->children()
 
+                                        // ──────────────────────────────
+                                        // Enabled
+                                        // ──────────────────────────────
+                                        ->booleanNode('enabled')
+                                            ->info('Enable or disable logout all sessions.')
+                                            ->defaultFalse()
+                                            ->treatNullLike(false)
+                                        ->end()
+
+                                        // ──────────────────────────────
+                                        // Route config
+                                        // ──────────────────────────────
+                                        ->arrayNode('route')
+                                            ->info('Defines the HTTP configuration for the endpoint: route name, path, HTTP methods, controller, constraints, and routing options.')
+                                            ->addDefaultsIfNotSet()
+                                            ->children()
+
+                                                ->scalarNode('pattern')
+                                                    ->info('Custom route name pattern. Falls back to global `routes.name` if null.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->scalarNode('name')
+                                                    ->info('Route name. If not defined, it will be generated automatically based on the collection and endpoint name.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->scalarNode('path')
+                                                    ->info('Optional custom path for this endpoint.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->arrayNode('methods')
+                                                    ->info('Allowed HTTP methods. Must be explicitly defined to avoid accidental exposure.')
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([Request::METHOD_POST])
+                                                    ->treatNullLike([Request::METHOD_POST])
+                                                ->end()
+
+                                                ->scalarNode('controller')
+                                                    ->info('Optional Symfony controller (FQCN::method). If not defined, the endpoint will automatically use the configured "repository.method" to fetch and expose data.')
+                                                    ->defaultValue('OSW3\Api\Controller\Auth\LogoutController::logoutAll')
+                                                    ->treatNullLike('OSW3\Api\Controller\Auth\LogoutController::logoutAll')
+                                                    ->validate()
+                                                        ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                                                        ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.')
+                                                    ->end()
+                                                ->end()
+
+                                                ->arrayNode('options')
+                                                    ->info('Advanced route options used by the Symfony router. Common keys include "utf8" (true to support UTF-8 paths), "compiler_class" (custom RouteCompiler), or any custom metadata for route generation and matching.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('hosts')
+                                                    ->info('Configure specific hosts for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('schemes')
+                                                    ->info('Configure specific schemes (http, https) for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                            ->end()
+                                        ->end()
+
+                                    ->end()
+                                ->end()
+                                
+                                // Refresh token endpoint
+                                ->arrayNode('refresh')
+                                    ->info('Defines the refresh token endpoint settings.')
+                                    ->addDefaultsIfNotSet()->children()
+
+                                        // ──────────────────────────────
+                                        // Enabled
+                                        // ──────────────────────────────
+                                        ->booleanNode('enabled')
+                                            ->info('Enable or disable refresh token.')
+                                            ->defaultFalse()
+                                            ->treatNullLike(false)
+                                        ->end()
+
+                                        // ──────────────────────────────
+                                        // Route config
+                                        // ──────────────────────────────
+                                        ->arrayNode('route')
+                                            ->info('Defines the HTTP configuration for the endpoint: route name, path, HTTP methods, controller, constraints, and routing options.')
+                                            ->addDefaultsIfNotSet()
+                                            ->children()
+
+                                                ->scalarNode('pattern')
+                                                    ->info('Custom route name pattern. Falls back to global `routes.name` if null.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->scalarNode('name')
+                                                    ->info('Route name. If not defined, it will be generated automatically based on the collection and endpoint name.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->scalarNode('path')
+                                                    ->info('Optional custom path for this endpoint.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->arrayNode('methods')
+                                                    ->info('Allowed HTTP methods. Must be explicitly defined to avoid accidental exposure.')
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([Request::METHOD_POST])
+                                                    ->treatNullLike([Request::METHOD_POST])
+                                                ->end()
+
+                                                ->scalarNode('controller')
+                                                    ->info('Optional Symfony controller (FQCN::method). If not defined, the endpoint will automatically use the configured "repository.method" to fetch and expose data.')
+                                                    ->defaultValue('OSW3\Api\Controller\Auth\LoginController::refresh')
+                                                    ->treatNullLike('OSW3\Api\Controller\Auth\LoginController::refresh')
+                                                    ->validate()
+                                                        ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                                                        ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.')
+                                                    ->end()
+                                                ->end()
+
+                                                ->arrayNode('options')
+                                                    ->info('Advanced route options used by the Symfony router. Common keys include "utf8" (true to support UTF-8 paths), "compiler_class" (custom RouteCompiler), or any custom metadata for route generation and matching.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('hosts')
+                                                    ->info('Configure specific hosts for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('schemes')
+                                                    ->info('Configure specific schemes (http, https) for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                            ->end()
+                                        ->end()
+
+                                    ->end()
+                                ->end()
+                                
+                                // Email verification endpoint
+                                ->arrayNode('email_verification')
+                                    ->info('Defines the email verification endpoint settings.')
+                                    ->addDefaultsIfNotSet()->children()
+
+                                        // ──────────────────────────────
+                                        // Enabled
+                                        // ──────────────────────────────
+                                        ->booleanNode('enabled')
+                                            ->info('Enable or disable email verification.')
+                                            ->defaultFalse()
+                                            ->treatNullLike(false)
+                                        ->end()
+
+                                        // ──────────────────────────────
+                                        // Route config
+                                        // ──────────────────────────────
+                                        ->arrayNode('route')
+                                            ->info('Defines the HTTP configuration for the endpoint: route name, path, HTTP methods, controller, constraints, and routing options.')
+                                            ->addDefaultsIfNotSet()
+                                            ->children()
+
+                                                ->scalarNode('pattern')
+                                                    ->info('Custom route name pattern. Falls back to global `routes.name` if null.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->scalarNode('name')
+                                                    ->info('Route name. If not defined, it will be generated automatically based on the collection and endpoint name.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->scalarNode('path')
+                                                    ->info('Optional custom path for this endpoint.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->arrayNode('methods')
+                                                    ->info('Allowed HTTP methods. Must be explicitly defined to avoid accidental exposure.')
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([Request::METHOD_POST])
+                                                    ->treatNullLike([Request::METHOD_POST])
+                                                ->end()
+
+                                                ->scalarNode('controller')
+                                                    ->info('Optional Symfony controller (FQCN::method). If not defined, the endpoint will automatically use the configured "repository.method" to fetch and expose data.')
+                                                    ->defaultValue('OSW3\Api\Controller\Auth\EmailVerificationController::verify')
+                                                    ->treatNullLike('OSW3\Api\Controller\Auth\EmailVerificationController::verify')
+                                                    ->validate()
+                                                        ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                                                        ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.')
+                                                    ->end()
+                                                ->end()
+
+                                                ->arrayNode('options')
+                                                    ->info('Advanced route options used by the Symfony router. Common keys include "utf8" (true to support UTF-8 paths), "compiler_class" (custom RouteCompiler), or any custom metadata for route generation and matching.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('hosts')
+                                                    ->info('Configure specific hosts for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('schemes')
+                                                    ->info('Configure specific schemes (http, https) for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                            ->end()
+                                        ->end()
+
+                                        // ──────────────────────────────
+                                        // Properties
+                                        // ──────────────────────────────
+                                        ->arrayNode('properties')
+                                            ->info('Email verification fields mapping.')
+                                            ->addDefaultsIfNotSet()->children()
+
+                                                ->scalarNode('token')
+                                                    ->info('Token field for the User entity (e.g., "token").')
+                                                    ->defaultValue('token')
+                                                    ->treatNullLike('token')
+                                                ->end()
+
+                                            ->end()
+                                        ->end()
+
+                                    ->end()
+                                ->end()
+                                
+                                // Email resend verification endpoint
+                                ->arrayNode('email_resend')
+                                    ->info('Defines the email resend verification endpoint settings.')
+                                    ->addDefaultsIfNotSet()->children()
+
+                                        // ──────────────────────────────
+                                        // Enabled
+                                        // ──────────────────────────────
+                                        ->booleanNode('enabled')
+                                            ->info('Enable or disable email resend verification.')
+                                            ->defaultFalse()
+                                            ->treatNullLike(false)
+                                        ->end()
+
+                                        // ──────────────────────────────
+                                        // Route config
+                                        // ──────────────────────────────
+                                        ->arrayNode('route')
+                                            ->info('Defines the HTTP configuration for the endpoint: route name, path, HTTP methods, controller, constraints, and routing options.')
+                                            ->addDefaultsIfNotSet()
+                                            ->children()
+
+                                                ->scalarNode('pattern')
+                                                    ->info('Custom route name pattern. Falls back to global `routes.name` if null.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->scalarNode('name')
+                                                    ->info('Route name. If not defined, it will be generated automatically based on the collection and endpoint name.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->scalarNode('path')
+                                                    ->info('Optional custom path for this endpoint.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->arrayNode('methods')
+                                                    ->info('Allowed HTTP methods. Must be explicitly defined to avoid accidental exposure.')
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([Request::METHOD_POST])
+                                                    ->treatNullLike([Request::METHOD_POST])
+                                                ->end()
+
+                                                ->scalarNode('controller')
+                                                    ->info('Optional Symfony controller (FQCN::method). If not defined, the endpoint will automatically use the configured "repository.method" to fetch and expose data.')
+                                                    ->defaultValue('OSW3\Api\Controller\Auth\EmailVerificationController::resend')
+                                                    ->treatNullLike('OSW3\Api\Controller\Auth\EmailVerificationController::resend')
+                                                    ->validate()
+                                                        ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                                                        ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.')
+                                                    ->end()
+                                                ->end()
+
+                                                ->arrayNode('options')
+                                                    ->info('Advanced route options used by the Symfony router. Common keys include "utf8" (true to support UTF-8 paths), "compiler_class" (custom RouteCompiler), or any custom metadata for route generation and matching.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('hosts')
+                                                    ->info('Configure specific hosts for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('schemes')
+                                                    ->info('Configure specific schemes (http, https) for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                            ->end()
+                                        ->end()
+
+                                        // ──────────────────────────────
+                                        // Properties
+                                        // ──────────────────────────────
+                                        ->arrayNode('properties')
+                                            ->info('Email verification resend fields mapping.')
+                                            ->addDefaultsIfNotSet()->children()
+
+                                                ->scalarNode('email')
+                                                    ->info('Email field for the User entity (e.g., "email").')
+                                                    ->defaultValue('email')
+                                                    ->treatNullLike('email')
+                                                ->end()
+
+                                            ->end()
+                                        ->end()
+
+                                    ->end()
+                                ->end()
+
+                                // Password reset request endpoint
+                                ->arrayNode('password_reset_request')
+                                    ->info('Defines the password reset request endpoint settings.')
+                                    ->addDefaultsIfNotSet()->children()
+
+                                        // ──────────────────────────────
+                                        // Enabled
+                                        // ──────────────────────────────
+                                        ->booleanNode('enabled')
+                                            ->info('Enable or disable password reset request.')
+                                            ->defaultFalse()
+                                            ->treatNullLike(false)
+                                        ->end()
+
+                                        // ──────────────────────────────
+                                        // Route config
+                                        // ──────────────────────────────
+                                        ->arrayNode('route')
+                                            ->info('Defines the HTTP configuration for the endpoint: route name, path, HTTP methods, controller, constraints, and routing options.')
+                                            ->addDefaultsIfNotSet()
+                                            ->children()
+
+                                                ->scalarNode('pattern')
+                                                    ->info('Custom route name pattern. Falls back to global `routes.name` if null.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->scalarNode('name')
+                                                    ->info('Route name. If not defined, it will be generated automatically based on the collection and endpoint name.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->scalarNode('path')
+                                                    ->info('Optional custom path for this endpoint.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->arrayNode('methods')
+                                                    ->info('Allowed HTTP methods. Must be explicitly defined to avoid accidental exposure.')
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([Request::METHOD_POST])
+                                                    ->treatNullLike([Request::METHOD_POST])
+                                                ->end()
+
+                                                ->scalarNode('controller')
+                                                    ->info('Optional Symfony controller (FQCN::method). If not defined, the endpoint will automatically use the configured "repository.method" to fetch and expose data.')
+                                                    ->defaultValue('OSW3\Api\Controller\Auth\PasswordController::request')
+                                                    ->treatNullLike('OSW3\Api\Controller\Auth\PasswordController::request')
+                                                    ->validate()
+                                                        ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                                                        ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.')
+                                                    ->end()
+                                                ->end()
+
+                                                ->arrayNode('options')
+                                                    ->info('Advanced route options used by the Symfony router. Common keys include "utf8" (true to support UTF-8 paths), "compiler_class" (custom RouteCompiler), or any custom metadata for route generation and matching.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('hosts')
+                                                    ->info('Configure specific hosts for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('schemes')
+                                                    ->info('Configure specific schemes (http, https) for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                            ->end()
+                                        ->end()
+
+                                        // ──────────────────────────────
+                                        // Properties
+                                        // ──────────────────────────────
+                                        ->arrayNode('properties')
+                                            ->info('Password reset fields mapping.')
+                                            ->addDefaultsIfNotSet()->children()
+
+                                                ->scalarNode('email')
+                                                    ->info('Email field for the User entity (e.g., "email").')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                            ->end()
+                                        ->end()
+
+                                    ->end()
+                                ->end()
+
+                                // Password reset endpoint
+                                ->arrayNode('password_reset')
+                                    ->info('Defines the password reset endpoint settings.')
+                                    ->addDefaultsIfNotSet()->children()
+
+                                        // ──────────────────────────────
+                                        // Enabled
+                                        // ──────────────────────────────
+                                        ->booleanNode('enabled')
+                                            ->info('Enable or disable password reset.')
+                                            ->defaultFalse()
+                                            ->treatNullLike(false)
+                                        ->end()
+
+                                        // ──────────────────────────────
+                                        // Route config
+                                        // ──────────────────────────────
+                                        ->arrayNode('route')
+                                            ->info('Defines the HTTP configuration for the endpoint: route name, path, HTTP methods, controller, constraints, and routing options.')
+                                            ->addDefaultsIfNotSet()
+                                            ->children()
+
+                                                ->scalarNode('pattern')
+                                                    ->info('Custom route name pattern. Falls back to global `routes.name` if null.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->scalarNode('name')
+                                                    ->info('Route name. If not defined, it will be generated automatically based on the collection and endpoint name.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->scalarNode('path')
+                                                    ->info('Optional custom path for this endpoint.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->arrayNode('methods')
+                                                    ->info('Allowed HTTP methods. Must be explicitly defined to avoid accidental exposure.')
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([Request::METHOD_POST])
+                                                    ->treatNullLike([Request::METHOD_POST])
+                                                ->end()
+
+                                                ->scalarNode('controller')
+                                                    ->info('Optional Symfony controller (FQCN::method). If not defined, the endpoint will automatically use the configured "repository.method" to fetch and expose data.')
+                                                    ->defaultValue('OSW3\Api\Controller\Auth\PasswordController::reset')
+                                                    ->treatNullLike('OSW3\Api\Controller\Auth\PasswordController::reset')
+                                                    ->validate()
+                                                        ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                                                        ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.')
+                                                    ->end()
+                                                ->end()
+
+                                                ->arrayNode('options')
+                                                    ->info('Advanced route options used by the Symfony router. Common keys include "utf8" (true to support UTF-8 paths), "compiler_class" (custom RouteCompiler), or any custom metadata for route generation and matching.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('hosts')
+                                                    ->info('Configure specific hosts for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('schemes')
+                                                    ->info('Configure specific schemes (http, https) for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                            ->end()
+                                        ->end()
+
+                                        // ──────────────────────────────
+                                        // Properties
+                                        // ──────────────────────────────
+                                        ->arrayNode('properties')
+                                            ->info('Registration fields mapping.')
+                                            ->addDefaultsIfNotSet()->children()
+
+                                                ->scalarNode('token')
+                                                    ->info('Token field for the User entity (e.g., "token").')
+                                                    ->defaultValue('token')
+                                                    ->treatNullLike('token')
+                                                ->end()
+
+                                                ->scalarNode('password')
+                                                    ->info('Password field for the User entity (e.g., "password").')
+                                                    ->defaultValue('password')
+                                                    ->treatNullLike('password')
+                                                ->end()
+
+                                                ->scalarNode('confirm')
+                                                    ->info('Confirm password field for the User entity (e.g., "confirm").')
+                                                    ->defaultValue('confirm')
+                                                    ->treatNullLike('confirm')
+                                                ->end()
+
+                                            ->end()
+                                        ->end()
+
+                                    ->end()
+                                ->end()
+
+                                // Password change endpoint
+                                ->arrayNode('password_change')
+                                    ->info('Defines the password change endpoint settings.')
+                                    ->addDefaultsIfNotSet()->children()
+
+                                        // ──────────────────────────────
+                                        // Enabled
+                                        // ──────────────────────────────
+                                        ->booleanNode('enabled')
+                                            ->info('Enable or disable password change.')
+                                            ->defaultFalse()
+                                            ->treatNullLike(false)
+                                        ->end()
+
+                                        // ──────────────────────────────
+                                        // Route config
+                                        // ──────────────────────────────
+                                        ->arrayNode('route')
+                                            ->info('Defines the HTTP configuration for the endpoint: route name, path, HTTP methods, controller, constraints, and routing options.')
+                                            ->addDefaultsIfNotSet()
+                                            ->children()
+
+                                                ->scalarNode('pattern')
+                                                    ->info('Custom route name pattern. Falls back to global `routes.name` if null.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->scalarNode('name')
+                                                    ->info('Route name. If not defined, it will be generated automatically based on the collection and endpoint name.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->scalarNode('path')
+                                                    ->info('Optional custom path for this endpoint.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->arrayNode('methods')
+                                                    ->info('Allowed HTTP methods. Must be explicitly defined to avoid accidental exposure.')
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([Request::METHOD_POST])
+                                                    ->treatNullLike([Request::METHOD_POST])
+                                                ->end()
+
+                                                ->scalarNode('controller')
+                                                    ->info('Optional Symfony controller (FQCN::method). If not defined, the endpoint will automatically use the configured "repository.method" to fetch and expose data.')
+                                                    ->defaultValue('OSW3\Api\Controller\Auth\PasswordController::change')
+                                                    ->treatNullLike('OSW3\Api\Controller\Auth\PasswordController::change')
+                                                    ->validate()
+                                                        ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                                                        ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.')
+                                                    ->end()
+                                                ->end()
+
+                                                ->arrayNode('options')
+                                                    ->info('Advanced route options used by the Symfony router. Common keys include "utf8" (true to support UTF-8 paths), "compiler_class" (custom RouteCompiler), or any custom metadata for route generation and matching.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('hosts')
+                                                    ->info('Configure specific hosts for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('schemes')
+                                                    ->info('Configure specific schemes (http, https) for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                            ->end()
+                                        ->end()
+
+                                        // ──────────────────────────────
+                                        // Properties
+                                        // ──────────────────────────────
+                                        ->arrayNode('properties')
+                                            ->info('Password change fields mapping.')
+                                            ->addDefaultsIfNotSet()->children()
+
+                                                ->scalarNode('current')
+                                                    ->info('Current password field for the User entity (e.g., "currentPassword").')
+                                                    ->defaultValue('current')
+                                                    ->treatNullLike('current')
+                                                ->end()
+
+                                                ->scalarNode('password')
+                                                    ->info('New password field for the User entity (e.g., "password").')
+                                                    ->defaultValue('password')
+                                                    ->treatNullLike('password')
+                                                ->end()
+
+                                                ->scalarNode('confirm')
+                                                    ->info('Confirm password field for the User entity (e.g., "confirmPassword").')
+                                                    ->defaultValue('confirm')
+                                                    ->treatNullLike('confirm')
+                                                ->end()
+
+                                            ->end()
+                                        ->end()
+
+                                    ->end()
+                                ->end()
+
+                                // Account endpoint
+                                ->arrayNode('account')
+                                    ->info('Defines the account endpoint settings.')
+                                    ->addDefaultsIfNotSet()->children()
+
+                                        // ──────────────────────────────
+                                        // Enabled
+                                        // ──────────────────────────────
+                                        ->booleanNode('enabled')
+                                            ->info('Enable or disable account endpoint.')
+                                            ->defaultFalse()
+                                            ->treatNullLike(false)
+                                        ->end()
+
+                                        // ──────────────────────────────
+                                        // Route config
+                                        // ──────────────────────────────
+                                        ->arrayNode('route')
+                                            ->info('Defines the HTTP configuration for the endpoint: route name, path, HTTP methods, controller, constraints, and routing options.')
+                                            ->addDefaultsIfNotSet()
+                                            ->children()
+
+                                                ->scalarNode('pattern')
+                                                    ->info('Custom route name pattern. Falls back to global `routes.name` if null.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->scalarNode('name')
+                                                    ->info('Route name. If not defined, it will be generated automatically based on the collection and endpoint name.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->scalarNode('path')
+                                                    ->info('Optional custom path for this endpoint.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->arrayNode('methods')
+                                                    ->info('Allowed HTTP methods. Must be explicitly defined to avoid accidental exposure.')
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([Request::METHOD_POST])
+                                                    ->treatNullLike([Request::METHOD_POST])
+                                                ->end()
+
+                                                ->scalarNode('controller')
+                                                    ->info('Optional Symfony controller (FQCN::method). If not defined, the endpoint will automatically use the configured "repository.method" to fetch and expose data.')
+                                                    ->defaultValue('OSW3\Api\Controller\Auth\AccountController::account')
+                                                    ->treatNullLike('OSW3\Api\Controller\Auth\AccountController::account')
+                                                    ->validate()
+                                                        ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                                                        ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.')
+                                                    ->end()
+                                                ->end()
+
+                                                ->arrayNode('options')
+                                                    ->info('Advanced route options used by the Symfony router. Common keys include "utf8" (true to support UTF-8 paths), "compiler_class" (custom RouteCompiler), or any custom metadata for route generation and matching.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('hosts')
+                                                    ->info('Configure specific hosts for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('schemes')
+                                                    ->info('Configure specific schemes (http, https) for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                            ->end()
+                                        ->end()
+
+                                    ->end()
+                                ->end()
+
+                                // Profile endpoint
+                                ->arrayNode('profile')
+                                    ->info('Defines the profile endpoint settings.')
+                                    ->addDefaultsIfNotSet()->children()
+
+                                        // ──────────────────────────────
+                                        // Enabled
+                                        // ──────────────────────────────
+                                        ->booleanNode('enabled')
+                                            ->info('Enable or disable profile endpoint.')
+                                            ->defaultFalse()
+                                            ->treatNullLike(false)
+                                        ->end()
+
+                                        // ──────────────────────────────
+                                        // Route config
+                                        // ──────────────────────────────
+                                        ->arrayNode('route')
+                                            ->info('Defines the HTTP configuration for the endpoint: route name, path, HTTP methods, controller, constraints, and routing options.')
+                                            ->addDefaultsIfNotSet()
+                                            ->children()
+
+                                                ->scalarNode('pattern')
+                                                    ->info('Custom route name pattern. Falls back to global `routes.name` if null.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->scalarNode('name')
+                                                    ->info('Route name. If not defined, it will be generated automatically based on the collection and endpoint name.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->scalarNode('path')
+                                                    ->info('Optional custom path for this endpoint.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->arrayNode('methods')
+                                                    ->info('Allowed HTTP methods. Must be explicitly defined to avoid accidental exposure.')
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([Request::METHOD_POST])
+                                                    ->treatNullLike([Request::METHOD_POST])
+                                                ->end()
+
+                                                ->scalarNode('controller')
+                                                    ->info('Optional Symfony controller (FQCN::method). If not defined, the endpoint will automatically use the configured "repository.method" to fetch and expose data.')
+                                                    ->defaultValue('OSW3\Api\Controller\Auth\AccountController::profile')
+                                                    ->treatNullLike('OSW3\Api\Controller\Auth\AccountController::profile')
+                                                    ->validate()
+                                                        ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                                                        ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.')
+                                                    ->end()
+                                                ->end()
+
+                                                ->arrayNode('options')
+                                                    ->info('Advanced route options used by the Symfony router. Common keys include "utf8" (true to support UTF-8 paths), "compiler_class" (custom RouteCompiler), or any custom metadata for route generation and matching.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('hosts')
+                                                    ->info('Configure specific hosts for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('schemes')
+                                                    ->info('Configure specific schemes (http, https) for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                            ->end()
+                                        ->end()
+
+                                        // ──────────────────────────────
+                                        // Properties
+                                        // ──────────────────────────────
+                                        ->arrayNode('properties')
+                                            ->info('Profile fields mapping.')
+                                            ->addDefaultsIfNotSet()->children()
+
+                                                ->scalarNode('first_name')
+                                                    ->info('First name field for the User entity (e.g., "firstName").')
+                                                    ->defaultValue('firstName')
+                                                    ->treatNullLike('firstName')
+                                                ->end()
+
+                                                ->scalarNode('last_name')
+                                                    ->info('Last name field for the User entity (e.g., "lastName").')
+                                                    ->defaultValue('lastName')
+                                                    ->treatNullLike('lastName')
+                                                ->end()
+
+                                                ->scalarNode('avatar')
+                                                    ->info('Avatar field for the User entity (e.g., "avatar").')
+                                                    ->defaultValue('avatar')
+                                                    ->treatNullLike('avatar')
+                                                ->end()
+
+                                                ->scalarNode('phone')
+                                                    ->info('Phone field for the User entity (e.g., "phone").')
+                                                    ->defaultValue('phone')
+                                                    ->treatNullLike('phone')
+                                                ->end()
+
+                                                ->scalarNode('birth_date')
+                                                    ->info('Birth date field for the User entity (e.g., "birthDate").')
+                                                    ->defaultValue('birthDate')
+                                                    ->treatNullLike('birthDate')
+                                                ->end()
+
+                                            ->end()
+                                        ->end()
+
+                                    ->end()
+                                ->end()
+
+                                // 2FA enable endpoint
+                                ->arrayNode('2fa_enable')
+                                    ->info('Defines the 2FA enable endpoint settings.')
+                                    ->addDefaultsIfNotSet()->children()
+
+                                        // ──────────────────────────────
+                                        // Enabled
+                                        // ──────────────────────────────
+                                        ->booleanNode('enabled')
+                                            ->info('Enable or disable 2FA enable endpoint.')
+                                            ->defaultFalse()
+                                            ->treatNullLike(false)
+                                        ->end()
+
+                                        // ──────────────────────────────
+                                        // Route config
+                                        // ──────────────────────────────
+                                        ->arrayNode('route')
+                                            ->info('Defines the HTTP configuration for the endpoint: route name, path, HTTP methods, controller, constraints, and routing options.')
+                                            ->addDefaultsIfNotSet()
+                                            ->children()
+
+                                                ->scalarNode('pattern')
+                                                    ->info('Custom route name pattern. Falls back to global `routes.name` if null.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->scalarNode('name')
+                                                    ->info('Route name. If not defined, it will be generated automatically based on the collection and endpoint name.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->scalarNode('path')
+                                                    ->info('Optional custom path for this endpoint.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->arrayNode('methods')
+                                                    ->info('Allowed HTTP methods. Must be explicitly defined to avoid accidental exposure.')
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([Request::METHOD_POST])
+                                                    ->treatNullLike([Request::METHOD_POST])
+                                                ->end()
+
+                                                ->scalarNode('controller')
+                                                    ->info('Optional Symfony controller (FQCN::method). If not defined, the endpoint will automatically use the configured "repository.method" to fetch and expose data.')
+                                                    ->defaultValue('OSW3\Api\Controller\Auth\TwoFactorAuthController::enabled')
+                                                    ->treatNullLike('OSW3\Api\Controller\Auth\TwoFactorAuthController::enabled')
+                                                    ->validate()
+                                                        ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                                                        ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.')
+                                                    ->end()
+                                                ->end()
+
+                                                ->arrayNode('options')
+                                                    ->info('Advanced route options used by the Symfony router. Common keys include "utf8" (true to support UTF-8 paths), "compiler_class" (custom RouteCompiler), or any custom metadata for route generation and matching.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('hosts')
+                                                    ->info('Configure specific hosts for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('schemes')
+                                                    ->info('Configure specific schemes (http, https) for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                            ->end()
+                                        ->end()
+
+                                        // ──────────────────────────────
+                                        // Properties
+                                        // ──────────────────────────────
+                                        ->arrayNode('properties')
+                                            ->info('2FA enable fields mapping.')
+                                            ->addDefaultsIfNotSet()->children()
+
+                                                ->scalarNode('password')
+                                                    ->info('Password field for the User entity (e.g., "password").')
+                                                    ->defaultValue('password')
+                                                    ->treatNullLike('password')
+                                                ->end()
+
+                                                ->scalarNode('code')
+                                                    ->info('Code field for the User entity (e.g., "code").')
+                                                    ->defaultValue('code')
+                                                    ->treatNullLike('code')
+                                                ->end()
+
+                                            ->end()
+                                        ->end()
+
+                                    ->end()
+                                ->end()
+
+                                // 2FA disable endpoint
+                                ->arrayNode('2fa_disable')
+                                    ->info('Defines the 2FA disable endpoint settings.')
+                                    ->addDefaultsIfNotSet()->children()
+
+                                        // ──────────────────────────────
+                                        // Enabled
+                                        // ──────────────────────────────
+                                        ->booleanNode('enabled')
+                                            ->info('Enable or disable 2FA disable endpoint.')
+                                            ->defaultFalse()
+                                            ->treatNullLike(false)
+                                        ->end()
+
+                                        // ──────────────────────────────
+                                        // Route config
+                                        // ──────────────────────────────
+                                        ->arrayNode('route')
+                                            ->info('Defines the HTTP configuration for the endpoint: route name, path, HTTP methods, controller, constraints, and routing options.')
+                                            ->addDefaultsIfNotSet()
+                                            ->children()
+
+                                                ->scalarNode('pattern')
+                                                    ->info('Custom route name pattern. Falls back to global `routes.name` if null.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->scalarNode('name')
+                                                    ->info('Route name. If not defined, it will be generated automatically based on the collection and endpoint name.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->scalarNode('path')
+                                                    ->info('Optional custom path for this endpoint.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->arrayNode('methods')
+                                                    ->info('Allowed HTTP methods. Must be explicitly defined to avoid accidental exposure.')
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([Request::METHOD_POST])
+                                                    ->treatNullLike([Request::METHOD_POST])
+                                                ->end()
+
+                                                ->scalarNode('controller')
+                                                    ->info('Optional Symfony controller (FQCN::method). If not defined, the endpoint will automatically use the configured "repository.method" to fetch and expose data.')
+                                                    ->defaultValue('OSW3\Api\Controller\Auth\TwoFactorAuthController::disabled')
+                                                    ->treatNullLike('OSW3\Api\Controller\Auth\TwoFactorAuthController::disabled')
+                                                    ->validate()
+                                                        ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                                                        ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.')
+                                                    ->end()
+                                                ->end()
+
+                                                ->arrayNode('options')
+                                                    ->info('Advanced route options used by the Symfony router. Common keys include "utf8" (true to support UTF-8 paths), "compiler_class" (custom RouteCompiler), or any custom metadata for route generation and matching.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('hosts')
+                                                    ->info('Configure specific hosts for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('schemes')
+                                                    ->info('Configure specific schemes (http, https) for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                            ->end()
+                                        ->end()
+
+                                        // ──────────────────────────────
+                                        // Properties
+                                        // ──────────────────────────────
+                                        ->arrayNode('properties')
+                                            ->info('Registration fields mapping. Override the default identifier and password fields if necessary.')
+                                            ->addDefaultsIfNotSet()->children()
+
+                                                ->scalarNode('code')
+                                                    ->info('Code field for the User entity (e.g., "code").')
+                                                    ->defaultValue('code')
+                                                    ->treatNullLike('code')
+                                                ->end()
+
+                                            ->end()
+                                        ->end()
+
+                                    ->end()
+                                ->end()
+
+                                // 2FA verify endpoint
+                                ->arrayNode('2fa_verify')
+                                    ->info('Defines the 2FA verify endpoint settings.')
+                                    ->addDefaultsIfNotSet()->children()
+
+                                        // ──────────────────────────────
+                                        // Enabled
+                                        // ──────────────────────────────
+                                        ->booleanNode('enabled')
+                                            ->info('Enable or disable 2FA verify endpoint.')
+                                            ->defaultFalse()
+                                            ->treatNullLike(false)
+                                        ->end()
+
+                                        // ──────────────────────────────
+                                        // Route config
+                                        // ──────────────────────────────
+                                        ->arrayNode('route')
+                                            ->info('Defines the HTTP configuration for the endpoint: route name, path, HTTP methods, controller, constraints, and routing options.')
+                                            ->addDefaultsIfNotSet()
+                                            ->children()
+
+                                                ->scalarNode('pattern')
+                                                    ->info('Custom route name pattern. Falls back to global `routes.name` if null.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->scalarNode('name')
+                                                    ->info('Route name. If not defined, it will be generated automatically based on the collection and endpoint name.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->scalarNode('path')
+                                                    ->info('Optional custom path for this endpoint.')
+                                                    ->defaultNull()
+                                                ->end()
+
+                                                ->arrayNode('methods')
+                                                    ->info('Allowed HTTP methods. Must be explicitly defined to avoid accidental exposure.')
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([Request::METHOD_POST])
+                                                    ->treatNullLike([Request::METHOD_POST])
+                                                ->end()
+
+                                                ->scalarNode('controller')
+                                                    ->info('Optional Symfony controller (FQCN::method). If not defined, the endpoint will automatically use the configured "repository.method" to fetch and expose data.')
+                                                    ->defaultValue('OSW3\Api\Controller\Auth\TwoFactorAuthController::verify')
+                                                    ->treatNullLike('OSW3\Api\Controller\Auth\TwoFactorAuthController::verify')
+                                                    ->validate()
+                                                        ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
+                                                        ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.')
+                                                    ->end()
+                                                ->end()
+
+                                                ->arrayNode('options')
+                                                    ->info('Advanced route options used by the Symfony router. Common keys include "utf8" (true to support UTF-8 paths), "compiler_class" (custom RouteCompiler), or any custom metadata for route generation and matching.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('hosts')
+                                                    ->info('Configure specific hosts for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                                ->arrayNode('schemes')
+                                                    ->info('Configure specific schemes (http, https) for the endpoint routes.')
+                                                    ->normalizeKeys(false)
+                                                    ->scalarPrototype()->end()
+                                                    ->defaultValue([])
+                                                ->end()
+
+                                            ->end()
+                                        ->end()
+
+                                        // ──────────────────────────────
+                                        // Properties
+                                        // ──────────────────────────────
+                                        ->arrayNode('properties')
+                                            ->info('Registration fields mapping. Override the default identifier and password fields if necessary.')
+                                            ->addDefaultsIfNotSet()->children()
+
+                                                ->scalarNode('password')
+                                                    ->info('Password field for the User entity (e.g., "password").')
+                                                    ->defaultValue('password')
+                                                    ->treatNullLike('password')
+                                                ->end()
+
+                                            ->end()
+                                        ->end()
+
+                                    ->end()
+                                ->end()
+
+                            ->end()
                         ->end()
+
                     ->end()
-
-                    ->arrayNode('authentication')
-                        ->info('Defines the authentication settings for the API.')
-                        ->addDefaultsIfNotSet()->children()
-
-                            ->arrayNode('login')
-                                ->info('Defines the login settings for the API.')
-                                ->addDefaultsIfNotSet()->children()
- 
-                                    ->booleanNode('enabled')
-                                        ->info('Enable or disable login.')
-                                        ->defaultFalse()
-                                        ->treatNullLike(false)
-                                    ->end()
-
-                                    ->scalarNode('path')
-                                        ->info('Path for the login endpoint.')
-                                        ->defaultNull('/api/{version}/login')
-                                        ->treatNullLike('/api/{version}/login')
-                                    ->end()
-
-                                    ->arrayNode('hosts')
-                                        ->info('Configure specific hosts for the login endpoint routes.')
-                                        ->normalizeKeys(false)
-                                        ->scalarPrototype()->end()
-                                        ->defaultValue([])
-                                    ->end()
-
-                                    ->arrayNode('schemes')
-                                        ->info('Configure specific schemes (http, https) for the login endpoint routes.')
-                                        ->normalizeKeys(false)
-                                        ->scalarPrototype()->end()
-                                        ->defaultValue([])
-                                    ->end()
-
-                                    ->scalarNode('controller')
-                                        ->info('Optional Symfony controller (FQCN::method) to handle login. If not defined, the default AuthenticationController will be used.')
-                                        ->defaultValue('OSW3\Api\Controller\AuthenticationController::login')
-                                        ->treatNullLike('OSW3\Api\Controller\AuthenticationController::login')
-                                        ->validate()
-                                            ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
-                                            ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.', 'login.controller')
-                                        ->end()
-                                    ->end()
-
-                                    ->arrayNode('fields')
-                                        ->info('Login fields mapping.')
-                                        ->normalizeKeys(false)
-                                        ->scalarPrototype()->end()
-                                        ->defaultValue([
-                                            'username' => 'email',
-                                            'password' => 'password',
-                                        ])
-                                    ->end()
-                                
-                                ->end()
-                            ->end()
-
-                            ->arrayNode('logout')
-                                ->info('Defines the logout settings for the API.')
-                                ->addDefaultsIfNotSet()->children()
- 
-                                    ->booleanNode('enabled')
-                                        ->info('Enable or disable logout.')
-                                        ->defaultFalse()
-                                        ->treatNullLike(false)
-                                    ->end()
-
-                                    ->scalarNode('path')
-                                        ->info('Path for the logout endpoint.')
-                                        ->defaultNull('/api/{version}/logout')
-                                        ->treatNullLike('/api/{version}/logout')
-                                    ->end()
-
-                                    ->arrayNode('hosts')
-                                        ->info('Configure specific hosts for the logout endpoint routes.')
-                                        ->normalizeKeys(false)
-                                        ->scalarPrototype()->end()
-                                        ->defaultValue([])
-                                    ->end()
-
-                                    ->arrayNode('schemes')
-                                        ->info('Configure specific schemes (http, https) for the logout endpoint routes.')
-                                        ->normalizeKeys(false)
-                                        ->scalarPrototype()->end()
-                                        ->defaultValue([])
-                                    ->end()
-
-                                    ->scalarNode('controller')
-                                        ->info('Optional Symfony controller (FQCN::method) to handle logout. If not defined, the default AuthenticationController will be used.')
-                                        ->defaultValue('OSW3\Api\Controller\AuthenticationController::logout')
-                                        ->treatNullLike('OSW3\Api\Controller\AuthenticationController::logout')
-                                        ->validate()
-                                            ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
-                                            ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.', 'logout.controller')
-                                        ->end()
-                                    ->end()
-
-                                ->end()
-                            ->end()
-
-                            ->arrayNode('refresh_token')
-                                ->info('Defines the refresh token settings for the API.')
-                                ->addDefaultsIfNotSet()->children()
- 
-                                    ->booleanNode('enabled')
-                                        ->info('Enable or disable refresh token.')
-                                        ->defaultFalse()
-                                        ->treatNullLike(false)
-                                    ->end()
-
-                                    ->scalarNode('path')
-                                        ->info('Path for the refresh token endpoint.')
-                                        ->defaultNull('/api/{version}/refresh-token')
-                                        ->treatNullLike('/api/{version}/refresh-token')
-                                    ->end()
-
-                                    ->arrayNode('hosts')
-                                        ->info('Configure specific hosts for the refresh token endpoint routes.')
-                                        ->normalizeKeys(false)
-                                        ->scalarPrototype()->end()
-                                        ->defaultValue([])
-                                    ->end()
-
-                                    ->arrayNode('schemes')
-                                        ->info('Configure specific schemes (http, https) for the refresh token endpoint routes.')
-                                        ->normalizeKeys(false)
-                                        ->scalarPrototype()->end()
-                                        ->defaultValue([])
-                                    ->end()
-
-                                    ->scalarNode('controller')
-                                        ->info('Optional Symfony controller (FQCN::method) to handle refresh token. If not defined, the default AuthenticationController will be used.')
-                                        ->defaultValue('OSW3\Api\Controller\AuthenticationController::refreshToken')
-                                        ->treatNullLike('OSW3\Api\Controller\AuthenticationController::refreshToken')
-                                        ->validate()
-                                            ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
-                                            ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.', 'refresh_token.controller')
-                                        ->end()
-                                    ->end()
-
-                                ->end()
-                            ->end()
-
-                        ->end()
-                    ->end()
-
-                    ->arrayNode('password')
-                        ->info('Defines the password settings for the API.')
-                        ->addDefaultsIfNotSet()->children()
-
-                            ->arrayNode('reset_request')
-                                ->info('Defines the password reset request settings for the API.')
-                                ->addDefaultsIfNotSet()->children()
- 
-                                    ->booleanNode('enabled')
-                                        ->info('Enable or disable password reset request.')
-                                        ->defaultFalse()
-                                        ->treatNullLike(false)
-                                    ->end()
-
-                                    ->scalarNode('path')
-                                        ->info('Path for the password reset request endpoint.')
-                                        ->defaultNull('/api/{version}/password/reset')
-                                        ->treatNullLike('/api/{version}/password/reset')
-                                    ->end()
-
-                                    ->arrayNode('hosts')
-                                        ->info('Configure specific hosts for the password reset request endpoint routes.')
-                                        ->normalizeKeys(false)
-                                        ->scalarPrototype()->end()
-                                        ->defaultValue([])
-                                    ->end()
-
-                                    ->arrayNode('schemes')
-                                        ->info('Configure specific schemes (http, https) for the password reset request endpoint routes.')
-                                        ->normalizeKeys(false)
-                                        ->scalarPrototype()->end()
-                                        ->defaultValue([])
-                                    ->end()
-
-                                    ->scalarNode('controller')
-                                        ->info('Optional Symfony controller (FQCN::method) to handle registration. If not defined, the default PasswordController will be used.')
-                                        ->defaultValue('OSW3\Api\Controller\PasswordController::resetRequest')
-                                        ->treatNullLike('OSW3\Api\Controller\PasswordController::resetRequest')
-                                        ->validate()
-                                            ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
-                                            ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.', 'reset_request.controller')
-                                        ->end()
-                                    ->end()
-                                
-                                ->end()
-                            ->end()
-
-                            ->arrayNode('reset_confirm')
-                                ->info('Defines the password reset confirmation settings for the API.')
-                                ->addDefaultsIfNotSet()->children()
- 
-                                    ->booleanNode('enabled')
-                                        ->info('Enable or disable password reset confirmation.')
-                                        ->defaultFalse()
-                                        ->treatNullLike(false)
-                                    ->end()
-
-                                    ->scalarNode('path')
-                                        ->info('Path for the password reset confirmation endpoint.')
-                                        ->defaultNull('/api/{version}/password/reset/confirm')
-                                        ->treatNullLike('/api/{version}/password/reset/confirm')
-                                    ->end()
-
-                                    ->arrayNode('hosts')
-                                        ->info('Configure specific hosts for the password reset confirmation endpoint routes.')
-                                        ->normalizeKeys(false)
-                                        ->scalarPrototype()->end()
-                                        ->defaultValue([])
-                                    ->end()
-
-                                    ->arrayNode('schemes')
-                                        ->info('Configure specific schemes (http, https) for the password reset confirmation endpoint routes.')
-                                        ->normalizeKeys(false)
-                                        ->scalarPrototype()->end()
-                                        ->defaultValue([])
-                                    ->end()
-
-                                    ->scalarNode('controller')
-                                        ->info('Optional Symfony controller (FQCN::method) to handle registration. If not defined, the default PasswordController will be used.')
-                                        ->defaultValue('OSW3\Api\Controller\PasswordController::resetConfirm')
-                                        ->treatNullLike('OSW3\Api\Controller\PasswordController::resetConfirm')
-                                        ->validate()
-                                            ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
-                                            ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.', 'reset_confirm.controller')
-                                        ->end()
-                                    ->end()
-
-                                ->end()
-                            ->end()
-
-                            ->arrayNode('change')
-                                ->info('Defines the password change settings for the API.')
-                                ->addDefaultsIfNotSet()->children()
- 
-                                    ->booleanNode('enabled')
-                                        ->info('Enable or disable password change.')
-                                        ->defaultFalse()
-                                        ->treatNullLike(false)
-                                    ->end()
-
-                                    ->scalarNode('path')
-                                        ->info('Path for the password change endpoint.')
-                                        ->defaultNull('/api/{version}/password/change')
-                                        ->treatNullLike('/api/{version}/password/change')
-                                    ->end()
-
-                                    ->arrayNode('hosts')
-                                        ->info('Configure specific hosts for the password change endpoint routes.')
-                                        ->normalizeKeys(false)
-                                        ->scalarPrototype()->end()
-                                        ->defaultValue([])
-                                    ->end()
-
-                                    ->arrayNode('schemes')
-                                        ->info('Configure specific schemes (http, https) for the password change endpoint routes.')
-                                        ->normalizeKeys(false)
-                                        ->scalarPrototype()->end()
-                                        ->defaultValue([])
-                                    ->end()
-
-                                    ->scalarNode('controller')
-                                        ->info('Optional Symfony controller (FQCN::method) to handle registration. If not defined, the default PasswordController will be used.')
-                                        ->defaultValue('OSW3\Api\Controller\PasswordController::change')
-                                        ->treatNullLike('OSW3\Api\Controller\PasswordController::change')
-                                        ->validate()
-                                            ->ifTrue(fn($controller) => $controller !== null && !ControllerValidator::isValid($controller))
-                                            ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.', 'change.controller')
-                                        ->end()
-                                    ->end()
-
-                                ->end()
-                            ->end()
-
-                        ->end()
-                    ->end()
-
                 ->end()
-            ->end()
-
-            // ──────────────────────────────
-            // Debug
-            // ──────────────────────────────
-			->arrayNode('debug')
-                ->info('Debug configuration')
-                ->addDefaultsIfNotSet()->children()
-
-                    ->booleanNode('enabled')
-                        ->info('Enable or disable debug.')
-                        ->defaultFalse()
-                        ->treatNullLike(false)
-                    ->end()
-
-			    ->end()
             ->end()
 
             // ──────────────────────────────
@@ -1251,14 +2327,13 @@ return static function($definition): void
                 ->useAttributeAsKey('entity')
                 ->requiresAtLeastOneElement()
                 ->arrayPrototype()
-                // ->ignoreExtraKeys(false)
                     ->children()
 
                         // ──────────────────────────────
                         // Enabled
                         // ──────────────────────────────
                         ->booleanNode('enabled')
-                            ->info('Enable or disable this provider.')
+                            ->info('Enable or disable this collection.')
                             ->defaultNull()
                         ->end()
 
@@ -1266,7 +2341,7 @@ return static function($definition): void
                         // Deprecation
                         // ──────────────────────────────
                         ->arrayNode('deprecation')
-                            ->info('API deprecation notices')
+                            ->info('API deprecation notices for this collection.')
                             ->addDefaultsIfNotSet()->children()
 
                                 ->booleanNode('enabled')
@@ -1529,63 +2604,6 @@ return static function($definition): void
                         ->end()
 
                         // ──────────────────────────────
-                        // HOOKS
-                        // ──────────────────────────────
-                        ->arrayNode('hooks')
-                            ->info('Defines callable hooks to be executed at various points in the request lifecycle.')
-                            ->addDefaultsIfNotSet()->children()
-
-                                ->enumNode('merge')
-                                    ->info('Defines how to handle merging hooks: "replace" to overwrite existing hooks, "append" to add to them, or "prepend" to add them at the beginning.')
-                                    ->values(['replace', 'append', 'prepend'])
-                                    ->treatNullLike('append')
-                                ->end()
-
-                                ->arrayNode('before')
-                                    ->info('List of callable listeners to execute **before** the endpoint action is run.')
-                                    ->scalarPrototype()->end()
-                                    ->defaultValue([])
-                                ->end()
-
-                                ->arrayNode('after')
-                                    ->info('List of callable listeners to execute **after** the endpoint action has completed.')
-                                    ->scalarPrototype()->end()
-                                    ->defaultValue([])
-                                ->end()
-
-                                ->arrayNode('around')
-                                    ->info('List of callable listeners to execute **around** the endpoint action.')
-                                    ->scalarPrototype()->end()
-                                    ->defaultValue([])
-                                ->end()
-
-                                ->arrayNode('on_success')
-                                    ->info('List of callable listeners to execute on success action.')
-                                    ->scalarPrototype()->end()
-                                    ->defaultValue([])
-                                ->end()
-
-                                ->arrayNode('on_failure')
-                                    ->info('List of callable listeners to execute on failure action.')
-                                    ->scalarPrototype()->end()
-                                    ->defaultValue([])
-                                ->end()
-
-                                ->arrayNode('on_complete')
-                                    ->info('List of callable listeners to execute on complete action.')
-                                    ->scalarPrototype()->end()
-                                    ->defaultValue([])
-                                ->end()
-
-                            ->end()
-
-                            ->validate()
-                                ->ifTrue(fn($hooks) => !HooksValidator::validate($hooks))
-                                ->thenInvalid('One or more hooks (before/after) are invalid. They must be valid callables (Class::method or callable).')
-                            ->end()
-                        ->end()
-
-                        // ──────────────────────────────
                         // Access control
                         // ──────────────────────────────
                         ->arrayNode('access_control')
@@ -1629,8 +2647,6 @@ return static function($definition): void
                                     ->booleanNode('enabled')
                                         ->info('Enable or disable this endpoint.')
                                         ->defaultNull()
-                                        // ->defaultTrue()
-                                        // ->treatNullLike(true)
                                     ->end()
                                     
                                     // ──────────────────────────────
@@ -1859,8 +2875,8 @@ return static function($definition): void
                                                 ->defaultNull()
                                             ->end()
 
-                                            ->scalarNode('template')
-                                                ->info('Path to the response template file used as a model for formatting the API output for generic templates.')
+                                            ->scalarNode('delete')
+                                                ->info('Path to the response template file used as a model for formatting delete responses.')
                                                 ->defaultNull()
                                             ->end()
 
@@ -2009,63 +3025,6 @@ return static function($definition): void
                                         ->end()
                                     ->end()
 
-                                    // ──────────────────────────────
-                                    // Hooks & Events
-                                    // ──────────────────────────────
-                                    ->arrayNode('hooks')
-                                        ->info('Defines callable hooks to be executed at various points in the request lifecycle.')
-                                        ->addDefaultsIfNotSet()->children()
-
-                                            ->enumNode('merge')
-                                                ->info('Defines how to handle merging hooks: "replace" to overwrite existing hooks, "append" to add to them, or "prepend" to add them at the beginning.')
-                                                ->values(['replace', 'append', 'prepend'])
-                                                ->treatNullLike('append')
-                                            ->end()
-
-                                            ->arrayNode('before')
-                                                ->info('List of callable listeners to execute **before** the endpoint action is run.')
-                                                ->scalarPrototype()->end()
-                                                ->defaultValue([])
-                                            ->end()
-
-                                            ->arrayNode('after')
-                                                ->info('List of callable listeners to execute **after** the endpoint action has completed.')
-                                                ->scalarPrototype()->end()
-                                                ->defaultValue([])
-                                            ->end()
-
-                                            ->arrayNode('around')
-                                                ->info('List of callable listeners to execute **around** the endpoint action.')
-                                                ->scalarPrototype()->end()
-                                                ->defaultValue([])
-                                            ->end()
-
-                                            ->arrayNode('on_success')
-                                                ->info('List of callable listeners to execute on success action.')
-                                                ->scalarPrototype()->end()
-                                                ->defaultValue([])
-                                            ->end()
-
-                                            ->arrayNode('on_failure')
-                                                ->info('List of callable listeners to execute on failure action.')
-                                                ->scalarPrototype()->end()
-                                                ->defaultValue([])
-                                            ->end()
-
-                                            ->arrayNode('on_complete')
-                                                ->info('List of callable listeners to execute on complete action.')
-                                                ->scalarPrototype()->end()
-                                                ->defaultValue([])
-                                            ->end()
-
-                                        ->end()
-
-                                        ->validate()
-                                            ->ifTrue(fn($hooks) => !HooksValidator::validate($hooks))
-                                            ->thenInvalid('One or more hooks (before/after) are invalid. They must be valid callables (Class::method or callable).')
-                                        ->end()
-                                    ->end()
-
                                 ->end()
                             ->end()
                         ->end()
@@ -2080,6 +3039,42 @@ return static function($definition): void
                 ->end()
 
             ->end() // of collections
+
+            // ──────────────────────────────
+            // Debug
+            // ──────────────────────────────
+			->arrayNode('debug')
+                ->info('Debug configuration')
+                ->addDefaultsIfNotSet()->children()
+
+                    ->booleanNode('enabled')
+                        ->info('Enable or disable debug.')
+                        ->defaultFalse()
+                        ->treatNullLike(false)
+                    ->end()
+
+			    ->end()
+            ->end()
+
+            // ──────────────────────────────
+            // Documentation
+            // ──────────────────────────────
+			// ->arrayNode('documentation')
+            //     ->info('API documentation configuration')
+            //     ->addDefaultsIfNotSet()->children()
+
+            //         ->booleanNode('enable')
+            //             ->info('Enable or disable the documentation for this API provider.')
+            //             ->defaultFalse()
+            //         ->end()
+
+            //         ->scalarNode('prefix')
+            //             ->info('Path prefix')
+            //             ->defaultValue('_documentation')
+            //         ->end()
+
+            //     ->end()
+            // ->end()
 
         ->end() // of version_provider
     ->end() // of rootNode
@@ -2101,6 +3096,13 @@ return static function($definition): void
             // Deprecation
             ProviderDeprecationStartAtResolver::resolve($providers);
             ProviderDeprecationSunsetAtResolver::resolve($providers);
+
+            // Route
+            ProviderRoutePrefixResolver::resolve($providers);
+            
+            // Authentication
+            ProviderAuthenticationNameResolver::resolve($providers);
+            // ProviderAuthenticationRoutePrefixResolver::resolve($providers);
 
 
             // ──────────────────────────────

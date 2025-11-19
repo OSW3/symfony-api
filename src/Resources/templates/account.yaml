@@ -1,0 +1,7 @@
+success: "{status.is_success}"
+status: "{status.code}"
+message: "{status.text}"
+data: "{response.data}"
+meta: 
+    api_version: "{app.version}"
+    timestamp: "{response.timestamp}"

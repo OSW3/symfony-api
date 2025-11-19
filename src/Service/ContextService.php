@@ -7,6 +7,9 @@ use Symfony\Component\HttpKernel\KernelInterface;
 
 final class ContextService
 {
+    const SEGMENT_AUTHENTICATION = 'authentication';
+    const SEGMENT_COLLECTION     = 'collections';
+    
     public function __construct(
         private readonly KernelInterface $kernel,
         private readonly ConfigurationService $configurationService,
@@ -22,6 +25,7 @@ final class ContextService
     {
         $context = [
             'provider'   => $this->configurationService->getContext('provider'),
+            'segment'    => $this->configurationService->getContext('segment'),
             'collection' => $this->configurationService->getContext('collection'),
             'endpoint'   => $this->configurationService->getContext('endpoint'),
         ];
@@ -37,6 +41,16 @@ final class ContextService
     public function getProvider(): ?string
     {
         return $this->configurationService->getContext('provider') ?? null;
+    }
+
+    /**
+     * Get the current segment name
+     * 
+     * @return string
+     */
+    public function getSegment(): ?string
+    {
+        return $this->configurationService->getContext('segment') ?? null;
     }
 
     /**

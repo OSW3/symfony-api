@@ -11,13 +11,11 @@ use Symfony\Component\Serializer\SerializerInterface;
 final class SerializeService
 {
     public function __construct(
-        private readonly ContextService $contextService,
-        private readonly ConfigurationService $configurationService,
-        private readonly SecurityService $securityService,
-
-        private readonly SerializerInterface $serializer,
         private readonly Security $security,
+        private readonly ContextService $contextService,
+        private readonly SerializerInterface $serializer,
         private readonly UrlGeneratorInterface $urlGenerator,
+        private readonly ConfigurationService $configurationService,
     ){}
 
     /**
@@ -39,6 +37,7 @@ final class SerializeService
     {
         return $this->configurationService->getSerializerGroups(
             provider  : $this->contextService->getProvider(),
+            segment   : $this->contextService->getSegment(),
             collection: $this->contextService->getCollection(),
             endpoint  : $this->contextService->getEndpoint(),
         );
@@ -53,6 +52,7 @@ final class SerializeService
     {
         return $this->configurationService->getSerializerIgnore(
             provider  : $this->contextService->getProvider(),
+            segment   : $this->contextService->getSegment(),
             collection: $this->contextService->getCollection(),
             endpoint  : $this->contextService->getEndpoint(),
         );
@@ -95,7 +95,10 @@ final class SerializeService
      */
     public function hasUrlSupport(): bool 
     {
-        return $this->configurationService->hasUrlSupport($this->contextService->getProvider());
+        return $this->configurationService->hasUrlSupport(
+            provider:$this->contextService->getProvider(),
+            segment: $this->contextService->getSegment(),
+        );
     }
 
     // = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -177,10 +180,11 @@ final class SerializeService
         $accessor   = PropertyAccess::createPropertyAccessor();
         $user       = $this->security->getUser();
         $provider   = $this->contextService->getProvider();
+        $segment    = $this->contextService->getSegment();
         $collection = $this->contextService->getCollection();
-        $isAbsolute = $this->configurationService->isUrlAbsolute($provider);
-        $property   = $this->configurationService->getUrlProperty($provider);
-        $endpoints  = array_keys($this->configurationService->getEndpoints($provider, $collection) ?? []);
+        $isAbsolute = $this->configurationService->isUrlAbsolute($provider, $segment);
+        $property   = $this->configurationService->getUrlProperty($provider, $segment);
+        $endpoints  = array_keys($this->configurationService->getEndpoints($provider, $segment, $collection) ?? []);
 
         foreach ($endpoints as $endpoint) 
         {
@@ -190,9 +194,9 @@ final class SerializeService
                 continue;
             }
 
-            $routeName    = $this->configurationService->getRouteName($provider, $collection, $endpoint);
-            $routeOptions = $this->configurationService->getRouteOptions($provider, $collection, $endpoint);
-            $routeMethods = $this->configurationService->getRouteMethods($provider, $collection, $endpoint);
+            $routeName    = $this->configurationService->getRouteName($provider, $segment, $collection, $endpoint);
+            $routeOptions = $this->configurationService->getRouteOptions($provider, $segment, $collection, $endpoint);
+            $routeMethods = $this->configurationService->getRouteMethods($provider, $segment, $collection, $endpoint);
             $routeParams  = [];
 
             if (!in_array(Request::METHOD_GET, $routeMethods)) {

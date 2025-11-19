@@ -15,17 +15,14 @@ final class RepositoryService
     private readonly Request $request;
 
     public function __construct(
-        private readonly ContextService $contextService,
-
-        private readonly EntityManagerInterface $entityManager,
-        private readonly ConfigurationService $configuration,
         private readonly ManagerRegistry $doctrine,
         private readonly RequestStack $requestStack,
-        private readonly UtilsService $utilsService,
         private readonly RequestService $requestService,
-        private readonly ResponseService $responseService,
-        private readonly ResponseStatusService $responseStatusService,
+        private readonly ContextService $contextService,
+        private readonly ConfigurationService $configuration,
         private readonly PaginationService $paginationService,
+        private readonly EntityManagerInterface $entityManager,
+        private readonly ResponseStatusService $responseStatusService,
     ){
         $this->request = $requestStack->getCurrentRequest();
     }
@@ -39,6 +36,7 @@ final class RepositoryService
     {
         return $this->configuration->getCriteria(
             provider  : $this->contextService->getProvider(),
+            segment   : $this->contextService->getSegment(),
             collection: $this->contextService->getCollection(),
             endpoint  : $this->contextService->getEndpoint(),
         );
@@ -48,6 +46,7 @@ final class RepositoryService
     {
         return $this->configuration->getOrderBy(
             provider  : $this->contextService->getProvider(),
+            segment   : $this->contextService->getSegment(),
             collection: $this->contextService->getCollection(),
             endpoint  : $this->contextService->getEndpoint(),
         );
@@ -120,6 +119,7 @@ final class RepositoryService
         // Get the repository class from the configuration
         $repositoryClass = $this->configuration->getRepositoryClass(
             provider  : $this->contextService->getProvider(),
+            segment   : $this->contextService->getSegment(),
             collection: $this->contextService->getCollection(),
             endpoint  : $this->contextService->getEndpoint(),
         );
@@ -144,6 +144,7 @@ final class RepositoryService
         // Get allowed HTTP methods for the route
         $repositoryMethod = $this->configuration->getRepositoryMethod(
             provider  : $this->contextService->getProvider(),
+            segment   : $this->contextService->getSegment(),
             collection: $this->contextService->getCollection(),
             endpoint  : $this->contextService->getEndpoint(),
         );
@@ -381,6 +382,7 @@ final class RepositoryService
         // Get repository method
         $repositoryMethod = $this->configuration->getRepositoryMethod(
             provider  : $this->contextService->getProvider(),
+            segment   : $this->contextService->getSegment(),
             collection: $this->contextService->getCollection(),
             endpoint  : $this->contextService->getEndpoint(),
         );
