@@ -40,21 +40,28 @@ class LoggerSubscriber implements EventSubscriberInterface
 
     public function debug(): void
     {
-        $section    = $this->configuration->getContext('section');
+        $segment    = $this->configuration->getContext('segment');
         $provider   = $this->configuration->getContext('provider');
         $collection = $this->configuration->getContext('collection');
         $endpoint   = $this->configuration->getContext('endpoint');
 
-        $collections = $this->configuration->getCollections($provider, 'collections');
-        $authentications = $this->configuration->getCollections($provider, 'authentication');
-        // dd([
-        //     // 'section'    => $section,
-        //     // 'provider'   => $provider,
-        //     // 'collection' => $collection,
-        //     // 'endpoint'   => $endpoint,
-        //     'collections' => $collections,
-        //     'authentications' => $authentications,
-        // ]);
+
+        dd([
+            $this->configuration->isProviderEnabled($provider),
+            $this->configuration->isCollectionEnabled($provider, $segment, $collection),
+            $this->configuration->isEndpointEnabled($provider, $segment, $collection, $endpoint),
+        ]);
+
+        // $collections = $this->configuration->getCollections($provider, 'collections');
+        // $authentications = $this->configuration->getCollections($provider, 'authentication');
+        dd([
+            // 'section'    => $section,
+            // 'provider'   => $provider,
+            // 'collection' => $collection,
+            // 'endpoint'   => $endpoint,
+            // 'collections' => $collections,
+            // 'authentications' => $authentications,
+        ]);
     }
 
     // public function onRequest(): void
