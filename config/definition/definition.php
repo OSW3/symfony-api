@@ -4,17 +4,19 @@
 use OSW3\Api\Enum\MimeType;
 // use OSW3\Api\Validator\ControllerValidator;
 // use OSW3\Api\Validator\TransformerValidator;
+use OSW3\Api\Resolver\ApiResolver;
 use OSW3\Api\Resolver\NameResolver;
 use OSW3\Api\Validator\EntityValidator;
 use OSW3\Api\Resolver\IsEnabledResolver;
+use OSW3\Api\Resolver\TemplatesResolver;
 use OSW3\Api\Resolver\DeprecationResolver;
-use OSW3\Api\Validator\ControllerValidator;
-use OSW3\Api\Validator\TransformerValidator;
 // use OSW3\Api\Resolver\Collection\NameResolver as Collection_Name;
-use Symfony\Component\HttpFoundation\Request;
-use OSW3\Api\Resolver\Provider\ApiVersionNumberResolver;
+use OSW3\Api\Validator\ControllerValidator;
 // use OSW3\Api\Resolver\Authentication\NameResolver as Authentication_Name;
-use OSW3\Api\Resolver\Provider\ApiVersionHeaderFormatResolver;
+// use OSW3\Api\Resolver\Provider\ApiVersionNumberResolver;
+// use OSW3\Api\Resolver\Provider\ApiVersionHeaderFormatResolver;
+use OSW3\Api\Validator\TransformerValidator;
+use Symfony\Component\HttpFoundation\Request;
 use OSW3\Api\Resolver\Endpoint\TemplatesResolver as Endpoint_Templates;
 use OSW3\Api\Resolver\Endpoint\Route\NameResolver as Endpoint_Route_Name;
 use OSW3\Api\Resolver\Endpoint\Route\PathResolver as Endpoint_Route_Path;
@@ -37,22 +39,22 @@ use OSW3\Api\Resolver\Endpoint\Route\ControllerResolver as Endpoint_Route_Contro
 use OSW3\Api\Resolver\Collection\RateLimit\LimitResolver as Collection_RateLimit_Limit;
 use OSW3\Api\Resolver\Collection\Pagination\LimitResolver as Collection_Pagination_Limit;
 use OSW3\Api\Resolver\Collection\RateLimit\ByRoleResolver as Collection_RateLimit_ByRole;
+// use OSW3\Api\Resolver\Endpoint\Deprecation\StartAtResolver as Endpoint_Deprecation_StartAt;
 use OSW3\Api\Resolver\Collection\RateLimit\ByUserResolver as Collection_RateLimit_ByUser;
 use OSW3\Api\Resolver\Endpoint\Route\RequirementsResolver as Endpoint_Route_Requirements;
-// use OSW3\Api\Resolver\Endpoint\Deprecation\StartAtResolver as Endpoint_Deprecation_StartAt;
-use OSW3\Api\Resolver\Endpoint\Pagination\MaxLimitResolver as Endpoint_Pagination_MaxLimit;
-use OSW3\Api\Resolver\Endpoint\RateLimit\IsEnabledResolver as Endpoint_RateLimit_IsEnabled;
 // use OSW3\Api\Resolver\Provider\Deprecation\StartAtResolver as Provider_Deprecation_StartAt;
 // use OSW3\Api\Resolver\Endpoint\Deprecation\SunsetAtResolver as Endpoint_Deprecation_SunsetAt;
-use OSW3\Api\Resolver\Endpoint\Pagination\IsEnabledResolver as Endpoint_Pagination_IsEnabled;
+use OSW3\Api\Resolver\Endpoint\Pagination\MaxLimitResolver as Endpoint_Pagination_MaxLimit;
 // use OSW3\Api\Resolver\Provider\Deprecation\SunsetAtResolver as Provider_Deprecation_SunsetAt;
 // use OSW3\Api\Resolver\Collection\Deprecation\StartAtResolver as Collection_Deprecation_StartAt;
-use OSW3\Api\Resolver\Collection\Pagination\MaxLimitResolver as Collection_Pagination_MaxLimit;
-use OSW3\Api\Resolver\Collection\RateLimit\IsEnabledResolver as Collection_RateLimit_IsEnabled;
+use OSW3\Api\Resolver\Endpoint\RateLimit\IsEnabledResolver as Endpoint_RateLimit_IsEnabled;
+use OSW3\Api\Resolver\Endpoint\Pagination\IsEnabledResolver as Endpoint_Pagination_IsEnabled;
 // use OSW3\Api\Resolver\Endpoint\Deprecation\IsEnabledResolver as Endpoint_Deprecation_IsEnabled;
 // use OSW3\Api\Resolver\Collection\Deprecation\SunsetAtResolver as Collection_Deprecation_SunsetAt;
-use OSW3\Api\Resolver\Collection\Pagination\IsEnabledResolver as Collection_Pagination_IsEnabled;
+use OSW3\Api\Resolver\Collection\Pagination\MaxLimitResolver as Collection_Pagination_MaxLimit;
 // use OSW3\Api\Resolver\Collection\Deprecation\IsEnabledResolver as Collection_Deprecation_IsEnabled;
+use OSW3\Api\Resolver\Collection\RateLimit\IsEnabledResolver as Collection_RateLimit_IsEnabled;
+use OSW3\Api\Resolver\Collection\Pagination\IsEnabledResolver as Collection_Pagination_IsEnabled;
 use OSW3\Api\Resolver\Endpoint\RateLimit\ByApplicationResolver as Endpoint_RateLimit_ByApplication;
 use OSW3\Api\Resolver\Endpoint\RateLimit\IncludeHeadersResolver as Endpoint_RateLimit_IncludeHeaders;
 use OSW3\Api\Resolver\Collection\RateLimit\ByApplicationResolver as Collection_RateLimit_ByApplication;
@@ -2457,32 +2459,38 @@ return static function($definition): void
                             ->info('API deprecation notices for this collection.')
                             ->addDefaultsIfNotSet()->children()
 
+                                // Deprecation enabled
                                 ->booleanNode('enabled')
                                     ->info('Enable or disable the deprecation for this collection.')
                                     ->defaultNull()
                                     ->treatNullLike(false)
                                 ->end()
 
+                                // Deprecation start date
                                 ->scalarNode('start_at')
                                     ->info('Deprecation since date')
                                     ->defaultNull()
                                 ->end()
 
+                                // Deprecation removal date
                                 ->scalarNode('sunset_at')
                                     ->info('Deprecation sunset date')
                                     ->defaultNull()
                                 ->end()
 
+                                // Deprecation link
                                 ->scalarNode('link')
                                     ->info('Deprecation link')
                                     ->defaultNull()
                                 ->end()
 
+                                // Deprecation successor link
                                 ->scalarNode('successor')
                                     ->info('Deprecation successor link')
                                     ->defaultNull()
                                 ->end()
 
+                                // Deprecation message
                                 ->scalarNode('message')
                                     ->info('Deprecation message')
                                     ->defaultNull()
@@ -2657,26 +2665,31 @@ return static function($definition): void
                             ->info('Paths to the response template files used as models for formatting the API output for lists and single items.')
                             ->addDefaultsIfNotSet()->children()
 
+                                // List template path
                                 ->scalarNode('list')
                                     ->info('Path to the response template file used as a model for formatting the API output for lists.')
                                     ->defaultNull()
                                 ->end()
 
+                                // Single template path
                                 ->scalarNode('single')
                                     ->info('Path to the response template file used as a model for formatting the API output for single items.')
                                     ->defaultNull()
                                 ->end()
 
+                                // Delete template path
                                 ->scalarNode('delete')
                                     ->info('Path to the response template file used as a model for formatting the API output for delete operations.')
                                     ->defaultNull()
                                 ->end()
 
+                                // Error template path
                                 ->scalarNode('error')
                                     ->info('Path to the response template file used as a model for formatting error responses.')
                                     ->defaultNull()
                                 ->end()
 
+                                // Not found template path
                                 ->scalarNode('not_found')
                                     ->info('Path to the response template file used as a model for formatting not found responses (e.g. 404 Not Found).')
                                     ->defaultNull()
@@ -3200,9 +3213,11 @@ return static function($definition): void
     ->validate()
         ->always(function($providers) {
 
+            ApiResolver::execute($providers);
             IsEnabledResolver::execute($providers);
             DeprecationResolver::execute($providers);
             NameResolver::execute($providers);
+            TemplatesResolver::execute($providers);
             
             
 
@@ -3251,15 +3266,6 @@ return static function($definition): void
 
 
 
-
-            // Enabled
-            // ProviderIsEnabledResolver::default($providers);
-            
-            // 1. Generate missing versions
-            ApiVersionNumberResolver::resolve($providers);
-            ApiVersionHeaderFormatResolver::resolve($providers);
-
-
             
             
 
@@ -3284,41 +3290,52 @@ return static function($definition): void
 
 
 
-            // Templates
-            Collection_Templates::default($providers);
-
-            Endpoint_Templates::default($providers);
-
-            // Repository
-
-
 
 
 
 
             foreach ($providers as $pKey => $provider) {
 
-                dump(['Provider dates: ', $pKey, $provider['deprecation']['start_at'], $provider['deprecation']['sunset_at']]);
+                dump([
+                    'Provider Templates: ', 
+                    $pKey, 
+                    $provider['templates'],
+                ]);
 
                 foreach ($provider['authentication'] as $cKey => $collection) {
                     
-                    dump(['Authentication dates: ', $cKey, $collection['deprecation']['start_at'], $collection['deprecation']['sunset_at']]);
+                    dump([
+                        'Authentication Templates: ', 
+                        $cKey, 
+                        $collection['templates'], 
+                    ]);
                     
                     foreach ($collection['endpoints'] as $eKey => $endpoint) {
 
-                        // dump(['Endpoint is enabled: ', $eKey, $endpoint['enabled']]);
-
+                        // dump([
+                        //     'Endpoint Templates: ', 
+                        //     $eKey, 
+                        //     $endpoint['templates'], 
+                        // ]);
                     }
                 }
 
 
                 foreach ($provider['collections'] as $cKey => $collection) {
-                    
-                    dump(['Collection dates: ', $cKey, $collection['deprecation']['start_at'], $collection['deprecation']['sunset_at']]);
-                    
+
+                    dump([
+                        'Collection Templates: ', 
+                        $cKey, 
+                        $collection['templates'], 
+                    ]);
+
                     foreach ($collection['endpoints'] as $eKey => $endpoint) {
                     
-                        dump(['Endpoint dates: ', $eKey, $endpoint['deprecation']['start_at'], $endpoint['deprecation']['sunset_at']]);
+                        dump([
+                            'Endpoint Templates: ', 
+                            $eKey, 
+                            $endpoint['templates'], 
+                        ]);
 
                     }
                 }
