@@ -31,7 +31,7 @@ class LoggerSubscriber implements EventSubscriberInterface
 
             // Low priority to log the end late, just before ResponseSubscriber
             // KernelEvents::RESPONSE => ['onResponse', -9], 
-            // KernelEvents::RESPONSE => ['debug', 0], 
+            KernelEvents::RESPONSE => ['debug', 0], 
 
             // Lowest priority to log the end after all other subscribers
             // KernelEvents::TERMINATE => ['onTerminate'],
@@ -47,9 +47,9 @@ class LoggerSubscriber implements EventSubscriberInterface
 
 
         dd([
-            $this->configuration->isProviderEnabled($provider),
-            $this->configuration->isCollectionEnabled($provider, $segment, $collection),
-            $this->configuration->isEndpointEnabled($provider, $segment, $collection, $endpoint),
+            $this->configuration->isEnabled($provider),
+            $this->configuration->isEnabled($provider, $segment, $collection),
+            $this->configuration->isEnabled($provider, $segment, $collection, $endpoint),
         ]);
 
         // $collections = $this->configuration->getCollections($provider, 'collections');

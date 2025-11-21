@@ -53,6 +53,40 @@ class ConfigurationService
         };
     }
 
+    public function isEnabled(?string $provider, ?string $segment = null, ?string $collection = null, ?string $endpoint = null): bool
+    {
+        
+        if (! $this->hasProvider($provider)) {
+            return false;
+        }
+
+        // 1. Endpoint-level
+        if (
+            $endpoint !== null &&
+            $this->hasEndpoint($provider, $segment, $collection, $endpoint) &&
+            $this->isEndpointEnabled($provider, $segment, $collection, $endpoint)
+        ) {
+            return true;
+        }
+
+        // 2. Collection-level
+        if (
+            $collection !== null &&
+            $this->hasCollection($provider, $segment, $collection) &&
+            $this->isCollectionEnabled($provider, $segment, $collection)
+        ) {
+            return true;
+        }
+
+        // 3. Provider/Segment-level
+        if ($this->isProviderEnabled($provider, $segment)) {
+            return true;
+        }
+
+        // 4. Default
+        return false;
+    }
+
 
     // ──────────────────────────────
     // PROVIDERS
