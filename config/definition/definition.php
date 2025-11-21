@@ -1,66 +1,21 @@
 <?php
 
-// use Symfony\Component\HttpFoundation\Request;
 use OSW3\Api\Enum\MimeType;
-// use OSW3\Api\Validator\ControllerValidator;
-// use OSW3\Api\Validator\TransformerValidator;
 use OSW3\Api\Resolver\ApiResolver;
 use OSW3\Api\Resolver\NameResolver;
+use OSW3\Api\Resolver\RouteResolver;
 use OSW3\Api\Validator\EntityValidator;
 use OSW3\Api\Resolver\IsEnabledResolver;
+use OSW3\Api\Resolver\RateLimitResolver;
 use OSW3\Api\Resolver\TemplatesResolver;
+use OSW3\Api\Resolver\PaginationResolver;
+use OSW3\Api\Resolver\UrlSupportResolver;
 use OSW3\Api\Resolver\DeprecationResolver;
-// use OSW3\Api\Resolver\Collection\NameResolver as Collection_Name;
 use OSW3\Api\Validator\ControllerValidator;
-// use OSW3\Api\Resolver\Authentication\NameResolver as Authentication_Name;
-// use OSW3\Api\Resolver\Provider\ApiVersionNumberResolver;
-// use OSW3\Api\Resolver\Provider\ApiVersionHeaderFormatResolver;
+use OSW3\Api\Resolver\AccessControlResolver;
+use OSW3\Api\Resolver\SerializationResolver;
 use OSW3\Api\Validator\TransformerValidator;
 use Symfony\Component\HttpFoundation\Request;
-use OSW3\Api\Resolver\Endpoint\TemplatesResolver as Endpoint_Templates;
-use OSW3\Api\Resolver\Endpoint\Route\NameResolver as Endpoint_Route_Name;
-use OSW3\Api\Resolver\Endpoint\Route\PathResolver as Endpoint_Route_Path;
-use OSW3\Api\Resolver\Collection\TemplatesResolver as Collection_Templates;
-use OSW3\Api\Resolver\Endpoint\Url\SupportResolver as Endpoint_Url_Support;
-use OSW3\Api\Resolver\Endpoint\Url\AbsoluteResolver as Endpoint_Url_Absolute;
-use OSW3\Api\Resolver\Endpoint\Url\PropertyResolver as Endpoint_Url_Property;
-use OSW3\Api\Resolver\Provider\Route\PrefixResolver as Provider_Route_Prefix;
-use OSW3\Api\Resolver\Endpoint\Route\MethodsResolver as Endpoint_Route_Methods;
-use OSW3\Api\Resolver\Endpoint\Route\OptionsResolver as Endpoint_Route_Options;
-use OSW3\Api\Resolver\Collection\Route\PrefixResolver as Collection_Route_Prefix;
-use OSW3\Api\Resolver\Endpoint\RateLimit\ByIpResolver as Endpoint_RateLimit_ByIp;
-use OSW3\Api\Resolver\Collection\Route\PatternResolver as Collection_Route_Pattern;
-use OSW3\Api\Resolver\Endpoint\RateLimit\LimitResolver as Endpoint_RateLimit_Limit;
-use OSW3\Api\Resolver\Collection\RateLimit\ByIpResolver as Collection_RateLimit_ByIp;
-use OSW3\Api\Resolver\Endpoint\Pagination\LimitResolver as Endpoint_Pagination_Limit;
-use OSW3\Api\Resolver\Endpoint\RateLimit\ByRoleResolver as Endpoint_RateLimit_ByRole;
-use OSW3\Api\Resolver\Endpoint\RateLimit\ByUserResolver as Endpoint_RateLimit_ByUser;
-use OSW3\Api\Resolver\Endpoint\Route\ControllerResolver as Endpoint_Route_Controller;
-use OSW3\Api\Resolver\Collection\RateLimit\LimitResolver as Collection_RateLimit_Limit;
-use OSW3\Api\Resolver\Collection\Pagination\LimitResolver as Collection_Pagination_Limit;
-use OSW3\Api\Resolver\Collection\RateLimit\ByRoleResolver as Collection_RateLimit_ByRole;
-// use OSW3\Api\Resolver\Endpoint\Deprecation\StartAtResolver as Endpoint_Deprecation_StartAt;
-use OSW3\Api\Resolver\Collection\RateLimit\ByUserResolver as Collection_RateLimit_ByUser;
-use OSW3\Api\Resolver\Endpoint\Route\RequirementsResolver as Endpoint_Route_Requirements;
-// use OSW3\Api\Resolver\Provider\Deprecation\StartAtResolver as Provider_Deprecation_StartAt;
-// use OSW3\Api\Resolver\Endpoint\Deprecation\SunsetAtResolver as Endpoint_Deprecation_SunsetAt;
-use OSW3\Api\Resolver\Endpoint\Pagination\MaxLimitResolver as Endpoint_Pagination_MaxLimit;
-// use OSW3\Api\Resolver\Provider\Deprecation\SunsetAtResolver as Provider_Deprecation_SunsetAt;
-// use OSW3\Api\Resolver\Collection\Deprecation\StartAtResolver as Collection_Deprecation_StartAt;
-use OSW3\Api\Resolver\Endpoint\RateLimit\IsEnabledResolver as Endpoint_RateLimit_IsEnabled;
-use OSW3\Api\Resolver\Endpoint\Pagination\IsEnabledResolver as Endpoint_Pagination_IsEnabled;
-// use OSW3\Api\Resolver\Endpoint\Deprecation\IsEnabledResolver as Endpoint_Deprecation_IsEnabled;
-// use OSW3\Api\Resolver\Collection\Deprecation\SunsetAtResolver as Collection_Deprecation_SunsetAt;
-use OSW3\Api\Resolver\Collection\Pagination\MaxLimitResolver as Collection_Pagination_MaxLimit;
-// use OSW3\Api\Resolver\Collection\Deprecation\IsEnabledResolver as Collection_Deprecation_IsEnabled;
-use OSW3\Api\Resolver\Collection\RateLimit\IsEnabledResolver as Collection_RateLimit_IsEnabled;
-use OSW3\Api\Resolver\Collection\Pagination\IsEnabledResolver as Collection_Pagination_IsEnabled;
-use OSW3\Api\Resolver\Endpoint\RateLimit\ByApplicationResolver as Endpoint_RateLimit_ByApplication;
-use OSW3\Api\Resolver\Endpoint\RateLimit\IncludeHeadersResolver as Endpoint_RateLimit_IncludeHeaders;
-use OSW3\Api\Resolver\Collection\RateLimit\ByApplicationResolver as Collection_RateLimit_ByApplication;
-use OSW3\Api\Resolver\Collection\RateLimit\IncludeHeadersResolver as Collection_RateLimit_IncludeHeaders;
-use OSW3\Api\Resolver\Endpoint\Pagination\AllowLimitOverrideResolver as Endpoint_Pagination_AllowLimitOverride;
-use OSW3\Api\Resolver\Collection\Pagination\AllowLimitOverrideResolver as Collection_Pagination_AllowLimitOverride;
 
 return static function($definition): void
 {
@@ -373,6 +328,7 @@ return static function($definition): void
                     ->booleanNode('include_headers')
                         ->info('Whether to include rate limit headers in responses.')
                         ->defaultTrue()
+                        ->treatNullLike(true)
                     ->end()
 
                 ->end()
@@ -696,12 +652,14 @@ return static function($definition): void
                             ->scalarNode('format')
                                 ->info('Date/time output format (e.g. "Y-m-d H:i:s" or ISO 8601). Set to null to use Symfony’s default format.')
                                 ->defaultValue('Y-m-d H:i:s')
+                                ->treatNullLike('Y-m-d H:i:s')
                             ->end()
 
                             // Timezone for date/time serialization
                             ->scalarNode('timezone')
                                 ->info('Timezone applied when serializing datetime values (e.g. "UTC", "Europe/Paris"). Set to null to use the system default.')
                                 ->defaultValue('UTC')
+                                ->treatNullLike('UTC')
                             ->end()
 
                         ->end()
@@ -767,6 +725,15 @@ return static function($definition): void
                         ->end()
 
                         // ──────────────────────────────
+                        // Collection name
+                        // ──────────────────────────────
+                        ->scalarNode('name')
+                            ->info('Name / Alias of the entity')
+                            ->defaultNull()
+                            ->treatNullLike(null)
+                        ->end()
+
+                        // ──────────────────────────────
                         // Deprecation
                         // ──────────────────────────────
                         ->arrayNode('deprecation')
@@ -814,18 +781,9 @@ return static function($definition): void
                         ->end()
 
                         // ──────────────────────────────
-                        // Collection name
-                        // ──────────────────────────────
-                        ->scalarNode('name')
-                            ->info('Name / Alias of the entity')
-                            ->defaultNull()
-                            ->treatNullLike(null)
-                        ->end()
-
-                        // ──────────────────────────────
                         // Route
                         // ──────────────────────────────
-                        ->arrayNode('route')
+                        ->arrayNode('routes')
                             ->info('Override default route name or URL prefix for security-related endpoints.')
                             ->addDefaultsIfNotSet()->children()
 
@@ -940,6 +898,7 @@ return static function($definition): void
                                 // Serialization groups
                                 ->arrayNode('groups')
                                     ->info('List of Symfony serialization groups to apply when serializing the response for this endpoint.')
+                                    ->normalizeKeys(false)
                                     ->scalarPrototype()->end()
                                     ->defaultValue([])
                                 ->end()
@@ -947,7 +906,9 @@ return static function($definition): void
                                 // Attributes or properties to ignore during serialization
                                 ->arrayNode('ignore')
                                     ->info('List of entity attributes or properties to explicitly exclude from serialization.')
+                                    ->normalizeKeys(false)
                                     ->scalarPrototype()->end()
+                                    ->defaultValue([])
                                 ->end()
 
                                 // Transformer or DTO class
@@ -992,7 +953,7 @@ return static function($definition): void
                                             ->addDefaultsIfNotSet()
                                             ->children()
 
-                                                // Custom route name pattern
+                                                // Custom route name
                                                 ->scalarNode('name')
                                                     ->info('Route name. If not defined, it will be generated automatically based on the collection and endpoint name.')
                                                     ->defaultNull()
@@ -1098,24 +1059,28 @@ return static function($definition): void
                                             ->info('Defines the HTTP configuration for the endpoint: route name, path, HTTP methods, controller, constraints, and routing options.')
                                             ->addDefaultsIfNotSet()
                                             ->children()
-
+                                                
+                                                // Custom route name pattern
                                                 ->scalarNode('name')
                                                     ->info('Route name. If not defined, it will be generated automatically based on the collection and endpoint name.')
                                                     ->defaultNull()
                                                 ->end()
-
+                                                
+                                                // Custom route path
                                                 ->scalarNode('path')
                                                     ->info('Optional custom path for this endpoint.')
                                                     ->defaultNull()
                                                 ->end()
-
+                                                
+                                                // Allowed HTTP methods
                                                 ->arrayNode('methods')
                                                     ->info('Allowed HTTP methods. Must be explicitly defined to avoid accidental exposure.')
                                                     ->scalarPrototype()->end()
                                                     ->defaultValue([Request::METHOD_POST])
                                                     ->treatNullLike([Request::METHOD_POST])
                                                 ->end()
-
+                                                
+                                                // Optional Symfony controller (FQCN::method)
                                                 ->scalarNode('controller')
                                                     ->info('Optional Symfony controller (FQCN::method). If not defined, the endpoint will automatically use the configured "repository.method" to fetch and expose data.')
                                                     ->defaultValue('OSW3\Api\Controller\Auth\LoginController::login')
@@ -1125,21 +1090,24 @@ return static function($definition): void
                                                         ->thenInvalid('The specified controller "%s" does not exist or the method is not callable.')
                                                     ->end()
                                                 ->end()
-
+                                                
+                                                // Advanced route options
                                                 ->arrayNode('options')
                                                     ->info('Advanced route options used by the Symfony router. Common keys include "utf8" (true to support UTF-8 paths), "compiler_class" (custom RouteCompiler), or any custom metadata for route generation and matching.')
                                                     ->normalizeKeys(false)
                                                     ->scalarPrototype()->end()
                                                     ->defaultValue([])
                                                 ->end()
-
+                                                
+                                                // Hosts configuration
                                                 ->arrayNode('hosts')
                                                     ->info('Configure specific hosts for the endpoint routes.')
                                                     ->normalizeKeys(false)
                                                     ->scalarPrototype()->end()
                                                     ->defaultValue([])
                                                 ->end()
-
+                                                
+                                                // Schemes configuration
                                                 ->arrayNode('schemes')
                                                     ->info('Configure specific schemes (http, https) for the endpoint routes.')
                                                     ->normalizeKeys(false)
@@ -1203,16 +1171,19 @@ return static function($definition): void
                                             ->addDefaultsIfNotSet()
                                             ->children()
 
+                                                // Custom route name pattern
                                                 ->scalarNode('name')
                                                     ->info('Route name. If not defined, it will be generated automatically based on the collection and endpoint name.')
                                                     ->defaultNull()
                                                 ->end()
 
+                                                // Custom route path
                                                 ->scalarNode('path')
                                                     ->info('Optional custom path for this endpoint.')
                                                     ->defaultNull()
                                                 ->end()
 
+                                                // Allowed HTTP methods
                                                 ->arrayNode('methods')
                                                     ->info('Allowed HTTP methods. Must be explicitly defined to avoid accidental exposure.')
                                                     ->scalarPrototype()->end()
@@ -1220,6 +1191,7 @@ return static function($definition): void
                                                     ->treatNullLike([Request::METHOD_POST])
                                                 ->end()
 
+                                                // Optional Symfony controller (FQCN::method)
                                                 ->scalarNode('controller')
                                                     ->info('Optional Symfony controller (FQCN::method). If not defined, the endpoint will automatically use the configured "repository.method" to fetch and expose data.')
                                                     ->defaultValue('OSW3\Api\Controller\Auth\LogoutController::logout')
@@ -1230,6 +1202,7 @@ return static function($definition): void
                                                     ->end()
                                                 ->end()
 
+                                                // Advanced route options
                                                 ->arrayNode('options')
                                                     ->info('Advanced route options used by the Symfony router. Common keys include "utf8" (true to support UTF-8 paths), "compiler_class" (custom RouteCompiler), or any custom metadata for route generation and matching.')
                                                     ->normalizeKeys(false)
@@ -1237,6 +1210,7 @@ return static function($definition): void
                                                     ->defaultValue([])
                                                 ->end()
 
+                                                // Hosts configuration
                                                 ->arrayNode('hosts')
                                                     ->info('Configure specific hosts for the endpoint routes.')
                                                     ->normalizeKeys(false)
@@ -1244,6 +1218,7 @@ return static function($definition): void
                                                     ->defaultValue([])
                                                 ->end()
 
+                                                // Schemes configuration
                                                 ->arrayNode('schemes')
                                                     ->info('Configure specific schemes (http, https) for the endpoint routes.')
                                                     ->normalizeKeys(false)
@@ -2453,6 +2428,14 @@ return static function($definition): void
                         ->end()
 
                         // ──────────────────────────────
+                        // Collection name
+                        // ──────────────────────────────
+                        ->scalarNode('name')
+                            ->info('Collection name in URLs and route names. Auto-generated from entity if null (e.g. App\\Entity\\Book → books).')
+                            ->defaultNull()
+                        ->end()
+
+                        // ──────────────────────────────
                         // Deprecation
                         // ──────────────────────────────
                         ->arrayNode('deprecation')
@@ -2500,30 +2483,25 @@ return static function($definition): void
                         ->end()
 
                         // ──────────────────────────────
-                        // Collection name
-                        // ──────────────────────────────
-                        ->scalarNode('name')
-                            ->info('Collection name in URLs and route names. Auto-generated from entity if null (e.g. App\\Entity\\Book → books).')
-                            ->defaultNull()
-                        ->end()
-
-                        // ──────────────────────────────
                         // Route
                         // ──────────────────────────────
-                        ->arrayNode('route')
+                        ->arrayNode('routes')
                             ->info('Override default route name or URL prefix for this specific collection.')
                             ->addDefaultsIfNotSet()->children()
 
+                                // Custom route name pattern
                                 ->scalarNode('pattern')
                                     ->info('Custom route name pattern. Falls back to global `routes.name` if null.')
                                     ->defaultNull()
                                 ->end()
 
+                                // Route prefix for security-related endpoints (login, registration, etc.)
                                 ->scalarNode('prefix')
                                     ->info('Custom URL prefix. Falls back to global `routes.prefix` if null.')
                                     ->defaultNull()
                                 ->end()
 
+                                // Configure specific hosts for the endpoint routes
                                 ->arrayNode('hosts')
                                     ->info('Configure specific hosts for the collection routes.')
                                     ->normalizeKeys(false)
@@ -2531,6 +2509,7 @@ return static function($definition): void
                                     ->defaultValue([])
                                 ->end()
 
+                                // Configure specific schemes for the endpoint routes
                                 ->arrayNode('schemes')
                                     ->info('Configure specific schemes (http, https) for the collection routes.')
                                     ->normalizeKeys(false)
@@ -2548,6 +2527,7 @@ return static function($definition): void
                             ->info('Default pagination behavior for a specific collection.')
                             ->addDefaultsIfNotSet()->children()
                             
+                                // Is pagination enabled
                                 ->variableNode('enabled')
                                     ->info('Enable or disable pagination. If null, inherits from parent.')
                                     ->validate()
@@ -2556,22 +2536,27 @@ return static function($definition): void
                                     ->end()
                                 ->end()
 
+                                // Limit the number of items per page
                                 ->integerNode('limit')
                                     ->info('Limit the number of items per page for this collection.')
                                     ->defaultValue(10)
                                     ->treatNullLike(-1)
                                 ->end()
 
+                                // Max limit of items per page
                                 ->integerNode('max_limit')
                                     ->info('Max number of items per page for this collection.')
                                     ->defaultValue(100)
                                     ->treatNullLike(-1)
                                 ->end()
 
-                                ->booleanNode('allow_limit_override')
+                                // Allow overriding the "limit" parameter via URL
+                                ->variableNode('allow_limit_override')
                                     ->info('Allow overriding the "limit" parameter via URL (e.g. ?limit=50) for this collection.')
-                                    ->defaultTrue()
-                                    ->treatNullLike(true)
+                                    ->validate()
+                                        ->ifTrue(fn($v) => !in_array($v, [true, false, null], true))
+                                        ->thenInvalid('The "enabled" value must be true, false, or null.')
+                                    ->end()
                                 ->end()
 
                             ->end()
@@ -2584,16 +2569,19 @@ return static function($definition): void
                             ->info('URL Support (in response) for this collection.')
                             ->addDefaultsIfNotSet()->children()
 
+                                // Enable or disable URL support in API responses
                                 ->booleanNode('support')
                                     ->info('Whether to include URL elements in API responses.')
                                     ->defaultNull()
                                 ->end()
 
+                                // Generate absolute URLs if true, relative otherwise
                                 ->booleanNode('absolute')
                                     ->info('Generate absolute URLs if true, relative otherwise')
                                     ->defaultNull()
                                 ->end()
 
+                                // The name of the URL property in response
                                 ->scalarNode('property')
                                     ->info('The name of the URL property in response.')
                                     ->defaultNull()
@@ -2609,6 +2597,7 @@ return static function($definition): void
                             ->info('Configuration for API rate limiting.')
                             ->addDefaultsIfNotSet()->children()
 
+                                // Enable or disable rate limiting
                                 ->variableNode('enabled')
                                     ->info('Enable or disable rate limiting for this API provider.')
                                     ->validate()
@@ -2617,11 +2606,13 @@ return static function($definition): void
                                     ->end()
                                 ->end()
 
+                                // Global rate limit
                                 ->scalarNode('limit')
                                     ->info('Maximum number of requests allowed in the specified time window.')
                                     ->defaultValue('100/hour')
                                 ->end()
 
+                                // Specific rate limits based on user roles
                                 ->arrayNode('by_role')
                                     ->info('Specific rate limits based on user roles.')
                                     ->normalizeKeys(false)
@@ -2629,6 +2620,7 @@ return static function($definition): void
                                     // ->defaultValue([])
                                 ->end()
 
+                                // Specific rate limits for individual users
                                 ->arrayNode('by_user')
                                     ->info('Specific rate limits for individual users identified by user ID or username.')
                                     ->normalizeKeys(false)
@@ -2636,6 +2628,7 @@ return static function($definition): void
                                     ->defaultValue([])
                                 ->end()
 
+                                // Specific rate limits based on client IP addresses
                                 ->arrayNode('by_ip')
                                     ->info('Specific rate limits based on client IP addresses.')
                                     ->normalizeKeys(false)
@@ -2643,6 +2636,7 @@ return static function($definition): void
                                     ->defaultValue([])
                                 ->end()
 
+                                // Specific rate limits for different application keys or API clients
                                 ->arrayNode('by_application')
                                     ->info('Specific rate limits for different application keys or API clients.')
                                     ->normalizeKeys(false)
@@ -2650,6 +2644,7 @@ return static function($definition): void
                                     ->defaultValue([])
                                 ->end()
 
+                                // Include rate limit headers in responses
                                 ->booleanNode('include_headers')
                                     ->info('Whether to include rate limit headers in responses.')
                                     ->defaultTrue()
@@ -2708,13 +2703,16 @@ return static function($definition): void
 
                                 ->arrayNode('groups')
                                     ->info('List of Symfony serialization groups to apply when serializing the response for this endpoint.')
+                                    ->normalizeKeys(false)
                                     ->scalarPrototype()->end()
                                     ->defaultValue([])
                                 ->end()
 
                                 ->arrayNode('ignore')
                                     ->info('List of entity attributes or properties to explicitly exclude from serialization.')
+                                    ->normalizeKeys(false)
                                     ->scalarPrototype()->end()
+                                    ->defaultValue([])
                                 ->end()
 
                                 ->scalarNode('transformer')
@@ -2736,19 +2734,21 @@ return static function($definition): void
                             ->info('Defines access control settings for this collection.')
                             ->addDefaultsIfNotSet()->children()
 
+                                // Merge strategy for access control settings
                                 ->enumNode('merge')
                                     ->info('Defines how to handle merging access control settings: "replace" to overwrite existing settings, "append" to add to them, or "prepend" to add them at the beginning.')
-                                    ->values(['replace', 'append', 'prepend'])
-                                    ->defaultValue('append')
-                                    ->treatNullLike('append')
+                                    ->values(['replace', 'append', 'prepend', null])
+                                    ->defaultNull()
                                 ->end()
 
+                                // Required roles for accessing this API collection
                                 ->arrayNode('roles')
                                     ->info('List of Symfony security roles required to access this collection.')
                                     ->scalarPrototype()->end()
                                     ->defaultValue([])
                                 ->end()
 
+                                // Custom voter for access control
                                 ->scalarNode('voter')
                                     ->info('Optional custom voter FQCN. If set, Symfony will use this voter to determine access instead of roles or expressions.')
                                     ->defaultNull()
@@ -2826,28 +2826,31 @@ return static function($definition): void
                                         ->addDefaultsIfNotSet()
                                         ->children()
 
+                                            // Custom route name pattern
                                             ->scalarNode('pattern')
                                                 ->info('Custom route name pattern. Falls back to global `routes.name` if null.')
                                                 ->defaultNull()
                                             ->end()
 
+                                            // Custom route name
                                             ->scalarNode('name')
                                                 ->info('Route name. If not defined, it will be generated automatically based on the collection and endpoint name.')
                                                 ->defaultNull()
                                             ->end()
 
+                                            // Custom route path
                                             ->scalarNode('path')
                                                 ->info('Optional custom path for this endpoint.')
                                                 ->defaultNull()
                                             ->end()
 
+                                            // Allowed HTTP methods
                                             ->arrayNode('methods')
                                                 ->info('Allowed HTTP methods. Must be explicitly defined to avoid accidental exposure.')
-                                                // ->requiresAtLeastOneElement()
-                                                // ->isRequired()
                                                 ->scalarPrototype()->end()
                                             ->end()
 
+                                            // Controller
                                             ->scalarNode('controller')
                                                 ->info('Optional Symfony controller (FQCN::method). If not defined, the endpoint will automatically use the configured "repository.method" to fetch and expose data.')
                                                 ->defaultNull()
@@ -2857,6 +2860,7 @@ return static function($definition): void
                                                 ->end()
                                             ->end()
 
+                                            // Requirements
                                             ->arrayNode('requirements')
                                                 ->info('Regex constraints for dynamic route parameters. Keys are parameter names, values are regular expressions that must be matched. For example: {id} must be digits, {slug} must be lowercase letters and dashes.')
                                                 ->normalizeKeys(false)
@@ -2864,6 +2868,7 @@ return static function($definition): void
                                                 ->defaultValue([])
                                             ->end()
 
+                                            // Advanced route options
                                             ->arrayNode('options')
                                                 ->info('Advanced route options used by the Symfony router. Common keys include "utf8" (true to support UTF-8 paths), "compiler_class" (custom RouteCompiler), or any custom metadata for route generation and matching.')
                                                 ->normalizeKeys(false)
@@ -2871,11 +2876,13 @@ return static function($definition): void
                                                 ->defaultValue([])
                                             ->end()
 
+                                            // Condition expression
                                             ->scalarNode('condition')
                                                 ->info('Optional condition expression for the route.')
                                                 ->defaultNull()
                                             ->end()
 
+                                            // Allowed hosts
                                             ->arrayNode('hosts')
                                                 ->info('Configure specific hosts for the endpoint routes.')
                                                 ->normalizeKeys(false)
@@ -2883,6 +2890,7 @@ return static function($definition): void
                                                 ->defaultValue([])
                                             ->end()
 
+                                            // Allowed schemes
                                             ->arrayNode('schemes')
                                                 ->info('Configure specific schemes (http, https) for the endpoint routes.')
                                                 ->normalizeKeys(false)
@@ -2900,6 +2908,7 @@ return static function($definition): void
                                         ->info('Pagination settings for a specific endpoint.')
                                         ->addDefaultsIfNotSet()->children()
                             
+                                            // Is pagination enabled
                                             ->variableNode('enabled')
                                                 ->info('Enable or disable pagination. If null, inherits from parent.')
                                                 ->validate()
@@ -2908,18 +2917,21 @@ return static function($definition): void
                                                 ->end()
                                             ->end()
 
+                                            // Limit the number of items per page
                                             ->integerNode('limit')
                                                 ->info('Limit the number of items per page for this endpoint.')
                                                 ->defaultValue(10)
                                                 ->treatNullLike(-1)
                                             ->end()
 
+                                            // Max limit of items per page
                                             ->integerNode('max_limit')
                                                 ->info('Max number of items per page for this endpoint.')
                                                 ->defaultValue(100)
                                                 ->treatNullLike(-1)
                                             ->end()
 
+                                            // Allow overriding the "limit" parameter via URL
                                             ->booleanNode('allow_limit_override')
                                                 ->info('Allow overriding the "limit" parameter via URL (e.g. ?limit=50) for this endpoint.')
                                                 ->defaultTrue()
@@ -2936,19 +2948,23 @@ return static function($definition): void
                                         ->info('Configuration for API rate limiting.')
                                         ->addDefaultsIfNotSet()->children()
 
+                                            // Enable or disable rate limiting
                                             ->variableNode('enabled')
                                                 ->info('Enable or disable rate limiting for this API provider.')
+                                                ->defaultNull()
                                                 ->validate()
                                                     ->ifTrue(fn($v) => !in_array($v, [true, false, null], true))
                                                     ->thenInvalid('The "enabled" value must be true, false, or null.')
                                                 ->end()
                                             ->end()
 
+                                            // Global rate limit
                                             ->scalarNode('limit')
                                                 ->info('Maximum number of requests allowed in the specified time window.')
                                                 ->defaultValue('100/hour')
                                             ->end()
 
+                                            // Specific rate limits based on user roles
                                             ->arrayNode('by_role')
                                                 ->info('Specific rate limits based on user roles.')
                                                 ->normalizeKeys(false)
@@ -2956,6 +2972,7 @@ return static function($definition): void
                                                 ->defaultValue([])
                                             ->end()
 
+                                            // Specific rate limits for individual users
                                             ->arrayNode('by_user')
                                                 ->info('Specific rate limits for individual users identified by user ID or username.')
                                                 ->normalizeKeys(false)
@@ -2963,6 +2980,7 @@ return static function($definition): void
                                                 ->defaultValue([])
                                             ->end()
 
+                                            // Specific rate limits based on client IP addresses
                                             ->arrayNode('by_ip')
                                                 ->info('Specific rate limits based on client IP addresses.')
                                                 ->normalizeKeys(false)
@@ -2970,6 +2988,7 @@ return static function($definition): void
                                                 ->defaultValue([])
                                             ->end()
 
+                                            // Specific rate limits for different application keys or API clients
                                             ->arrayNode('by_application')
                                                 ->info('Specific rate limits for different application keys or API clients.')
                                                 ->normalizeKeys(false)
@@ -2977,6 +2996,7 @@ return static function($definition): void
                                                 ->defaultValue([])
                                             ->end()
 
+                                            // Include rate limit headers in responses
                                             ->booleanNode('include_headers')
                                                 ->info('Whether to include rate limit headers in responses.')
                                                 ->defaultTrue()
@@ -3030,13 +3050,16 @@ return static function($definition): void
 
                                             ->arrayNode('groups')
                                                 ->info('List of Symfony serialization groups to apply when serializing the response for this endpoint.')
+                                                ->normalizeKeys(false)
                                                 ->scalarPrototype()->end()
                                                 ->defaultValue([])
                                             ->end()
 
                                             ->arrayNode('ignore')
                                                 ->info('List of entity attributes or properties to explicitly exclude from serialization.')
+                                                ->normalizeKeys(false)
                                                 ->scalarPrototype()->end()
+                                                ->defaultValue([])
                                             ->end()
 
                                             ->scalarNode('transformer')
@@ -3131,19 +3154,21 @@ return static function($definition): void
                                         ->info('Defines the access control rules for this endpoint.')
                                         ->addDefaultsIfNotSet()->children()
 
+                                            // Merge strategy for access control settings
                                             ->enumNode('merge')
                                                 ->info('Defines how to handle merging access control settings: "replace" to overwrite existing settings, "append" to add to them, or "prepend" to add them at the beginning.')
-                                                ->values(['replace', 'append', 'prepend'])
-                                                ->defaultValue('append')
-                                                ->treatNullLike('append')
+                                                ->values(['replace', 'append', 'prepend', null])
+                                                ->defaultNull()
                                             ->end()
 
+                                            // Required roles for accessing this API endpoint
                                             ->arrayNode('roles')
                                                 ->info('List of Symfony security roles required to access this endpoint, e.g., ["ROLE_ADMIN", "PUBLIC_ACCESS"].')
                                                 ->scalarPrototype()->end()
                                                 ->defaultValue(['PUBLIC_ACCESS'])
                                             ->end()
 
+                                            // Custom voter for access control
                                             ->scalarNode('voter')
                                                 ->info('Optional custom voter FQCN. If set, Symfony will use this voter to determine access instead of roles or expressions.')
                                                 ->defaultNull()
@@ -3213,135 +3238,69 @@ return static function($definition): void
     ->validate()
         ->always(function($providers) {
 
-            ApiResolver::execute($providers);
+
+            // Enabled
+            // -> Provider level
+            // -> Collections level
+            // -> Endpoint level
             IsEnabledResolver::execute($providers);
-            DeprecationResolver::execute($providers);
+
+            // Collections names (alias)
+            // -> Collections level
             NameResolver::execute($providers);
-            TemplatesResolver::execute($providers);
-            
-            
 
+            // Deprecation
+            // -> Provider level
+            // -> Collections level
+            // -> Endpoint level
+            DeprecationResolver::execute($providers);
 
+            // API Resolver (API Versioning)
+            // -> Provider level
+            ApiResolver::execute($providers);
 
-
-
-
-
-            // Route
-            Provider_Route_Prefix::resolve($providers);
-
-            Collection_Route_Pattern::default($providers);
-            Collection_Route_Prefix::default($providers);
-            Collection_Route_Prefix::resolve($providers);
-
-            Endpoint_Route_Name::default($providers);
-            Endpoint_Route_Path::default($providers);
-            Endpoint_Route_Name::resolve($providers);
-            Endpoint_Route_Path::resolve($providers);
-            Endpoint_Route_Controller::resolve($providers);
-            Endpoint_Route_Methods::resolve($providers);
-            Endpoint_Route_Requirements::resolve($providers);
-            Endpoint_Route_Options::resolve($providers);
-
-
+            // Route 
+            // -> Provider level
+            // -> Collections level
+            // -> Endpoint level
+            RouteResolver::execute($providers);
 
             // Pagination
-            Collection_Pagination_IsEnabled::default($providers);
-            Collection_Pagination_Limit::default($providers);
-            Collection_Pagination_MaxLimit::default($providers);
-            Collection_Pagination_AllowLimitOverride::default($providers);
-
-            Endpoint_Pagination_IsEnabled::default($providers);
-            Endpoint_Pagination_Limit::default($providers);
-            Endpoint_Pagination_MaxLimit::default($providers);
-            Endpoint_Pagination_AllowLimitOverride::default($providers);
-
-
-            
+            // -> Provider level
+            // -> Collections level
+            // -> Endpoint level
+            PaginationResolver::execute($providers);
 
             // URL Support
-            Endpoint_Url_Support::default($providers);
-            Endpoint_Url_Absolute::default($providers);
-            Endpoint_Url_Property::default($providers);
+            // -> Provider level
+            // -> Collections level
+            UrlSupportResolver::execute($providers);
 
+            // Rate limit
+            // -> Provider level
+            // -> Collections level (collections)
+            // -> Endpoint level
+            RateLimitResolver::execute($providers);
 
+            // Templates paths
+            // -> Provider level
+            // -> Collections level
+            // -> Endpoint level
+            TemplatesResolver::execute($providers);
 
-            
-            
+            // Response
 
-            // Rate Limit
-            Collection_RateLimit_IsEnabled::default($providers);
-            Collection_RateLimit_Limit::default($providers);
-            Collection_RateLimit_ByRole::default($providers);
-            Collection_RateLimit_ByUser::default($providers);
-            Collection_RateLimit_ByIp::default($providers);
-            Collection_RateLimit_ByApplication::default($providers);
-            Collection_RateLimit_IncludeHeaders::default($providers);
+            // Serialization
+            // -> Provider level
+            // -> Collections level
+            // -> Endpoint level
+            SerializationResolver::execute($providers);
 
-            Endpoint_RateLimit_IsEnabled::default($providers);
-            Endpoint_RateLimit_Limit::default($providers);
-            Endpoint_RateLimit_ByRole::default($providers);
-            Endpoint_RateLimit_ByUser::default($providers);
-            Endpoint_RateLimit_ByIp::default($providers);
-            Endpoint_RateLimit_ByApplication::default($providers);
-            Endpoint_RateLimit_IncludeHeaders::default($providers);
-
-
-
-
-
-
-
-
-
-            foreach ($providers as $pKey => $provider) {
-
-                dump([
-                    'Provider Templates: ', 
-                    $pKey, 
-                    $provider['templates'],
-                ]);
-
-                foreach ($provider['authentication'] as $cKey => $collection) {
-                    
-                    dump([
-                        'Authentication Templates: ', 
-                        $cKey, 
-                        $collection['templates'], 
-                    ]);
-                    
-                    foreach ($collection['endpoints'] as $eKey => $endpoint) {
-
-                        // dump([
-                        //     'Endpoint Templates: ', 
-                        //     $eKey, 
-                        //     $endpoint['templates'], 
-                        // ]);
-                    }
-                }
-
-
-                foreach ($provider['collections'] as $cKey => $collection) {
-
-                    dump([
-                        'Collection Templates: ', 
-                        $cKey, 
-                        $collection['templates'], 
-                    ]);
-
-                    foreach ($collection['endpoints'] as $eKey => $endpoint) {
-                    
-                        dump([
-                            'Endpoint Templates: ', 
-                            $eKey, 
-                            $endpoint['templates'], 
-                        ]);
-
-                    }
-                }
-            }
-
-            dd('post process');
+            // Access Control
+            // -> Provider level
+            // -> Collections level
+            // -> Endpoint level
+            AccessControlResolver::execute($providers);
 
             return $providers;
         })
