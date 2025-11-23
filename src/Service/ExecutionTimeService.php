@@ -2,11 +2,13 @@
 
 namespace OSW3\Api\Service;
 
+use OSW3\Api\Enum\Logger\ExecutionTimeUnit;
+
 final class ExecutionTimeService
 {
     private float $start;
     private float $end;
-    private string $unit = 'ms';
+    private string $unit = ExecutionTimeUnit::MILLISECOND->value;
 
 
     // ──────────────────────────────
@@ -75,20 +77,13 @@ final class ExecutionTimeService
     public function getDuration(): float
     {
         return match($this->unit) {
-            'ms'    => $this->getMilliseconds(),
-            's'     => $this->getSeconds(),
-            default => $this->getMilliseconds(),
+            ExecutionTimeUnit::SECOND->value      => $this->getSeconds(),
+            ExecutionTimeUnit::MILLISECOND->value => $this->getMilliseconds(),
+            ExecutionTimeUnit::MICROSECOND->value => $this->getMicroseconds(),
+            ExecutionTimeUnit::NANOSECOND->value  => $this->getNanoseconds(),
+            ExecutionTimeUnit::FEMTOSECOND->value => $this->getFemtoseconds(),
+            default                               => $this->getMilliseconds(),
         };
-    }
-
-    /**
-     * Get the duration in milliseconds.
-     * 
-     * @return float The duration in milliseconds.
-     */
-    private function getMilliseconds(): float
-    {
-        return round(($this->end - $this->start) * 1000, 6);
     }
 
     /**
@@ -98,6 +93,50 @@ final class ExecutionTimeService
      */
     private function getSeconds(): float
     {
+        if (!isset($this->end)) {
+            $this->stop();
+        }
+
         return round(($this->end - $this->start), 6);
+    }
+
+    /**
+     * Get the duration in milliseconds.
+     * 
+     * @return float The duration in milliseconds.
+     */
+    private function getMilliseconds(): float
+    {
+        return round(($this->getSeconds() * 1000), 6);
+    }
+
+    /**
+     * Get the duration in microseconds.
+     * 
+     * @return float The duration in microseconds.
+     */
+    private function getMicroseconds(): float
+    {
+        return round(($this->getMilliseconds() * 1000), 6);
+    }
+
+    /**
+     * Get the duration in nanoseconds.
+     * 
+     * @return float The duration in nanoseconds.
+     */
+    private function getNanoseconds(): float
+    {
+        return round(($this->getMicroseconds() * 1000), 6);
+    }
+
+    /**
+     * Get the duration in femtoseconds.
+     * 
+     * @return float The duration in femtoseconds.
+     */
+    private function getFemtoseconds(): float
+    {
+        return round(($this->getNanoseconds() * 1000), 6);
     }
 }

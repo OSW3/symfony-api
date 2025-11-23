@@ -3,6 +3,8 @@ namespace OSW3\Api\Service;
 
 final class ServerService 
 {
+    private ?string $softwareNameCache = null;
+
     /** Get the server IP address
      * 
      * @return string
@@ -86,11 +88,19 @@ final class ServerService
     
     public function getSoftwareName(): string
     {
+        if ($this->softwareNameCache !== null) {
+            return $this->softwareNameCache;
+        }
+
         $name = $_SERVER['SERVER_SOFTWARE'] ?? '';
         if (preg_match('/^[a-zA-Z]+/', $name, $matches)) {
-            return $matches[0];
+            $this->softwareNameCache = $matches[0];
+            return $this->softwareNameCache;
         }
-        return 'Unknown';
+
+        $this->softwareNameCache = 'Unknown';
+        
+        return $this->softwareNameCache;
     }
 
     /**

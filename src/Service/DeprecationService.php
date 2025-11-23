@@ -1,37 +1,59 @@
 <?php 
 namespace OSW3\Api\Service;
 
+use OSW3\Api\Enum\Deprecation\State;
 use OSW3\Api\Service\ContextService;
 use OSW3\Api\Service\ConfigurationService;
-use Symfony\Component\HttpFoundation\Response;
 
 final class DeprecationService
 {
-    public const HEADER_DEPRECATION = 'Deprecation';
-    public const HEADER_SUNSET      = 'Sunset';
-    public const HEADER_LINK        = 'Link';
-    public const HEADER_MESSAGE     = 'X-Message';
-    // public const HEADER_WARNING     = 'Warning';
+    private ?bool $isEnabledCache = null;
+    private ?\DateTimeImmutable $startDateCache = null;
+    private ?\DateTimeImmutable $sunsetDateCache = null;
+    private ?string $linkCache = null;
+    private ?string $successorCache = null;
+    private ?string $messageCache = null;
 
     public function __construct(
         private readonly ContextService $contextService,
         private readonly ConfigurationService $configurationService,
     ) {}
 
-    // Configuration 
+    
+    // Deprecation data from ConfigurationService
 
+    /**
+     * Deprecation is enabled
+     * 
+     * @return bool
+     */
     public function isEnabled(): bool
     {
-        return $this->configurationService->isDeprecationEnabled(
+        if ($this->isEnabledCache !== null) {
+            return $this->isEnabledCache;
+        }
+
+        $this->isEnabledCache = $this->configurationService->isDeprecationEnabled(
             provider  : $this->contextService->getProvider(),
             segment   : $this->contextService->getSegment(),
             collection: $this->contextService->getCollection(),
             endpoint  : $this->contextService->getEndpoint(),
         );
+
+        return $this->isEnabledCache;
     }
 
+    /**
+     * Get the deprecation start date
+     * 
+     * @return \DateTimeImmutable|null
+     */
     public function getStartAt(): ?\DateTimeImmutable
     {
+        if ($this->startDateCache !== null) {
+            return $this->startDateCache;
+        }
+
         $date = $this->configurationService->getDeprecationStartAt(
             provider  : $this->contextService->getProvider(),
             segment   : $this->contextService->getSegment(),
@@ -39,11 +61,22 @@ final class DeprecationService
             endpoint  : $this->contextService->getEndpoint(),
         );
 
-        return $date ? new \DateTimeImmutable($date) : null;
+        $this->startDateCache = $date ? new \DateTimeImmutable($date) : null;
+
+        return $this->startDateCache;
     }
 
+    /**
+     * Get the deprecation sunset date
+     * 
+     * @return \DateTimeImmutable|null
+     */
     public function getSunsetAt(): ?\DateTimeImmutable
     {
+        if ($this->sunsetDateCache !== null) {
+            return $this->sunsetDateCache;
+        }
+
         $date = $this->configurationService->getDeprecationSunsetAt(
             provider  : $this->contextService->getProvider(),
             segment   : $this->contextService->getSegment(),
@@ -51,42 +84,88 @@ final class DeprecationService
             endpoint  : $this->contextService->getEndpoint(),
         );
 
-        return $date ? new \DateTimeImmutable($date) : null;
+        $this->sunsetDateCache = $date ? new \DateTimeImmutable($date) : null;
+
+        return $this->sunsetDateCache;
     }
 
+    /**
+     * Get the deprecation link
+     * 
+     * @return string|null
+     */
     public function getLink(): ?string
     {
-        return $this->configurationService->getDeprecationLink(
+        if ($this->linkCache !== null) 
+        {
+            return $this->linkCache;
+        }
+        
+        $this->linkCache = $this->configurationService->getDeprecationLink(
             provider  : $this->contextService->getProvider(),
             segment   : $this->contextService->getSegment(),
             collection: $this->contextService->getCollection(),
             endpoint  : $this->contextService->getEndpoint(),
         );
+        
+        return $this->linkCache;
     }
 
+    /**
+     * Get the deprecation successor link
+     * 
+     * @return string|null
+     */
     public function getSuccessor(): ?string
     {
-        return $this->configurationService->getDeprecationSuccessor(
+        if ($this->successorCache !== null) {
+            return $this->successorCache;
+        }
+
+        $this->successorCache = $this->configurationService->getDeprecationSuccessor(
             provider  : $this->contextService->getProvider(),
             segment   : $this->contextService->getSegment(),
             collection: $this->contextService->getCollection(),
             endpoint  : $this->contextService->getEndpoint(),
         );
+        
+        return $this->successorCache;
     }
 
+    /**
+     * Get the deprecation message
+     * 
+     * @return string|null
+     */
     public function getMessage(): ?string
     {
-        return $this->configurationService->getDeprecationMessage(
+        if ($this->messageCache !== null) {
+            return $this->messageCache;
+        }
+
+        $this->messageCache = $this->configurationService->getDeprecationMessage(
             provider  : $this->contextService->getProvider(),
             segment   : $this->contextService->getSegment(),
             collection: $this->contextService->getCollection(),
             endpoint  : $this->contextService->getEndpoint(),
         );
+        
+        return $this->messageCache;
     }
 
 
-    // State
+    // Computed Deprecation State
 
+    /**
+     * API is active
+     * 
+     * An API is considered active if:
+     * - Deprecation is enabled
+     * - It is not deprecated
+     * - It is not removed
+     * 
+     * @return bool
+     */
     public function isActive(): bool
     {
         return !$this->isEnabled() && !$this->isRemoved();
@@ -120,6 +199,15 @@ final class DeprecationService
         return true;
     }
 
+    /**
+     * API is removed
+     * 
+     * An API is considered removed if:
+     * - Deprecation is enabled
+     * - The current date is after the sunset date (if provided)
+     * 
+     * @return bool
+     */
     public function isRemoved(): bool
     {
         if (!$this->isEnabled()) {
@@ -138,16 +226,21 @@ final class DeprecationService
         return false;
     }
 
+    /**
+     * Get the current deprecation state
+     * 
+     * @return string One of 'active', 'deprecated', 'removed'
+     */
     public function getState(): string
     {
         if ($this->isRemoved()) {
-            return 'removed';
+            return State::REMOVED->value;
         }
 
         if ($this->isDeprecated()) {
-            return 'deprecated';
+            return State::DEPRECATED->value;
         }
 
-        return 'active';
+        return State::ACTIVE->value;
     }
 }

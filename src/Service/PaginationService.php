@@ -1,22 +1,16 @@
 <?php
 namespace OSW3\Api\Service;
 
+use OSW3\Api\Enum\Route\DefaultEndpoint;
 use OSW3\Api\Service\RequestService;
 use OSW3\Api\Service\ConfigurationService;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 final class PaginationService
 {
-    public const HEADER_TOTAL_COUNT   = 'X-Total-Count';
-    public const HEADER_TOTAL_PAGES   = 'X-Total-Pages';
-    public const HEADER_PER_PAGE      = 'X-Per-Page';
-    public const HEADER_CURRENT_PAGE  = 'X-Current-Page';
-    public const HEADER_NEXT_PAGE     = 'X-Next-Page';
-    public const HEADER_PREVIOUS_PAGE = 'X-Previous-Page';
-    public const HEADER_SELF_PAGE     = 'X-Self-Page';
-    public const HEADER_FIRST_PAGE    = 'X-First-Page';
-    public const HEADER_LAST_PAGE     = 'X-Last-Page';
-
+    private ?bool $enabledCache = null;
+    private ?string $parameterPageCache = null;
+    private ?string $parameterLimitCache = null;
     private int $total = 0;
 
     public function __construct(
@@ -26,29 +20,77 @@ final class PaginationService
         private readonly UrlGeneratorInterface $urlGenerator,
     ){}
     
+    
+    /** 
+     * Check if pagination is enabled for the current context
+     * 
+     * @return bool
+     */
     public function isEnabled(): bool 
     {
+        if ($this->enabledCache !== null) {
+            return $this->enabledCache;
+        }
+
         $provider   = $this->contextService->getProvider();
         $collection = $this->contextService->getCollection();
         $endpoint   = $this->contextService->getEndpoint();
 
-        if (in_array(strtolower($endpoint), ['edit','delete','patch','put','read','show','update'], true  )) {
+        if (in_array(strtolower($endpoint), [
+            DefaultEndpoint::EDIT->value,
+            DefaultEndpoint::DELETE->value,
+            DefaultEndpoint::PATCH->value,
+            DefaultEndpoint::PUT->value,
+            DefaultEndpoint::READ->value,
+            DefaultEndpoint::SHOW->value,
+            DefaultEndpoint::UPDATE->value
+        ], true  )) {
             return false;
         }
 
-        return $this->configurationService->isPaginationEnabled($provider, $collection, $endpoint);
+        $this->enabledCache = $this->configurationService->isPaginationEnabled(
+            provider  : $provider,
+            collection: $collection,
+            endpoint  : $endpoint,
+        );
+
+        return $this->enabledCache;
     }
 
+    /**
+     * Get the query parameter name for the page number
+     * 
+     * @return string
+     */
     public function getParameterPage(): string
     {
-        $provider = $this->contextService->getProvider();
-        return $this->configurationService->getParameterPage($provider);
+        if ($this->parameterPageCache !== null) {
+            return $this->parameterPageCache;
+        }
+
+        $this->parameterPageCache = $this->configurationService->getParameterPage(
+            provider: $this->contextService->getProvider(),
+        );
+        
+        return $this->parameterPageCache;
     }
 
+    /**
+     * Get the query parameter name for the limit
+     * 
+     * @return string
+     */
     public function getParameterLimit(): string
     {
-        $provider = $this->contextService->getProvider();
-        return $this->configurationService->getParameterLimit($provider);
+        if ($this->parameterLimitCache !== null) {
+            return $this->parameterLimitCache;
+        }
+
+        $this->parameterLimitCache = $this->configurationService->getParameterLimit(
+            provider: $this->contextService->getProvider(),
+        );
+        
+        return $this->parameterLimitCache;
     }
 
 

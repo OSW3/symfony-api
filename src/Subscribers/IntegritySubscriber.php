@@ -1,8 +1,6 @@
 <?php
 namespace OSW3\Api\Subscribers;
 
-use OSW3\Api\Service\HeadersService;
-use OSW3\Api\Service\ResponseService;
 use OSW3\Api\Service\IntegrityService;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
@@ -11,9 +9,9 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 class IntegritySubscriber implements EventSubscriberInterface
 {
     public function __construct(
-        private readonly HeadersService $headersService,
+        // private readonly HeadersService $headersService,
         private readonly IntegrityService $integrityService,
-        private readonly ResponseService $responseService,
+        // private readonly ResponseService $responseService,
     ){}
     
     public static function getSubscribedEvents(): array

@@ -1,6 +1,7 @@
 <?php 
 namespace OSW3\Api\Subscribers;
 
+use OSW3\Api\Enum\Version\Headers;
 use OSW3\Api\Service\HeadersService;
 use OSW3\Api\Service\VersionService;
 use Symfony\Component\HttpKernel\KernelEvents;
@@ -9,14 +10,6 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class VersionSubscriber implements EventSubscriberInterface 
 {
-    private const ALLOWED_DIRECTIVES = [
-        'API-Version',
-        'X-API-Version',
-        'X-API-All-Versions',
-        'X-API-Supported-Versions',
-        'X-API-Deprecated-Versions',
-    ];
-
     public function __construct(
         private readonly HeadersService $headersService,
         private readonly VersionService $versionService,
@@ -39,8 +32,7 @@ class VersionSubscriber implements EventSubscriberInterface
         $response = $event->getResponse();
         $exposed = $this->headersService->getExposedDirectives();
 
-
-        foreach (self::ALLOWED_DIRECTIVES as $directive) 
+        foreach (Headers::values() as $directive) 
         {
             $normalizedDirective = $this->headersService->toHeaderCase($directive);
 
@@ -49,11 +41,10 @@ class VersionSubscriber implements EventSubscriberInterface
             }
 
             $value = match ($directive) {
-                'API-Version'               => $this->versionService->getLabel(),
-                'X-API-Version'             => $this->versionService->getLabel(),
-                'X-API-All-Versions'        => $this->versionService->getAllVersions(),
-                'X-API-Supported-Versions'  => $this->versionService->getSupportedVersions(),
-                'X-API-Deprecated-Versions' => $this->versionService->getDeprecatedVersions(),
+                Headers::API_VERSION->value             => $this->versionService->getLabel(),
+                Headers::API_ALL_VERSIONS->value        => $this->versionService->getAllVersions(),
+                Headers::API_SUPPORTED_VERSIONS->value  => $this->versionService->getSupportedVersions(),
+                Headers::API_DEPRECATED_VERSIONS->value => $this->versionService->getDeprecatedVersions(),
             };
             $value = $this->headersService->toHeaderValue($value);
 

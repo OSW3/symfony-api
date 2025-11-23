@@ -103,6 +103,11 @@ class ConfigurationService
         return $this->configuration;
     }
 
+    public function getProviderNames(): array
+    {
+        return array_keys($this->getProviders());
+    }
+
     /**
      * Returns the configuration array for a specific API provider.
      * e.g.: $this->configuration->getProvider('my_custom_api_v1');
@@ -854,40 +859,40 @@ class ConfigurationService
         return $providerOptions['routes']['pattern'] ?? '';
     }
 
-    // /**
-    //  * Get the route prefix with optional fallback at endpoint, collection or provider level.
-    //  * 
-    //  * @param string $provider Name of the API provider
-    //  * @param string|null $collection Name of the collection (optional)
-    //  * @param string|null $endpoint Name of the endpoint (optional)
-    //  * @return string Route prefix
-    //  */
-    // public function getRoutePrefix(?string $provider, ?string $collection = null, ?string $endpoint = null): string
-    // {
-    //     if (! $this->hasProvider($provider)) {
-    //         return '';
-    //     }
+    /**
+     * Get the route prefix with optional fallback at endpoint, collection or provider level.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return string Route prefix
+     */
+    public function getRoutePrefix(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string
+    {
+        if (! $this->hasProvider($provider)) {
+            return '';
+        }
 
-    //     // 1. Endpoint-specific prefix
-    //     if ($collection && $endpoint) {
-    //         $endpointOptions = $this->getEndpoint($provider, $collection, $endpoint);
-    //         if ($endpointOptions && isset($endpointOptions['route']['prefix'])) {
-    //             return $endpointOptions['route']['prefix'];
-    //         }
-    //     }
+        // 1. Endpoint-specific prefix
+        if ($collection && $endpoint) {
+            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
+            if ($endpointOptions && isset($endpointOptions['route']['prefix'])) {
+                return $endpointOptions['route']['prefix'];
+            }
+        }
 
-    //     // 2. Collection-level prefix
-    //     if ($collection) {
-    //         $collectionOptions = $this->getCollection($provider, $collection);
-    //         if ($collectionOptions && isset($collectionOptions['route']['prefix'])) {
-    //             return $collectionOptions['route']['prefix'];
-    //         }
-    //     }
+        // 2. Collection-level prefix
+        if ($collection) {
+            $collectionOptions = $this->getCollection($provider, $segment, $collection);
+            if ($collectionOptions && isset($collectionOptions['route']['prefix'])) {
+                return $collectionOptions['route']['prefix'];
+            }
+        }
 
-    //     // 3. Global default prefix
-    //     $providerOptions = $this->getProvider($provider);
-    //     return $providerOptions['routes']['prefix'] ?? '';
-    // }
+        // 3. Global default prefix
+        $providerOptions = $this->getProvider($provider);
+        return $providerOptions['routes']['prefix'] ?? '';
+    }
 
     /**
      * Get the route hosts with optional fallback at endpoint, collection or provider level.
@@ -962,9 +967,6 @@ class ConfigurationService
         $providerOptions = $this->getProvider($provider);
         return $providerOptions['routes']['schemes'] ?? [];
     }
-
-    // Route configuration for specific endpoint
-    // $provider, $collection, $endpoint are required !
 
     /**
      * Get the route name of a specific endpoint.

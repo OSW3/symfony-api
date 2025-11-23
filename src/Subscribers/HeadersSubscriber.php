@@ -1,17 +1,15 @@
 <?php
 namespace OSW3\Api\Subscribers;
 
-use OSW3\Api\Service\AppService;
 use OSW3\Api\Service\ServerService;
 use OSW3\Api\Service\HeadersService;
-use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class HeadersSubscriber implements EventSubscriberInterface
 {
     public function __construct(
-        private readonly AppService $appService,
+        // private readonly AppService $appService,
         private readonly HeadersService $headersService,
         private readonly ServerService $serverService,
     ){}

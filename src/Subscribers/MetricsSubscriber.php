@@ -2,19 +2,9 @@
 namespace OSW3\Api\Subscribers;
 
 use OSW3\Api\Service\ExecutionTimeService;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\KernelEvents;
-use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
-/**
- * Handles metrics-related tasks during the request lifecycle.
- * 
- * @stage 5
- * @priority 0
- * @before -
- * @after ResponseSubscriber
- */
 class MetricsSubscriber implements EventSubscriberInterface
 {
     public function __construct(

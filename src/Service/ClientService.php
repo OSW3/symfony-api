@@ -3,6 +3,8 @@ namespace OSW3\Api\Service;
 
 use UAParser\Parser;
 use Detection\MobileDetect;
+use OSW3\Api\Enum\Client\BrowserEngine;
+use OSW3\Api\Enum\Client\Device;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 
@@ -55,7 +57,7 @@ final class ClientService
             'os_minor'        => $result->os->minor,
             'os_patch'        => $result->os->patch,
             'os_version'      => $result->os->toVersion(),
-            default     => $ua,
+            default           => $ua,
         };
     }
 
@@ -67,9 +69,9 @@ final class ClientService
     public function getDevice(): string 
     {
         return match (true) {
-            $this->isMobile() => 'mobile',
-            $this->isTablet() => 'tablet',
-            default           => 'desktop',
+            $this->isMobile() => Device::MOBILE->value,
+            $this->isTablet() => Device::TABLET->value,
+            default           => Device::DESKTOP->value,
         };
     }
     public function isMobile(): bool 
@@ -143,32 +145,34 @@ final class ClientService
     // ──────────────────────────────
 
     /**
-     * (Blink, WebKit, Gecko…).
+     * Get the browser engine (Blink, WebKit, Gecko…).
+     * 
+     * @return string|null
      */
     public function getEngine(): ?string
     {
         $ua = (string) $this->getUserAgent();
 
         if (stripos($ua, 'Gecko/') !== false && stripos($ua, 'Firefox/') !== false) {
-            return 'Gecko';
+            return BrowserEngine::GECKO->value;
         }
 
         if (stripos($ua, 'AppleWebKit/') !== false) {
             if (stripos($ua, 'Chrome/') !== false || stripos($ua, 'Edg/') !== false || stripos($ua, 'OPR/') !== false) {
-                return 'Blink';
+                return BrowserEngine::BLINK->value;
             }
-            return 'WebKit';
+            return BrowserEngine::WEBKIT->value;
         }
 
         if (stripos($ua, 'Trident/') !== false || stripos($ua, 'MSIE') !== false) {
-            return 'Trident';
+            return BrowserEngine::TRIDENT->value;
         }
 
         if (stripos($ua, 'Presto/') !== false) {
-            return 'Presto';
+            return BrowserEngine::PRESTO->value;
         }
 
-        return 'unknown';
+        return BrowserEngine::UNKNOWN->value;
     }
 
     

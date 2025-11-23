@@ -6,21 +6,11 @@ use Symfony\Component\HttpKernel\KernelInterface;
 
 final class AppService 
 {
+    private ?array $dataCache = null;
+
     public function __construct(
         private readonly KernelInterface $kernel,
     ){}
-
-    private function getComposerData(): array
-    {
-        try {
-            $file = Path::join($this->kernel->getProjectDir(), 'composer.json');
-            $data = file_get_contents($file);
-            return json_decode($data, true);
-        } catch (\Throwable $e) {
-            return [];
-        }
-    }
-
 
     /**
      * Get the name of the App from composer.json
@@ -84,4 +74,18 @@ final class AppService
         return $this->getComposerData()['license'] ?? '';
     }
 
+    private function getComposerData(): array
+    {
+        if ($this->dataCache === null) {
+            try {
+                $file = Path::join($this->kernel->getProjectDir(), 'composer.json');
+                $data = file_get_contents($file);
+                $this->dataCache = json_decode($data, true);
+            } catch (\Throwable $e) {
+                $this->dataCache = [];
+            }
+        }
+
+        return $this->dataCache;
+    }
 }

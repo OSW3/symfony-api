@@ -9,6 +9,15 @@ final class ContextService
 {
     const SEGMENT_AUTHENTICATION = 'authentication';
     const SEGMENT_COLLECTION     = 'collections';
+
+    private ?string $providerCache = null;
+    private ?string $segmentCache = null;
+    private ?string $collectionCache = null;
+    private ?string $endpointCache = null;
+    private ?string $environmentCache = null;
+    private ?bool $debugCache = null;
+    private ?string $bundleDirCache = null;
+    private ?string $projectDirCache = null;
     
     public function __construct(
         private readonly KernelInterface $kernel,
@@ -40,7 +49,13 @@ final class ContextService
      */
     public function getProvider(): ?string
     {
-        return $this->configurationService->getContext('provider') ?? null;
+        if ($this->providerCache !== null) {
+            return $this->providerCache;
+        }
+        
+        $this->providerCache = $this->configurationService->getContext('provider') ?? null;
+        
+        return $this->providerCache;
     }
 
     /**
@@ -50,7 +65,13 @@ final class ContextService
      */
     public function getSegment(): ?string
     {
-        return $this->configurationService->getContext('segment') ?? null;
+        if ($this->segmentCache !== null) {
+            return $this->segmentCache;
+        }
+        
+        $this->segmentCache = $this->configurationService->getContext('segment') ?? null;
+        
+        return $this->segmentCache;
     }
 
     /**
@@ -60,7 +81,13 @@ final class ContextService
      */
     public function getCollection(): ?string
     {
-        return $this->configurationService->getContext('collection') ?? null;
+        if ($this->collectionCache !== null) {
+            return $this->collectionCache;
+        }
+        
+        $this->collectionCache = $this->configurationService->getContext('collection') ?? null;
+        
+        return $this->collectionCache;
     }
 
     /**
@@ -70,7 +97,13 @@ final class ContextService
      */
     public function getEndpoint(): ?string
     {
-        return $this->configurationService->getContext('endpoint') ?? null;
+        if ($this->endpointCache !== null) {
+            return $this->endpointCache;
+        }
+        
+        $this->endpointCache = $this->configurationService->getContext('endpoint') ?? null;
+        
+        return $this->endpointCache;
     }
 
     /**
@@ -80,7 +113,13 @@ final class ContextService
      */
     public function getEnvironment(): ?string
     {
-        return $this->kernel->getEnvironment() ?? null;
+        if ($this->environmentCache !== null) {
+            return $this->environmentCache;
+        }
+        
+        $this->environmentCache = $this->kernel->getEnvironment() ?? null;
+        
+        return $this->environmentCache;
     }
 
     /**
@@ -90,7 +129,13 @@ final class ContextService
      */
     public function isDebug(): bool
     {
-        return $this->kernel->isDebug() ?? false;
+        if ($this->debugCache !== null) {
+            return $this->debugCache;
+        }
+        
+        $this->debugCache = $this->kernel->isDebug() ?? false;
+        
+        return $this->debugCache;
     }
 
     /**
@@ -100,10 +145,16 @@ final class ContextService
      */
     public function getBundleDir(): string
     {
+        if ($this->bundleDirCache !== null) {
+            return $this->bundleDirCache;
+        }
+
         $bundleClass = ApiBundle::class;
         $bundleName  = (new \ReflectionClass($bundleClass))->getShortName();
 
-        return $this->kernel->getBundle($bundleName)->getPath();
+        $this->bundleDirCache = $this->kernel->getBundle($bundleName)->getPath();
+
+        return $this->bundleDirCache;
     }
 
     /**
@@ -113,6 +164,12 @@ final class ContextService
      */
     public function getProjectDir(): string
     {
-        return $this->kernel->getProjectDir();
+        if ($this->projectDirCache !== null) {
+            return $this->projectDirCache;
+        }
+
+        $this->projectDirCache = $this->kernel->getProjectDir();
+
+        return $this->projectDirCache;
     }
 }

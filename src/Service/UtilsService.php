@@ -7,14 +7,23 @@ use DateTimeInterface;
 final class UtilsService
 {
     /**
-     * Convert string to camelCase (e.g.:: 'first_name' => 'FirstName')
+     * Convert a string to CamelCase
+     * e.g. my_string-name => MyStringName
+     * 
+     * @param string $string
+     * @return string
      */
     public static function camelize(string $string): string
     {
         return str_replace(' ', '', ucwords(str_replace(['-', '_'], ' ', $string)));
     }
 
-
+    /**
+     * Check if a value is a date (DateTimeInterface, timestamp or Y-m-d string)
+     * 
+     * @param mixed $value
+     * @return bool
+     */
     public static function is_date($value): bool
     {
         if ($value instanceof DateTimeInterface) {
@@ -33,6 +42,12 @@ final class UtilsService
         return false;
     }
 
+    /**
+     * Convert a date value to an HTTP date string
+     * 
+     * @param mixed $value
+     * @return string|null
+     */
     public static function to_http_date($value): ?string
     {
         if (!static::is_date($value)) {
@@ -51,6 +66,12 @@ final class UtilsService
         return $ts ? gmdate('D, d M Y H:i:s \G\M\T', $ts) : null;
     }
 
+    /**
+     * Pluralize a word
+     * 
+     * @param string $word
+     * @return string
+     */
     public static function pluralize(string $word): string
     {
         $w = strtolower($word);

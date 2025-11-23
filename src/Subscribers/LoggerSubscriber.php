@@ -1,9 +1,14 @@
 <?php
 namespace OSW3\Api\Subscribers;
 
-// use OSW3\Api\Service\AuthenticationService;
+use OSW3\Api\Service\DebugService;
+use OSW3\Api\Service\RouteService;
+use OSW3\Api\Service\IntegrityService;
 use OSW3\Api\Service\ConfigurationService;
 use OSW3\Api\Service\ExecutionTimeService;
+use OSW3\Api\Enum\Logger\ExecutionTimeUnit;
+use OSW3\Api\Service\PaginationService;
+use OSW3\Api\Service\SecurityService;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
@@ -20,7 +25,9 @@ class LoggerSubscriber implements EventSubscriberInterface
     public function __construct(
         private readonly ExecutionTimeService $timer,
         private readonly ConfigurationService $configuration,
+        // private readonly ContextService $contextService,
         // private readonly AuthenticationService $authentication,
+        private readonly SecurityService $securityService,
     ){}
 
     public static function getSubscribedEvents(): array
@@ -31,7 +38,7 @@ class LoggerSubscriber implements EventSubscriberInterface
 
             // Low priority to log the end late, just before ResponseSubscriber
             // KernelEvents::RESPONSE => ['onResponse', -9], 
-            KernelEvents::RESPONSE => ['debug', 0], 
+            // KernelEvents::RESPONSE => ['debug', 0], 
 
             // Lowest priority to log the end after all other subscribers
             // KernelEvents::TERMINATE => ['onTerminate'],
@@ -41,15 +48,29 @@ class LoggerSubscriber implements EventSubscriberInterface
     public function debug(): void
     {
         $segment    = $this->configuration->getContext('segment');
+        // $segment    = ContextService::SEGMENT_COLLECTION;
+        // $segment    = ContextService::SEGMENT_AUTHENTICATION;
         $provider   = $this->configuration->getContext('provider');
         $collection = $this->configuration->getContext('collection');
         $endpoint   = $this->configuration->getContext('endpoint');
 
 
+        dump([
+            'provider'   => $provider,
+            'segment'    => $segment,
+            'collection' => $collection,
+            'endpoint'   => $endpoint,
+        ]);
         dd([
-            $this->configuration->isEnabled($provider),
-            $this->configuration->isEnabled($provider, $segment, $collection),
-            $this->configuration->isEnabled($provider, $segment, $collection, $endpoint),
+            $this->securityService->getUser(),
+            $this->securityService->isAuthenticated(),
+            $this->securityService->getId(),
+            $this->securityService->getIdentifier(),
+            $this->securityService->getUsername(),
+            $this->securityService->getRoles(),
+            $this->securityService->getEmail(),
+            $this->securityService->getPermissions(),
+            $this->securityService->isMfaEnabled(),
         ]);
 
         // $collections = $this->configuration->getCollections($provider, 'collections');

@@ -1,10 +1,6 @@
 <?php 
 namespace OSW3\Api\Subscribers;
 
-use OSW3\Api\Service\ResponseService;
-use OSW3\Api\Service\TemplateService;
-use OSW3\Api\Service\ConfigurationService;
-use OSW3\Api\Service\ResponseStatusService;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
@@ -13,10 +9,10 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 class ExceptionSubscriber implements EventSubscriberInterface
 {
     public function __construct(
-        private readonly ResponseService $responseService,
-        private readonly ResponseStatusService $statusService,
-        private readonly TemplateService $templateService,
-        private readonly ConfigurationService $configurationService,
+        // private readonly ResponseService $responseService,
+        // private readonly ResponseStatusService $statusService,
+        // private readonly TemplateService $templateService,
+        // private readonly ConfigurationService $configurationService,
     ){}
 
     public static function getSubscribedEvents(): array
@@ -44,7 +40,7 @@ class ExceptionSubscriber implements EventSubscriberInterface
         
         // Determine the status code and status text
         $statusCode = method_exists($exception, 'getStatusCode')
-            ? $exception->getStatusCode()
+            ? $exception->{'getStatusCode'}()
             : Response::HTTP_INTERNAL_SERVER_ERROR;
 
         $statusText = method_exists($exception, 'getMessage')

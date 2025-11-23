@@ -7,13 +7,9 @@ use OSW3\Api\Encoder\ToonEncoder;
 use OSW3\Api\Service\ContextService;
 use OSW3\Api\Service\RequestService;
 use OSW3\Api\Service\ConfigurationService;
-use OSW3\Api\Service\ResponseStatusService;
 use Symfony\Component\Serializer\Serializer;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Serializer\Encoder\CsvEncoder;
 use Symfony\Component\Serializer\Encoder\XmlEncoder;
-use Symfony\Component\Serializer\Encoder\YamlEncoder;
 
 final class ResponseService 
 {
@@ -25,7 +21,6 @@ final class ResponseService
 
     public function __construct(
         private readonly RouteService $routeService,
-        private readonly ResponseStatusService $status,
         private readonly ContextService $contextService,
         private readonly ConfigurationService $configuration,
         private readonly RequestService $requestService,
@@ -157,7 +152,7 @@ final class ResponseService
         }
 
         $compressedContent = gzencode($jsonContent, 9);
-        $this->setContent(['compressed' => base64_encode($compressedContent)]);
+        // $this->setContent(['compressed' => base64_encode($compressedContent)]);
     }
 
 

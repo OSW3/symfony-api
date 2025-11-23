@@ -1,6 +1,7 @@
 <?php 
 namespace OSW3\Api\Subscribers;
 
+use OSW3\Api\Enum\Deprecation\Headers;
 use OSW3\Api\Service\TemplateService;
 use OSW3\Api\Service\DeprecationService;
 use Symfony\Component\HttpFoundation\Response;
@@ -95,10 +96,10 @@ class DeprecationSubscriber implements EventSubscriberInterface
                 $value = $start->format(DATE_RFC7231);
             }
         }
-        $response->headers->set(DeprecationService::HEADER_DEPRECATION, $value);
+        $response->headers->set(Headers::DEPRECATION->value, $value);
 
         if ($sunset) {
-            $response->headers->set(DeprecationService::HEADER_SUNSET, $sunset->format(DATE_RFC7231));
+            $response->headers->set(Headers::SUNSET->value, $sunset->format(DATE_RFC7231));
         }
 
         if ($link) {
@@ -110,12 +111,12 @@ class DeprecationSubscriber implements EventSubscriberInterface
         }
 
         if ($links) {
-            $response->headers->set(DeprecationService::HEADER_LINK, implode(', ', $links));
-            // $response->headers->set(DeprecationService::HEADER_LINK, $links);
+            $response->headers->set(Headers::LINK->value, implode(', ', $links));
+            // $response->headers->set(Headers::LINK->value, $links);
         }
 
         if ($message) {
-            $response->headers->set(DeprecationService::HEADER_MESSAGE, $message);
+            $response->headers->set(Headers::MESSAGE->value, $message);
         }
     }
 }

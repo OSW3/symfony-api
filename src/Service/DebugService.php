@@ -4,7 +4,9 @@ namespace OSW3\Api\Service;
 use Symfony\Component\HttpKernel\Profiler\Profiler;
 
 final class DebugService 
-{    
+{
+    private ?bool $enabledCache = null;
+
     public function __construct(
         private readonly ?Profiler $profiler = null,
         private readonly ContextService $contextService,
@@ -13,8 +15,15 @@ final class DebugService
 
     public function isEnabled(): bool
     {
-        $provider = $this->contextService->getProvider();
-        return $this->configurationService->isDebugEnabled($provider);
+        if ($this->enabledCache !== null) {
+            return $this->enabledCache;
+        }
+
+        $this->enabledCache = $this->configurationService->isDebugEnabled(
+            provider: $this->contextService->getProvider()
+        );
+        
+        return $this->enabledCache;
     }
 
 
@@ -49,7 +58,7 @@ final class DebugService
 
 
     // ──────────────────────────────
-    // Cache
+    // 
     // ──────────────────────────────
 
 

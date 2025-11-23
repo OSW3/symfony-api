@@ -4,13 +4,13 @@ namespace OSW3\Api\Service;
 final class RateLimitService
 {
     private const TIME_UNITS = [
-        'second' => 1,
-        'minute' => 60,
-        'hour'   => 3600,
-        'day'    => 86400,
-        'week'   => 604800,
-        'month'  => 2592000,    // ≈ 30 jours
-        'year'   => 31536000,   // 365 jours
+        'second' => 1,          // 1 second
+        'minute' => 60,         // 60 seconds
+        'hour'   => 3600,       // 60 minutes
+        'day'    => 86400,      // 24 hours
+        'week'   => 604800,     // 7 days
+        'month'  => 2592000,    // 30 days
+        'year'   => 31536000,   // 365 days
     ];
 
     public function __construct(

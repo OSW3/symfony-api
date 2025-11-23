@@ -1,12 +1,13 @@
 <?php 
 namespace OSW3\Api\Service;
 
+use OSW3\Api\Service\UrlSupportService;
 use OSW3\Api\Service\ConfigurationService;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\PropertyAccess\PropertyAccess;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 final class SerializeService
 {
@@ -15,9 +16,11 @@ final class SerializeService
         private readonly ContextService $contextService,
         private readonly SerializerInterface $serializer,
         private readonly UrlGeneratorInterface $urlGenerator,
+        private readonly UrlSupportService $urlSupportService,
         private readonly ConfigurationService $configurationService,
     ){}
 
+    // Serializer data Configuration
     /**
      * Get the encoder to use
      * 
@@ -95,14 +98,11 @@ final class SerializeService
      */
     public function hasUrlSupport(): bool 
     {
-        return $this->configurationService->hasUrlSupport(
-            provider:$this->contextService->getProvider(),
-            segment: $this->contextService->getSegment(),
-        );
+        return $this->urlSupportService->isEnabled();
     }
 
-    // = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-
+    
+    // Conversion Methods
 
     public function normalize($data): array
     {
@@ -182,14 +182,15 @@ final class SerializeService
         $provider   = $this->contextService->getProvider();
         $segment    = $this->contextService->getSegment();
         $collection = $this->contextService->getCollection();
-        $isAbsolute = $this->configurationService->isUrlAbsolute($provider, $segment);
-        $property   = $this->configurationService->getUrlProperty($provider, $segment);
+        $isAbsolute = $this->urlSupportService->isAbsolute();
+        $property   = $this->urlSupportService->getProperty();
         $endpoints  = array_keys($this->configurationService->getEndpoints($provider, $segment, $collection) ?? []);
 
         foreach ($endpoints as $endpoint) 
         {
             $allowedRoles = $this->configurationService->getAccessControlRoles($provider, $collection, $endpoint);
 
+            dump($allowedRoles);
             if (!($user === null && in_array('PUBLIC_ACCESS', $allowedRoles) || $this->security->isGranted($allowedRoles))) {
                 continue;
             }
@@ -213,5 +214,8 @@ final class SerializeService
             
             $data[$property] = $this->urlGenerator->generate($routeName, $routeParams, !$isAbsolute);
         }
+
+        dd($data, $entity, $property, $endpoints);
+
     }
 }

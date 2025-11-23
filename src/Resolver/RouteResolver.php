@@ -7,6 +7,7 @@ use OSW3\Api\Controller\Crud\IndexController;
 use OSW3\Api\Controller\Crud\CreateController;
 use OSW3\Api\Controller\Crud\DeleteController;
 use OSW3\Api\Controller\Crud\UpdateController;
+use OSW3\Api\Enum\Route\DefaultEndpoint;
 
 final class RouteResolver
 {
@@ -27,7 +28,6 @@ final class RouteResolver
             $providerPrefix  .= DIRECTORY_SEPARATOR . $version;
             $providerHosts    = $provider['routes']['hosts'];
             $providerSchemes  = $provider['routes']['schemes'];
-
 
             foreach ($segments as $segment) {
 
@@ -187,12 +187,18 @@ final class RouteResolver
                         if ($segment === ContextService::SEGMENT_COLLECTION) {
                             if (empty($endpoint['route']['methods'])) {
                                 $endpoint['route']['methods'] = match (strtolower($endpointName)) {
-                                    'add', 'create', 'post'         => ['POST'],
-                                    'put', 'update', 'edit'         => ['PUT'],
-                                    'patch'                         => ['PATCH'],
-                                    'delete'                        => ['DELETE'],
-                                    'index', 'list', 'read', 'show' => ['GET', 'HEAD'],
-                                    default                         => ['GET', 'HEAD'],
+                                    DefaultEndpoint::ADD->value, 
+                                    DefaultEndpoint::CREATE->value, 
+                                    DefaultEndpoint::POST->value       => ['POST'],
+                                    DefaultEndpoint::PUT->value, 
+                                    DefaultEndpoint::UPDATE->value, 
+                                    DefaultEndpoint::EDIT->value       => ['PUT'],
+                                    DefaultEndpoint::PATCH->value      => ['PATCH'],
+                                    DefaultEndpoint::DELETE->value     => ['DELETE'],
+                                    DefaultEndpoint::INDEX->value, 
+                                    DefaultEndpoint::LIST->value, 
+                                    DefaultEndpoint::READ->value       => ['GET', 'HEAD'],
+                                    default                     => ['GET', 'HEAD'],
                                 };
                             }
                         }
@@ -202,13 +208,18 @@ final class RouteResolver
                         if ($segment === ContextService::SEGMENT_COLLECTION) {
                             if (empty($endpoint['route']['controller'])) {
                                 $endpoint['route']['controller'] = match (strtolower($endpointName)) {
-                                    'index', 'list'         => IndexController::class . '::execute',
-                                    'add', 'create', 'post' => CreateController::class . '::execute',
-                                    'read', 'show'          => ReadController::class . '::execute',
-                                    'put', 'update', 'edit' => UpdateController::class . '::execute',
-                                    'patch'                 => UpdateController::class . '::execute',
-                                    'delete'                => DeleteController::class . '::execute',
-                                    default                 => null,
+                                    DefaultEndpoint::INDEX->value, 
+                                    DefaultEndpoint::LIST->value       => IndexController::class . '::execute',
+                                    DefaultEndpoint::ADD->value, 
+                                    DefaultEndpoint::CREATE->value, 
+                                    DefaultEndpoint::POST->value       => CreateController::class . '::execute',
+                                    DefaultEndpoint::READ->value       => ReadController::class . '::execute',
+                                    DefaultEndpoint::PUT->value, 
+                                    DefaultEndpoint::UPDATE->value, 
+                                    DefaultEndpoint::EDIT->value       => UpdateController::class . '::execute',
+                                    DefaultEndpoint::PATCH->value      => UpdateController::class . '::execute',
+                                    DefaultEndpoint::DELETE->value     => DeleteController::class . '::execute',
+                                    default                     => null,
                                 };
                             }
                         }
@@ -219,7 +230,15 @@ final class RouteResolver
                         if ($segment === ContextService::SEGMENT_COLLECTION) {
                             if (
                                 empty($endpoint['route']['requirements']) && 
-                                in_array(strtolower($endpointName), ['edit','delete','patch','put','read','show','update'], true  )
+                                in_array(strtolower($endpointName), [
+                                    DefaultEndpoint::EDIT->value,
+                                    DefaultEndpoint::DELETE->value,
+                                    DefaultEndpoint::PATCH->value,
+                                    DefaultEndpoint::PUT->value,
+                                    DefaultEndpoint::READ->value,
+                                    DefaultEndpoint::SHOW->value,
+                                    DefaultEndpoint::UPDATE->value
+                                ], true  )
                             ) {
                                 $endpoint['route']['requirements'] = ['id' => '\d+|[\w-]+'];
                             }
@@ -231,7 +250,15 @@ final class RouteResolver
                         if ($segment === ContextService::SEGMENT_COLLECTION) {
                             if (
                                 empty($endpoint['route']['options']) && 
-                                in_array(strtolower($endpointName), ['edit','delete','patch','put','read','show','update'], true  )
+                                in_array(strtolower($endpointName), [
+                                    DefaultEndpoint::EDIT->value,
+                                    DefaultEndpoint::DELETE->value,
+                                    DefaultEndpoint::PATCH->value,
+                                    DefaultEndpoint::PUT->value,
+                                    DefaultEndpoint::READ->value,
+                                    DefaultEndpoint::SHOW->value,
+                                    DefaultEndpoint::UPDATE->value
+                                ], true  )
                             ) {
                                 $endpoint['route']['options'] = ['id'];
                             }

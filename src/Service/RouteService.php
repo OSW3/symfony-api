@@ -18,24 +18,30 @@ final class RouteService
     }
 
 
-    /**
-     * Check if the endpoint is enabled based on the context
-     * e.g.: $this->isEndpointEnabled('my_custom_api_v1', 'collections', 'App\Entity\Book', 'index');
-     * 
-     * @param string|null $provider
-     * @param string|null $segment
-     * @param string|null $collection
-     * @param string|null $endpoint
-     * @return bool
-     */
-    public function isEndpointEnabled(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): bool
+    // Route Information from ConfigurationService
+
+    public function getPattern(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string|null
     {
-        return $this->configuration->isEndpointEnabled(
-            provider  : $provider,
-            segment   : $segment,
-            collection: $collection,
-            endpoint  : $endpoint
+        $pattern = $this->configuration->getRouteNamePattern(
+            provider   : $provider,
+            segment    : $segment,
+            collection : $collection,
+            endpoint   : $endpoint,
         );
+
+        return $pattern;
+    }
+
+    public function getPrefix(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string|null
+    {
+        $pattern = $this->configuration->getRoutePrefix(
+            provider   : $provider,
+            segment    : $segment,
+            collection : $collection,
+            endpoint   : $endpoint,
+        );
+
+        return $pattern;
     }
 
     /**
@@ -98,37 +104,6 @@ final class RouteService
     }
 
     /**
-     * Get the route defaults for a given provider, collection, and endpoint
-     * e.g.: $this->getDefaults('my_custom_api_v1', 'collections', 'App\Entity\Book', 'index');
-     * 
-     * @param string|null $provider
-     * @param string|null $segment
-     * @param string|null $collection
-     * @param string|null $endpoint
-     * @return array
-     */
-    public function getDefaults(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): array
-    {
-        $controller = $this->configuration->getRouteController(
-            provider   : $provider,
-            segment    : $segment,
-            collection : $collection,
-            endpoint   : $endpoint, 
-        );
-
-        $defaults = [];
-        $defaults['_controller'] = $controller;
-        $defaults['_context'] = [
-            'provider'   => $provider,
-            'segment'    => $segment,
-            'collection' => $collection,
-            'endpoint'   => $endpoint,
-        ];
-        
-        return $defaults;
-    }
-
-    /**
      * Get the route requirements for a given provider, collection, and endpoint
      * e.g.: $this->getRequirements('my_custom_api_v1', 'collections', 'App\Entity\Book', 'index');
      *
@@ -187,7 +162,7 @@ final class RouteService
      * @param string|null $endpoint
      * @return string|null
      */
-    public function getHosts(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): string|null
+    public function getHosts(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): array
     {
         $hosts = $this->configuration->getRouteHosts(
             provider   : $provider,
@@ -195,6 +170,18 @@ final class RouteService
             collection : $collection,
             endpoint   : $endpoint, 
         ) ?? [];
+
+        return $hosts;
+    }
+
+    public function getHost(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): string|null
+    {
+        $hosts = $this->getHosts(
+            provider   : $provider,
+            segment    : $segment,
+            collection : $collection,
+            endpoint   : $endpoint,
+        );
 
         return $hosts[0] ?? null;
     }
@@ -260,6 +247,38 @@ final class RouteService
     }
 
 
+    // Computed Route Information
+
+    /**
+     * Get the route defaults for a given provider, collection, and endpoint
+     * e.g.: $this->getDefaults('my_custom_api_v1', 'collections', 'App\Entity\Book', 'index');
+     * 
+     * @param string|null $provider
+     * @param string|null $segment
+     * @param string|null $collection
+     * @param string|null $endpoint
+     * @return array
+     */
+    public function getDefaults(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): array
+    {
+        $controller = $this->configuration->getRouteController(
+            provider   : $provider,
+            segment    : $segment,
+            collection : $collection,
+            endpoint   : $endpoint, 
+        );
+
+        $defaults = [];
+        $defaults['_controller'] = $controller;
+        $defaults['_context'] = [
+            'provider'   => $provider,
+            'segment'    => $segment,
+            'collection' => $collection,
+            'endpoint'   => $endpoint,
+        ];
+        
+        return $defaults;
+    }
 
     /**
      * Get all exposed routes from configuration
@@ -294,7 +313,7 @@ final class RouteService
                 // Iterate over each endpoint
                 foreach ($endpoints as $endpoint => $options) {
 
-                    if (!$this->isEndpointEnabled(
+                    if (!$this->configuration->isEndpointEnabled(
                         provider  : $provider,
                         segment   : $segment,
                         collection: $collection,
@@ -336,7 +355,7 @@ final class RouteService
                         endpoint  : $endpoint
                     );
 
-                    $host = $this->getHosts(
+                    $host = $this->getHost(
                         provider  : $provider,
                         segment   : $segment,
                         collection: $collection,
@@ -400,67 +419,6 @@ final class RouteService
         return $exposedRoutes[$routeName] ?? null;
     }
 
-
-
-    /**
-     * Add a route to the collection if it does not already exist
-     *
-     * @param array $route
-     * @param array $options
-     * @return void
-     */
-    private function addRouteToCollection(array &$route, array $options = []): void 
-    {
-        if (!isset($route[$options['name']])) {
-            $route[$options['name']] = [
-                'path'         => $options['path'] ?? '',
-                'defaults'     => $options['defaults'] ?? [],
-                'requirements' => $options['requirements'] ?? [],
-                'options'      => $options['options'] ?? [],
-                'host'         => $options['host'] ?? null,
-                'schemes'      => $options['schemes'] ?? [],
-                'methods'      => $options['methods'] ?? [],
-                'condition'    => $options['condition'] ?? '',
-            ];
-        }
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-    /**
-     * Resolve the route name for a given provider and action
-     *
-     * Parse the route name pattern and replace placeholders
-     * e.g.: api_{version}_{collection}_{action} -> api_v1_users_list
-     * 
-     * @param string $provider
-     * @param string $action
-     * @return string|null
-     */
-    // public function resolveRouteName(string $provider, string $entity, string $action): string|null 
-    // {
-    //     $pattern    = $this->configuration->getRouteNamePattern($provider);
-    //     $version    = $this->versionService->getLabel($provider);
-    //     $collection = $this->configuration->getAuthenticationName($provider, $entity);
-
-    //     $route      = $pattern;
-    //     $route      = preg_replace("/{version}/", $version, $route);
-    //     $route      = preg_replace("/{action}/", $action, $route);
-    //     $route      = preg_replace("/{collection}/", $collection, $route);
-
-    //     return $route;
-    // }
-
     /**
      * Check if a given route is registered in the API configuration
      *
@@ -494,6 +452,57 @@ final class RouteService
 
         return false;
     }
+
+    /**
+     * Add a route to the collection if it does not already exist
+     *
+     * @param array $route
+     * @param array $options
+     * @return void
+     */
+    private function addRouteToCollection(array &$route, array $options = []): void 
+    {
+        if (!isset($route[$options['name']])) {
+            $route[$options['name']] = [
+                'path'         => $options['path'] ?? '',
+                'defaults'     => $options['defaults'] ?? [],
+                'requirements' => $options['requirements'] ?? [],
+                'options'      => $options['options'] ?? [],
+                'host'         => $options['host'] ?? null,
+                'schemes'      => $options['schemes'] ?? [],
+                'methods'      => $options['methods'] ?? [],
+                'condition'    => $options['condition'] ?? '',
+            ];
+        }
+    }
+
+
+
+
+
+    /**
+     * Resolve the route name for a given provider and action
+     *
+     * Parse the route name pattern and replace placeholders
+     * e.g.: api_{version}_{collection}_{action} -> api_v1_users_list
+     * 
+     * @param string $provider
+     * @param string $action
+     * @return string|null
+     */
+    // public function resolveRouteName(string $provider, string $entity, string $action): string|null 
+    // {
+    //     $pattern    = $this->configuration->getRouteNamePattern($provider);
+    //     $version    = $this->versionService->getLabel($provider);
+    //     $collection = $this->configuration->getAuthenticationName($provider, $entity);
+
+    //     $route      = $pattern;
+    //     $route      = preg_replace("/{version}/", $version, $route);
+    //     $route      = preg_replace("/{action}/", $action, $route);
+    //     $route      = preg_replace("/{collection}/", $collection, $route);
+
+    //     return $route;
+    // }
 
     /**
      * Get the context attributes of the current route
