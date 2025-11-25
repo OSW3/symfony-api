@@ -156,17 +156,8 @@ final class RequestService
     /**
      * Get all params
      * 
-     * @deprecated use getParameters() instead
      * @return array
      */
-    public function getParams(): array
-    {
-        return array_merge(
-            $this->getQueryParams(),
-            $this->getRequestParams(),
-            $this->getAttributesParams()
-        );
-    }
     public function getParameters(): array
     {
         return array_merge(
@@ -229,10 +220,10 @@ final class RequestService
     public function hasRequiredParameters(): bool 
     {
         $required = $this->routeService->getRequirements(
-            provider: $this->contextService->getProvider(),
-            segment: $this->contextService->getSegment(),
+            provider  : $this->contextService->getProvider(),
+            segment   : $this->contextService->getSegment(),
             collection: $this->contextService->getCollection(),
-            endpoint: $this->contextService->getEndpoint(),
+            endpoint  : $this->contextService->getEndpoint(),
         );
         $routeParams = $this->request->attributes->get('_route_params', []);
 
@@ -265,85 +256,23 @@ final class RequestService
     // Xxxxx
     // ──────────────────────────────
 
-    public function getHeaders(): array
-    {
-        return $this->request->headers->all();
-    }
-
-    public function getRawContent(): string
-    {
-        return $this->request->getContent();
-    }
-    public function getFormat(): string
-    {
-        return $this->request->getRequestFormat();
-    }
-
-
-    // public function getEntityClassname(): string|null
+    // public function getHeaders(): array
     // {
-    //     // $providers = $this->configuration->getProviders();
-    //     // $current = $this->requestStack->getCurrentRequest()->get('_route');
-
-    //     // foreach ($providers as $provider) 
-    //     // foreach ($provider['collections'] ?? [] as $entityName => $collections) 
-    //     // foreach ($collections['endpoints'] ?? [] as $endpointName => $endpointOption) 
-    //     // {
-    //     //     $routeName = $endpointOption['name'];
-
-    //     //     if ($current == $routeName) {
-    //     //         return $entityName;
-    //     //     }
-    //     // }
-        
-    //     return null;
+    //     return $this->request->headers->all();
     // }
 
-    // /**
-    //  * Get the repository method
-    //  *
-    //  * @return string|null
-    //  */
-    // public function getRepositoryMethod(): string|null 
+    // public function getRawContent(): string
     // {
-    //     // $providers = $this->configuration->getProviders();
-    //     // $current = $this->requestStack->getCurrentRequest()->get('_route');
-
-    //     // foreach ($providers as $provider) 
-    //     // foreach ($provider['collections'] ?? [] as $entityName => $collections) 
-    //     // foreach ($collections['endpoints'] ?? [] as $endpointName => $endpointOption) 
-    //     // {
-    //     //     $routeName = $endpointOption['name'];
-
-    //     //     if ($current == $routeName) {
-    //     //         return $endpointOption['repository']['method'];
-    //     //     }
-    //     // }
-
-    //     return null;
+    //     return $this->request->getContent();
     // }
-       
-    // public function getRepositoryCriteria(): array
+    // public function getFormat(): string
     // {
-    //     // $providers = $this->configuration->getProviders();
-    //     // $current = $this->requestStack->getCurrentRequest()->get('_route');
+    //     return $this->request->getRequestFormat();
+    // }
 
-    //     // foreach ($providers as $provider) 
-    //     // foreach ($provider['collections'] ?? [] as $entityName => $collections) 
-    //     // foreach ($collections['endpoints'] ?? [] as $endpointName => $endpointOption) 
-    //     // {
-    //     //     $routeName = $endpointOption['name'];
 
-    //     //     if ($current == $routeName) {
-    //     //         return $endpointOption['repository']['criteria'];
-    //     //     }
-    //     // }
-
+    // public function getSorter(): array 
+    // {
     //     return [];
     // }
-
-    public function getSorter(): array 
-    {
-        return [];
-    }
 }

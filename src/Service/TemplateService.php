@@ -1,6 +1,7 @@
 <?php 
 namespace OSW3\Api\Service;
 
+use OSW3\Api\Enum\Template\Type;
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Filesystem\Path;
 use OSW3\Api\Service\ConfigurationService;
@@ -10,34 +11,47 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 
 final class TemplateService 
 {
-    public const TEMPLATE_TYPE_LIST        = 'list';
-    public const TEMPLATE_TYPE_SINGLE      = 'single';
-    public const TEMPLATE_TYPE_DELETE      = 'delete';
-    public const TEMPLATE_TYPE_ACCOUNT     = 'account';
-    public const TEMPLATE_TYPE_ERROR       = 'error';
-    public const TEMPLATE_TYPE_NOT_FOUND   = 'not_found';
-
     private string $type;
 
     public function __construct(
+        #[Autowire(service: 'service_container')] 
+        private readonly ContainerInterface $container,
         private readonly KernelInterface $kernel,
-        private readonly ConfigurationService $configuration,
         private readonly RouteService $routeService,
-        #[Autowire(service: 'service_container')] private readonly ContainerInterface $container,
+        private readonly ConfigurationService $configuration,
     ){}
 
-
+    /**
+     * Set the template type.
+     * 
+     * @param string $type The template type
+     * @return static
+     */
     public function setType(string $type): static 
     {
         $this->type = $type;
 
         return $this;
     }
+
+    /**
+     * Get the template type.
+     * 
+     * @return string The template type
+     */
     public function getType(): string 
     {
         return $this->type;
     }
 
+    /**
+     * Render the template with the given options.
+     * 
+     * @param string $type The template type
+     * @param array $options The options to replace in the template
+     * @param bool $hasArray Whether to return as array or JSON string
+     * @return string|array The rendered template
+     */
     public function render(string $type, array $options = [], bool $hasArray = false): string|array
     {
         $path       = $this->resolvePath($type);
@@ -76,6 +90,40 @@ final class TemplateService
         ;
     }
 
+    /**
+     * Loads the template file based on its format.
+     * Supports JSON, PHP, XML, and YAML formats.
+     * 
+     * @param string $path The absolute path to the template file.
+     * @throws \Exception If the file does not exist or the format is unsupported.
+     */
+    private function getContent(string $path) 
+    {
+        if (!file_exists($path)) {
+            // return [];
+            throw new \Exception("Template file does not exist: $path");
+        }
+
+        return match (pathinfo($path, PATHINFO_EXTENSION)) {
+            // JSON
+            'json'  => json_decode(file_get_contents($path), true) ?? [],
+
+            // PHP
+            'php'   => include $path,
+
+            // XML
+            'xml'   => json_decode(json_encode(simplexml_load_string(file_get_contents($path))), true) ?? [],
+
+            // YAML
+            'yml', 'yaml'  => Yaml::parseFile($path) ?? [],
+
+            // Default
+            default => throw new \Exception("Unsupported template format: $path"),
+        };
+    }
+
+
+
 
     /**
      * Resolves the absolute path to the template file based on provider and type.
@@ -110,12 +158,12 @@ final class TemplateService
 
         // Resolve the template path based on type
         $templatePath = match($type) {
-            static::TEMPLATE_TYPE_LIST      => $this->configuration->getListTemplate($provider, $segment),
-            static::TEMPLATE_TYPE_SINGLE    => $this->configuration->getSingleTemplate($provider, $segment),
-            static::TEMPLATE_TYPE_DELETE    => $this->configuration->getDeleteTemplate($provider, $segment),
-            static::TEMPLATE_TYPE_ACCOUNT   => $this->configuration->getAccountTemplate($provider, $segment),
-            static::TEMPLATE_TYPE_ERROR     => $this->configuration->getErrorTemplate($provider, $segment),
-            static::TEMPLATE_TYPE_NOT_FOUND => $this->configuration->getNotFoundTemplate($provider, $segment),
+            Type::LIST->value      => $this->configuration->getListTemplate($provider, $segment),
+            Type::SINGLE->value    => $this->configuration->getSingleTemplate($provider, $segment),
+            Type::DELETE->value    => $this->configuration->getDeleteTemplate($provider, $segment),
+            Type::ACCOUNT->value   => $this->configuration->getAccountTemplate($provider, $segment),
+            Type::ERROR->value     => $this->configuration->getErrorTemplate($provider, $segment),
+            Type::NOT_FOUND->value => $this->configuration->getNotFoundTemplate($provider, $segment),
             default => throw new \Exception("Unknown template type"),
         };
 
@@ -142,39 +190,6 @@ final class TemplateService
             implode("\n", array_map(fn($c) => " - $c", $candidates))
         ));
     }
-
-    /**
-     * Loads the template file based on its format.
-     * Supports JSON, PHP, XML, and YAML formats.
-     * 
-     * @param string $path The absolute path to the template file.
-     * @throws \Exception If the file does not exist or the format is unsupported.
-     */
-    private function getContent(string $path) 
-    {
-        if (!file_exists($path)) {
-            // return [];
-            throw new \Exception("Template file does not exist: $path");
-        }
-
-        return match (pathinfo($path, PATHINFO_EXTENSION)) {
-            // JSON
-            'json'  => json_decode(file_get_contents($path), true) ?? [],
-
-            // PHP
-            'php'   => include $path,
-
-            // XML
-            'xml'   => json_decode(json_encode(simplexml_load_string(file_get_contents($path))), true) ?? [],
-
-            // YAML
-            'yml', 'yaml'  => Yaml::parseFile($path) ?? [],
-
-            // Default
-            default => throw new \Exception("Unsupported template format: $path"),
-        };
-    }
-
 
 
     // ──────────────────────────────

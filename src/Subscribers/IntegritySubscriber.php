@@ -6,12 +6,15 @@ use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
-class IntegritySubscriber implements EventSubscriberInterface
+/**
+ * IntegritySubscriber
+ * 
+ * Adds integrity checksum headers to API responses if enabled.
+ */
+final class IntegritySubscriber implements EventSubscriberInterface
 {
     public function __construct(
-        // private readonly HeadersService $headersService,
         private readonly IntegrityService $integrityService,
-        // private readonly ResponseService $responseService,
     ){}
     
     public static function getSubscribedEvents(): array
@@ -27,16 +30,17 @@ class IntegritySubscriber implements EventSubscriberInterface
             return;
         }
 
+        if (! $this->integrityService->isEnabled()) {
+            return;
+        }
+
         // Get current response
         $response  = $event->getResponse();
 
-        $isEnabled = $this->integrityService->isEnabled();
         $algorithm = $this->integrityService->getAlgorithm();
         $hash      = $this->integrityService->getHash($algorithm);
         $base64    = base64_encode(hex2bin($hash) ?: '');
 
-        if ($isEnabled) {
-            $response->headers->set('Digest', "{$algorithm}={$base64}");
-        }
+        $response->headers->set('Digest', "{$algorithm}={$base64}");
     }
 }

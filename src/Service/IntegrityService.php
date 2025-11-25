@@ -26,7 +26,7 @@ final class IntegrityService
             return $this->enabledCache;
         }
 
-        $this->enabledCache = $this->configurationService->isChecksumEnabled(
+        $this->enabledCache = $this->configurationService->isSecurityChecksumEnabled(
             provider: $this->contextService->getProvider()
         );
 
@@ -44,7 +44,7 @@ final class IntegrityService
             return $this->algorithmCache;
         }
 
-        $this->algorithmCache = $this->configurationService->getChecksumAlgorithm(
+        $this->algorithmCache = $this->configurationService->getSecurityChecksumAlgorithm(
             provider: $this->contextService->getProvider()
         );
 

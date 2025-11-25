@@ -207,7 +207,7 @@ final class PaginationService
     public function getLimit(): ?int 
     {
         if (!$this->isEnabled()) {
-            return null;
+            return -1;
         }
 
         $provider = $this->configurationService->getContext('provider');

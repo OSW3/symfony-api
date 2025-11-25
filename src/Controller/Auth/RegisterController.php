@@ -1,6 +1,7 @@
 <?php 
 namespace OSW3\Api\Controller\Auth;
 
+use OSW3\Api\Enum\Template\Type;
 use OSW3\Api\Service\ContextService;
 use OSW3\Api\Service\TemplateService;
 use OSW3\Api\Service\SerializeService;
@@ -108,7 +109,7 @@ final class RegisterController extends AbstractController
         $normalized = $this->serializeService->normalize($user);
 
         // Define template type
-        $this->templateService->setType(TemplateService::TEMPLATE_TYPE_ACCOUNT);
+        $this->templateService->setType(Type::ACCOUNT->value);
         
         // Return response
         return new JsonResponse([

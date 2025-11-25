@@ -3,7 +3,6 @@ namespace OSW3\Api\Service;
 
 use OSW3\Api\Service\ConfigurationService;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 
 final class RouteService 
@@ -475,63 +474,4 @@ final class RouteService
             ];
         }
     }
-
-
-
-
-
-    /**
-     * Resolve the route name for a given provider and action
-     *
-     * Parse the route name pattern and replace placeholders
-     * e.g.: api_{version}_{collection}_{action} -> api_v1_users_list
-     * 
-     * @param string $provider
-     * @param string $action
-     * @return string|null
-     */
-    // public function resolveRouteName(string $provider, string $entity, string $action): string|null 
-    // {
-    //     $pattern    = $this->configuration->getRouteNamePattern($provider);
-    //     $version    = $this->versionService->getLabel($provider);
-    //     $collection = $this->configuration->getAuthenticationName($provider, $entity);
-
-    //     $route      = $pattern;
-    //     $route      = preg_replace("/{version}/", $version, $route);
-    //     $route      = preg_replace("/{action}/", $action, $route);
-    //     $route      = preg_replace("/{collection}/", $collection, $route);
-
-    //     return $route;
-    // }
-
-    /**
-     * Get the context attributes of the current route
-     * 
-     * @return array
-     */
-    // public function getContext(): array
-    // {
-    //     $route = $this->getCurrentRoute();
-    //     $options = $route ? $route['options'] : [];
-
-    //     return $options['context'] ?? [];
-    // }
-
-
-    /**
-     * Get the route controller for a given provider, collection, and endpoint
-     *
-     * @param string $provider
-     * @param string $collection
-     * @param string $endpoint
-     * @return string|null
-     */
-    // public function getController(string $provider, string $collection, string $endpoint): string|null
-    // {
-    //     return $this->configuration->getRouteController(
-    //         provider   : $provider,
-    //         collection : $collection,
-    //         endpoint   : $endpoint, 
-    //     ) ?? null;
-    // }
 }

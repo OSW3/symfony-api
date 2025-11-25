@@ -8,36 +8,75 @@ final class CacheControlService
         private readonly ConfigurationService $configuration,
     ){}
 
+    // Cache Control Configuration
+
+    /**
+     * Check if cache control is enabled
+     * 
+     * @return bool
+     */
     public function isEnabled(): bool
     {
-        $provider = $this->contextService->getProvider();
-        return $this->configuration->isCacheControlEnabled($provider);
+        return $this->configuration->isCacheControlEnabled(
+            provider: $this->contextService->getProvider()
+        );
     }
 
+    /**
+     * Check if cache control is public
+     * 
+     * @return bool
+     */
     public function isPublic(): bool
     {
-        $provider = $this->contextService->getProvider();
-        return $this->configuration->isCacheControlPublic($provider);
+        return $this->configuration->isCacheControlPublic(
+            provider: $this->contextService->getProvider()
+        );
     }
 
+    /**
+     * Check if cache control is no-store
+     * 
+     * @return bool
+     */
     public function isNoStore(): bool
     {
-        $provider = $this->contextService->getProvider();
-        return $this->configuration->isCacheControlNoStore($provider);
+        return $this->configuration->isCacheControlNoStore(
+            provider: $this->contextService->getProvider()
+        );
     }
 
+    /**
+     * Check if cache control is must-revalidate
+     * 
+     * @return bool
+     */
     public function isMustRevalidate(): bool
     {
-        $provider = $this->contextService->getProvider();
-        return $this->configuration->isCacheControlMustRevalidate($provider);
+        return $this->configuration->isCacheControlMustRevalidate(
+            provider: $this->contextService->getProvider()
+        );
     }
 
+    /**
+     * Get the max-age value
+     * 
+     * @return int|null
+     */
     public function getMaxAge(): ?int
     {
-        $provider = $this->contextService->getProvider();
-        return $this->configuration->getCacheControlMaxAge($provider);
+        return $this->configuration->getCacheControlMaxAge(
+            provider: $this->contextService->getProvider()
+        );
     }
 
+    // Computed Cache Control Values
+
+    /**
+     * Convert cache control directives to a string
+     * 
+     * @return string
+     */
     public function toString(): string
     {
         $directives = [];

@@ -1,6 +1,7 @@
 <?php
 namespace OSW3\Api\Resolver;
 
+use OSW3\Api\Enum\MergeStrategy;
 use OSW3\Api\Service\ContextService;
 
 final class AccessControlResolver
@@ -11,10 +12,10 @@ final class AccessControlResolver
         $segments = [
             ContextService::SEGMENT_COLLECTION,
         ];
-        
+
         foreach ($providers as &$provider) {
 
-            $providerMerge = $provider['access_control']['merge'] ?? 'append';
+            $providerMerge = $provider['access_control']['merge'] ?? MergeStrategy::APPEND->value;
             $providerRoles = $provider['access_control']['roles'] ?? [];
             $providerVoter = $provider['access_control']['voter'] ?? null;
 
@@ -101,11 +102,75 @@ final class AccessControlResolver
                         if ($endpoint['access_control']['voter'] === null) {
                             $endpoint['access_control']['voter'] = $collectionVoter;
                         }
+
+
+                    }
+                }
+            }
+        }
+
+
+        // ---- Merging roles ----
+
+        foreach ($providers as &$provider) {
+            $provider['access_control']['roles'] = static::mergeRoles([
+                $provider['access_control']['roles'],
+            ], $provider['access_control']['merge']);
+
+            foreach ($segments as $segment) {
+                foreach ($provider[$segment] as &$collection) {
+                    $collection['access_control']['roles'] = static::mergeRoles([
+                        $provider['access_control']['roles'],
+                        $collection['access_control']['roles'],
+                    ], $collection['access_control']['merge']);
+
+                    foreach ($collection['endpoints'] as &$endpoint) {
+                        $endpoint['access_control']['roles'] = static::mergeRoles([
+                            $provider['access_control']['roles'],
+                            $collection['access_control']['roles'],
+                            $endpoint['access_control']['roles']
+                        ], $endpoint['access_control']['merge']);
                     }
                 }
             }
         }
 
         return $providers;
+    }
+
+    /**
+     * Merge roles based on strategy
+     * e.g.: mergeRoles([['ROLE_ADMIN'], ['ROLE_USER']], 'append') => ['ROLE_ADMIN', 'ROLE_USER']
+     * 
+     * @param array<int, array<string>> $rolesList
+     * @param string $strategy
+     * @return array<string>
+     */
+    private static function mergeRoles(array $rolesList, string $strategy): array
+    {
+        $mergedRoles = [];
+
+        foreach ($rolesList as $roles) {
+            if (!is_array($roles)) {
+                continue;
+            }
+
+            switch ($strategy) {
+                case MergeStrategy::REPLACE->value:
+                    $mergedRoles = $roles;
+                    break;
+
+                case MergeStrategy::PREPEND->value:
+                    $mergedRoles = array_merge($roles, $mergedRoles);
+                    break;
+
+                case MergeStrategy::APPEND->value:
+                default:
+                    $mergedRoles = array_merge($mergedRoles, $roles);
+                    break;
+            }
+        }
+
+        return array_values(array_unique($mergedRoles));
     }
 }

@@ -7,7 +7,11 @@ use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
-class PaginationSubscriber implements EventSubscriberInterface 
+/**
+ * Handles pagination headers in API responses.
+ * Used to provide pagination metadata to clients.
+ */
+final class PaginationSubscriber implements EventSubscriberInterface 
 {
     public function __construct(
         private readonly PaginationService $paginationService,

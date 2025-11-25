@@ -1,13 +1,18 @@
 <?php
 namespace OSW3\Api\Subscribers;
 
+use OSW3\Api\Enum\Hash\Algorithm;
 use OSW3\Api\Service\ResponseService;
 use OSW3\Api\Service\IntegrityService;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
-class ControllerSubscriber implements EventSubscriberInterface
+/**
+ * Subscriber to handle actions after controller execution.
+ * Used to set response size, count, and compute data integrity hashes.
+ */
+final class ControllerSubscriber implements EventSubscriberInterface
 {
     public function __construct(
         private readonly ResponseService $responseService,
@@ -17,14 +22,8 @@ class ControllerSubscriber implements EventSubscriberInterface
     public static function getSubscribedEvents(): array
     {
         return [
-            // KernelEvents::CONTROLLER => ['onBeforeController', 0],
             KernelEvents::RESPONSE => ['onAfterController', 100],
         ];
-    }
-
-    public function onBeforeController($event): void
-    {
-        // dump('CONTROLLER - ControllerSubscriber::onController');
     }
 
     public function onAfterController(ResponseEvent $event): void
@@ -49,16 +48,15 @@ class ControllerSubscriber implements EventSubscriberInterface
         $size = strlen((string) $content);
 
         // Get the integrity algorithm
-        $algorithm = $this->integrityService->getAlgorithm();
+        // $algorithm = $this->integrityService->getAlgorithm();
 
         // Set the response size and count
         $this->responseService->setSize($size);
         $this->responseService->setCount($count);
 
         // Compute the data hash
-        $this->integrityService->computeHash($content, 'md5');
-        $this->integrityService->computeHash($content, 'sha1');
-        $this->integrityService->computeHash($content, 'sha256');
-        $this->integrityService->computeHash($content, 'sha512');
+        foreach (Algorithm::toArray() as $algorithm) {
+            $this->integrityService->computeHash($content, $algorithm);
+        }
     }
 }

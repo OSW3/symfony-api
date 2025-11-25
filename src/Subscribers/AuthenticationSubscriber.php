@@ -1,8 +1,10 @@
 <?php
 namespace OSW3\Api\Subscribers;
 
+use OSW3\Api\Service\AccessControlService;
 use OSW3\Api\Service\ContextService;
 use OSW3\Api\Service\ConfigurationService;
+use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -16,59 +18,49 @@ final class AuthenticationSubscriber implements EventSubscriberInterface
         private readonly ContextService $contextService,
         private readonly ConfigurationService $configurationService,
         private readonly AuthorizationCheckerInterface $auth,
+        private readonly AccessControlService $accessControlService,
     ){}
 
     public static function getSubscribedEvents(): array
     {
         return [
-            // KernelEvents::REQUEST => ['onRequest', 31]
+            KernelEvents::REQUEST => ['onRequest', 31]
         ];
     }
 
     public function onRequest(RequestEvent $event): void
     {
-        // dump('2 - AuthenticationSubscriber');
-
-        $provider   = $this->contextService->getProvider();
-        $collection = $this->contextService->getCollection();
-        $endpoint   = $this->contextService->getEndpoint();
-        $security   = $this->configurationService->getSecurity($provider);
-        $routeName  = $event->getRequest()->attributes->get('_route');
-
-        $securityEndpoints = array_keys(array_merge(
-            $security['registration'] ?? [], 
-            $security['authentication'] ?? [], 
-            $security['password'] ?? [], 
-        ));
-
-        $granted = false;
-
+        // Is main request
         if (!$event->isMainRequest()) {
             return;
         }
 
-        if (in_array($endpoint, $securityEndpoints, true)) {
+        $provider   = $this->contextService->getProvider();
+        $segment    = $this->contextService->getSegment();
+        $collection = $this->contextService->getCollection();
+        $endpoint   = $this->contextService->getEndpoint();
+        $isGranted  = false;
+
+        // Skip if not in collection segment
+        if ($segment !== ContextService::SEGMENT_COLLECTION) {
             return;
         }
 
-        $roles = $this->configurationService->getAccessControlRoles(
-            $provider,
-            $collection,
-            $endpoint
-        );
-        
+
+        // Get allowed roles for the current context
+        $roles = $this->accessControlService->getContextAllowedRoles();
+
         if (empty($roles)) {
             return;
         }
-        
+
         foreach ($roles as $role) {
-            if ($this->auth->isGranted($role)) {
-                $granted = true;
+            if ($isGranted = $this->auth->isGranted($role)) {
                 break;
             }
         }
 
-        if (!$granted) {
+        if (!$isGranted) {
             $message = $this->translator?->trans("error.access_denied", [
                 '%roles%' => implode(', ', $roles),
             ], 'messages') ?? 'Access Denied.';

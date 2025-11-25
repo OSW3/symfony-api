@@ -2,6 +2,7 @@
 namespace OSW3\Api\Service;
 
 use OSW3\Api\Service\UrlSupportService;
+use OSW3\Api\Service\AccessControlService;
 use OSW3\Api\Service\ConfigurationService;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
@@ -18,6 +19,7 @@ final class SerializeService
         private readonly UrlGeneratorInterface $urlGenerator,
         private readonly UrlSupportService $urlSupportService,
         private readonly ConfigurationService $configurationService,
+        private readonly AccessControlService $accessControlService,
     ){}
 
     // Serializer data Configuration
@@ -188,9 +190,8 @@ final class SerializeService
 
         foreach ($endpoints as $endpoint) 
         {
-            $allowedRoles = $this->configurationService->getAccessControlRoles($provider, $collection, $endpoint);
+            $allowedRoles = $this->accessControlService->getAllowedRoles($provider, $segment, $collection, $endpoint);
 
-            dump($allowedRoles);
             if (!($user === null && in_array('PUBLIC_ACCESS', $allowedRoles) || $this->security->isGranted($allowedRoles))) {
                 continue;
             }
@@ -214,8 +215,5 @@ final class SerializeService
             
             $data[$property] = $this->urlGenerator->generate($routeName, $routeParams, !$isAbsolute);
         }
-
-        dd($data, $entity, $property, $endpoints);
-
     }
 }

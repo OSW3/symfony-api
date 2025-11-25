@@ -1,15 +1,17 @@
 <?php
 namespace OSW3\Api\Subscribers;
 
+use OSW3\Api\Helper\HeaderHelper;
 use OSW3\Api\Service\ServerService;
 use OSW3\Api\Service\HeadersService;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
-class HeadersSubscriber implements EventSubscriberInterface
+final class HeadersSubscriber implements EventSubscriberInterface
 {
     public function __construct(
-        // private readonly AppService $appService,
         private readonly HeadersService $headersService,
         private readonly ServerService $serverService,
     ){}
@@ -17,100 +19,132 @@ class HeadersSubscriber implements EventSubscriberInterface
     public static function getSubscribedEvents(): array
     {
         return [
-            // KernelEvents::RESPONSE => ['onResponse', -100],
-            // KernelEvents::RESPONSE => ['onResponse', 0],
+            KernelEvents::RESPONSE => ['onResponse', -1000],
         ];
     }
 
     public function onResponse(ResponseEvent $event): void
-    {
-        // dump('FINAL - HeadersSubscriber::onResponse');
-        
+    {        
         if (!$event->isMainRequest()) {
             return;
         }
 
         // Get current response
         $response = $event->getResponse();
-        $exposed  = $this->headersService->getExposedDirectives();
-        $custom   = $this->headersService->getCustomDirectives();
-        $removed  = $this->headersService->getDirectivesList('remove');
+
+        // Get headers directives
+        $exposed = $this->headersService->getExposedDirectives();
+
+        // Get removed headers
+        $removed = [];//$this->headersService->getRemovedDirectives();
 
 
-        // Keep exposed headers
-        // foreach ($exposed as $key => $value) 
-        // {
-        //     $key = $this->headersService->toHeaderCase($key);
-
-        //     if ($value === false) {
-        //         $response->headers->remove($key);
-        //     }
-        //     elseif ($value === true) {
-        //         $xStrippedKey = strtolower(preg_replace('/^X-/i', '', $key));
-
-        //         $value = match($xStrippedKey) {
-
-        //             'server' => $this->serverService->getSoftware(),
-        //             // 'content-length' => $this->responseService->getSize(),
-
-        //             // App
-        //             'app-name'           => $this->appService->getName(),
-        //             'app-vendor'         => $this->appService->getVendor(),
-        //             'app-version'        => $this->appService->getVersion(),
-        //             'app-description'    => $this->appService->getDescription(),
-        //             'app-license'        => $this->appService->getLicense(),
-                    
-        //             // API Version
-        //             // 'api-version'             => $this->headersService->toHeaderValue($this->versionService->getLabel()),
-        //             // 'api-all-versions'        => $this->headersService->toHeaderValue($this->versionService->getAllVersions()),
-        //             // 'api-supported-versions'  => $this->headersService->toHeaderValue($this->versionService->getSupportedVersions()),
-        //             // 'api-deprecated-versions' => $this->headersService->toHeaderValue($this->versionService->getDeprecatedVersions()),
-
-        //             default         => $value,
-        //         };
-
-        //         $response->headers->set($key, $value);
-        //     }
-        // }
-
-        // Add custom headers
-        foreach ($custom as $key => $value) 
+        // Exposed headers
+        foreach ($exposed as $key => $value) 
         {
-            $key = $this->headersService->toHeaderCase($key);
+            $key    = HeaderHelper::toHeaderCase($key);
+            $value  = $this->resolveHeaderValue($key, $value, $event);
+
+            if ($this->shouldRemoveHeader($value)) {
+                $removed[] = $key;
+                continue;
+            }
+
             $response->headers->set($key, $value);
         }
+
 
         // Remove headers
         foreach ($removed as $key) 
         {
-            $key = $this->headersService->toHeaderCase($key);
+            $key = HeaderHelper::toHeaderCase($key);
             $response->headers->remove($key);
         }
+
 
         // Strip X Prefix
         foreach ($response->headers->all() as $key => $value) {
             $newKey = $key;
 
-            if ($this->headersService->stripXPrefix() &&  str_starts_with(strtolower($key), 'x-')) 
+            if ($this->headersService->stripXPrefix() &&  str_starts_with(strtolower($newKey), 'x-')) 
             {
-                
                 $newKey = substr($key, 2);
                 $response->headers->remove($key);
-                $response->headers->set($newKey, $value);
+                $response->headers->set(ucwords($newKey, '-'), $value);
             }
 
             if ($this->headersService->keepLegacy() && $key !== $newKey) {
-                $response->headers->set($key, $value);
+                $response->headers->set(ucwords($key, '-'), $value);
+            }
+        }
+    }
+
+
+    private function resolveHeaderValue(string $key, mixed $value, ResponseEvent $event): mixed
+    {
+        $keyLower = strtolower($key);
+
+        if ($value === true && $event->getResponse()->headers->has($key)) {
+            return $event->getResponse()->headers->get($key);
+        }
+
+        return match ($keyLower) {
+            'server' => $this->serverService->getSoftware(),
+            'vary'   => $this->computeVary($event, $value),
+            default  => $this->resolveDynamicValue($value, $event->getResponse()),
+        };
+    }
+
+    private function resolveDynamicValue(mixed $value, Response $response): mixed
+    {
+        if (!is_string($value) && !is_callable($value)) {
+            return $value;
+        }
+
+        if (is_string($value) && str_contains($value, '::')) {
+            [$class, $method] = explode('::', $value);
+            $reflection = new \ReflectionMethod($class, $method);
+            
+            if ($reflection->isStatic()) {
+                return call_user_func($value, $response);
+            } else {
+                return call_user_func([new $class(), $method], $response);
             }
         }
 
-        $h = $response->headers->all();
-        // unset($h['cache-control']);
-        // unset($h['date']);
+        if (is_callable($value)) {
+            return $value($response);
+        }
 
-        // unset($h['content-type']);
-        dump($response->getStatusCode());
-        // dump($h);
-        dd($response->getContent());
+        return $value;
+    }
+
+    private function shouldRemoveHeader(mixed $value): bool
+    {
+        return is_bool($value) || $value === null || $value === '';
+    }
+
+
+
+
+    private function computeVary(ResponseEvent $event, mixed $data): ?string 
+    {
+        $response = $event->getResponse();
+        
+        $store = $response->headers->all('vary');
+        $response->headers->remove('vary');
+
+        if ($data === false || $data === null) {
+            return null;
+        }
+
+        if (!is_array($data)) {
+            $data = [$data];
+        }
+        
+        return implode(', ', array_values(array_unique(array_merge(
+            $store,
+            $data
+        ))));
     }
 }

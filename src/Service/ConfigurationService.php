@@ -1,6 +1,7 @@
 <?php 
 namespace OSW3\Api\Service;
 
+use OSW3\Api\Enum\Hash\Algorithm;
 use OSW3\Api\Service\ContextService;
 use Symfony\Component\HttpFoundation\Request;
 use OSW3\Api\DependencyInjection\Configuration;
@@ -1669,32 +1670,32 @@ class ConfigurationService
      * @param string|null $endpoint Name of the endpoint (optional)
      * @return array Templates configuration array
      */
-    public function getTemplates(string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): array
-    {
-        if (! $this->hasProvider($provider)) {
-            return [];
-        }
+    // public function getTemplates(string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): array
+    // {
+    //     if (! $this->hasProvider($provider)) {
+    //         return [];
+    //     }
 
-        // 1. Endpoint-specific templates
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
-            if ($endpointOptions && isset($endpointOptions['templates'])) {
-                return $endpointOptions['templates'];
-            }
-        }
+    //     // 1. Endpoint-specific templates
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
+    //         if ($endpointOptions && isset($endpointOptions['templates'])) {
+    //             return $endpointOptions['templates'];
+    //         }
+    //     }
 
-        // 2. Collection-level templates
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if ($collectionOptions && isset($collectionOptions['templates'])) {
-                return $collectionOptions['templates'];
-            }
-        }
+    //     // 2. Collection-level templates
+    //     if ($collection) {
+    //         $collectionOptions = $this->getCollection($provider, $segment, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['templates'])) {
+    //             return $collectionOptions['templates'];
+    //         }
+    //     }
 
-        // 3. Global default templates
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['templates'] ?? [];
-    }
+    //     // 3. Global default templates
+    //     $providerOptions = $this->getProvider($provider);
+    //     return $providerOptions['templates'] ?? [];
+    // }
 
     /**
      * Get the list template for a specific provider, collection, and endpoint.
@@ -1975,20 +1976,23 @@ class ConfigurationService
         return $responseOptions['format']['mime_type'] ?? null;
     }
 
+
+    // RESPONSES -> CONTENT NEGOTIATION
+
     /**
      * Check if format overrides are allowed for a specific provider.
      * 
      * @param string $provider Name of the API provider
      * @return bool True if format overrides are allowed, false otherwise
      */
-    public function canOverrideResponseType(?string $provider): bool
+    public function isResponseContentNegotiationEnabled(?string $provider): bool
     {
         if (! $this->hasProvider($provider)) {
             return false;
         }
 
         $responseOptions = $this->getResponse($provider);
-        return $responseOptions['format']['override'] ?? false;
+        return $responseOptions['content_negotiation']['enabled'] ?? false;
     }
 
     /**
@@ -1998,18 +2002,18 @@ class ConfigurationService
      * @param string $provider Name of the API provider
      * @return string Response format parameter name
      */
-    public function getResponseFormatParameter(?string $provider): string
+    public function getResponseContentNegotiationParameter(?string $provider): string
     {
         if (! $this->hasProvider($provider)) {
             return '_format';
         }
 
         $responseOptions = $this->getResponse($provider);
-        return $responseOptions['format']['parameter'] ?? '_format';
+        return $responseOptions['content_negotiation']['parameter'] ?? '_format';
     }
 
 
-    // RESPONSES -> CHECKSUM
+    // RESPONSES -> SECURITY CHECKSUM
 
     /**
      * Check if response checksum is enabled for a specific provider.
@@ -2017,14 +2021,14 @@ class ConfigurationService
      * @param string $provider Name of the API provider
      * @return bool True if response checksum is enabled, false otherwise
      */
-    public function isChecksumEnabled(?string $provider): bool
+    public function isSecurityChecksumEnabled(?string $provider): bool
     {
         if (! $this->hasProvider($provider)) {
             return false;
         }
 
         $options = $this->getResponse($provider);
-        return $options['checksum']['enabled'] ?? false;
+        return $options['security']['checksum']['enabled'] ?? false;
     }
 
     /**
@@ -2034,14 +2038,14 @@ class ConfigurationService
      * @param string $provider Name of the API provider
      * @return string Checksum algorithm (e.g., 'md5', 'sha256')
      */
-    public function getChecksumAlgorithm(?string $provider): string
+    public function getSecurityChecksumAlgorithm(?string $provider): string
     {
         if (! $this->hasProvider($provider)) {
-            return 'md5';
+            return Algorithm::MD5->value;
         }
 
         $options = $this->getResponse($provider);
-        return $options['checksum']['algorithm'] ?? 'md5';
+        return $options['security']['checksum']['algorithm'] ?? Algorithm::MD5->value;
     }
 
 
@@ -2130,6 +2134,12 @@ class ConfigurationService
 
     // RESPONSE -> HEADERS
 
+    /**
+     * Get the response headers configuration for a specific provider.
+     * 
+     * @param string $provider Name of the API provider
+     * @return array Response headers configuration array
+     */
     public function getHeaders(?string $provider): array
     {
         if (! $this->hasProvider($provider)) {
@@ -2140,6 +2150,12 @@ class ConfigurationService
         return $providerOptions['response']['headers'] ?? [];
     }
 
+    /**
+     * Check if legacy headers should be kept for a specific provider.
+     * 
+     * @param string $provider Name of the API provider
+     * @return bool True if legacy headers should be kept, false otherwise
+     */
     public function isHeadersStripXPrefix(?string $provider): bool
     {
         if (! $this->hasProvider($provider)) {
@@ -2147,9 +2163,15 @@ class ConfigurationService
         }
 
         $providerOptions = $this->getProvider($provider);
-        return $providerOptions['response']['headers']['strip_x_prefix'] ?? false;
+        return $providerOptions['response']['behavior']['strip_x_prefix'] ?? false;
     }
 
+    /**
+     * Check if legacy headers are kept for a specific provider.
+     * 
+     * @param string $provider Name of the API provider
+     * @return bool True if legacy headers are kept, false otherwise
+     */
     public function isHeadersKeepLegacy(?string $provider): bool
     {
         if (! $this->hasProvider($provider)) {
@@ -2157,9 +2179,15 @@ class ConfigurationService
         }
 
         $providerOptions = $this->getProvider($provider);
-        return $providerOptions['response']['headers']['keep_legacy'] ?? false;
+        return $providerOptions['response']['behavior']['keep_legacy'] ?? false;
     }
 
+    /**
+     * Get the headers vary directives for a specific provider.
+     * 
+     * @param string $provider Name of the API provider
+     * @return array Array of header names for Vary directive
+     */
     public function getHeadersExposedDirectives(?string $provider): array
     {
         if (! $this->hasProvider($provider)) {
@@ -2170,43 +2198,63 @@ class ConfigurationService
         return $providerOptions['response']['headers']['exposed'] ?? [];
     }
 
-    public function getHeadersVaryDirectives(?string $provider): array
-    {
-        if (! $this->hasProvider($provider)) {
-            return [];
-        }
+    /**
+     * Get the headers vary directives for a specific provider.
+     * 
+     * @param string $provider Name of the API provider
+     * @return array Array of header names for Vary directive
+     */
+    // public function getHeadersVaryDirectives(?string $provider): array
+    // {
+    //     if (! $this->hasProvider($provider)) {
+    //         return [];
+    //     }
 
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['response']['headers']['vary'] ?? [];
-    }
+    //     $providerOptions = $this->getProvider($provider);
+    //     return $providerOptions['response']['headers']['vary'] ?? [];
+    // }
 
-    public function getHeadersCustomDirectives(?string $provider): array
-    {
-        if (! $this->hasProvider($provider)) {
-            return [];
-        }
+    /**
+     * Get the headers remove directives for a specific provider.
+     * 
+     * @param string $provider Name of the API provider
+     * @return array Array of header names to be removed
+     */
+    // public function getHeadersRemoveDirectives(?string $provider): array
+    // {
+    //     if (! $this->hasProvider($provider)) {
+    //         return [];
+    //     }
 
-        $providerOptions = $this->getProvider($provider);
-
-        $directives = $providerOptions['response']['headers']['custom'] ?? [];
-        $directives = array_map('trim', $directives);
-        $directives = array_combine(array_map(fn($key) => "X-{$key}", array_keys($directives)), array_values($directives));
-        return $directives;
-    }
-
-    public function getHeadersRemoveDirectives(?string $provider): array
-    {
-        if (! $this->hasProvider($provider)) {
-            return [];
-        }
-
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['response']['headers']['remove'] ?? [];
-    }
+    //     $providerOptions = $this->getProvider($provider);
+    //     return $providerOptions['response']['headers']['remove'] ?? [];
+    // }
 
 
     // RESPONSE -> CORS
 
+    /**
+     * Check if CORS is enabled for a specific provider.
+     * 
+     * @param string $provider Name of the API provider
+     * @return bool True if CORS is enabled, false otherwise
+     */
+    public function isCorsEnabled(?string $provider): bool
+    {
+        if (! $this->hasProvider($provider)) {
+            return false;
+        }
+
+        $providerOptions = $this->getProvider($provider);
+        return $providerOptions['response']['cors']['enabled'] ?? false;
+    }
+
+    /**
+     * Get the CORS allowed origins for a specific provider.
+     * 
+     * @param string $provider Name of the API provider
+     * @return array Array of allowed origins
+     */
     public function getCorsAllowedOrigins(?string $provider): array
     {
         if (! $this->hasProvider($provider)) {
@@ -2214,9 +2262,15 @@ class ConfigurationService
         }
 
         $providerOptions = $this->getProvider($provider);
-        return $providerOptions['response']['headers']['cors']['origins'] ?? [];
+        return $providerOptions['response']['cors']['origins'] ?? [];
     }
 
+    /**
+     * Get the CORS allowed headers for a specific provider.
+     * 
+     * @param string $provider Name of the API provider
+     * @return array Array of allowed headers
+     */
     public function getCorsAllowedMethods(?string $provider): array
     {
         if (! $this->hasProvider($provider)) {
@@ -2224,19 +2278,47 @@ class ConfigurationService
         }
 
         $providerOptions = $this->getProvider($provider);
-        return $providerOptions['response']['headers']['cors']['methods'] ?? [];
+        return $providerOptions['response']['cors']['methods'] ?? [];
     }
 
-    public function getCorsAttributes(?string $provider): array
+    /**
+     * Get the CORS allowed headers for a specific provider.
+     * 
+     * @param string $provider Name of the API provider
+     * @return array Array of allowed headers
+     */
+    public function getCorsHeaders(?string $provider): array
     {
         if (! $this->hasProvider($provider)) {
             return [];
         }
 
         $providerOptions = $this->getProvider($provider);
-        return $providerOptions['response']['headers']['cors']['attributes'] ?? [];
+        return $providerOptions['response']['cors']['headers'] ?? [];
     }
 
+    /**
+     * Get the CORS allowed headers for a specific provider.
+     * 
+     * @param string $provider Name of the API provider
+     * @return array Array of allowed headers
+     */
+    public function getCorsExposedHeaders(?string $provider): array
+    {
+        if (! $this->hasProvider($provider)) {
+            return [];
+        }
+
+        $providerOptions = $this->getProvider($provider);
+        return $providerOptions['response']['cors']['expose'] ?? [];
+    }
+
+    /**
+     * Check if CORS credentials are allowed for a specific provider.
+     * 
+     * @param string $provider Name of the API provider
+     * @return bool True if CORS credentials are allowed, false otherwise
+     */
     public function getCorsCredentials(?string $provider): bool
     {
         if (! $this->hasProvider($provider)) {
@@ -2244,7 +2326,23 @@ class ConfigurationService
         }
 
         $providerOptions = $this->getProvider($provider);
-        return $providerOptions['response']['headers']['cors']['credentials'] ?? false;
+        return $providerOptions['response']['cors']['credentials'] ?? false;
+    }
+
+    /**
+     * Get the CORS max-age for a specific provider.
+     * 
+     * @param string $provider Name of the API provider
+     * @return int Max-age value in seconds
+     */
+    public function getCorsMaxAge(?string $provider): int
+    {
+        if (! $this->hasProvider($provider)) {
+            return 0;
+        }
+
+        $providerOptions = $this->getProvider($provider);
+        return $providerOptions['response']['cors']['max_age'] ?? 0;
     }
 
 
@@ -2265,23 +2363,6 @@ class ConfigurationService
         $providerOptions = $this->getProvider($provider);
         return $providerOptions['response']['compression']['enabled'] ?? false;
     }
-
-    /**
-     * Get the compression level for a specific provider.
-     * Defaults to 6 if not specified.
-     * 
-     * @param string $provider Name of the API provider
-     * @return int Compression level (0-9)
-     */
-    public function getCompressionLevel(?string $provider): int
-    {
-        if (! $this->hasProvider($provider)) {
-            return 6;
-        }
-
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['response']['compression']['level'] ?? 6;
-    }
     
     /**
      * Get the compression format for a specific provider.
@@ -2298,6 +2379,23 @@ class ConfigurationService
 
         $providerOptions = $this->getProvider($provider);
         return $providerOptions['response']['compression']['format'] ?? 'gzip';
+    }
+
+    /**
+     * Get the compression level for a specific provider.
+     * Defaults to 6 if not specified.
+     * 
+     * @param string $provider Name of the API provider
+     * @return int Compression level (0-9)
+     */
+    public function getCompressionLevel(?string $provider): int
+    {
+        if (! $this->hasProvider($provider)) {
+            return 6;
+        }
+
+        $providerOptions = $this->getProvider($provider);
+        return $providerOptions['response']['compression']['level'] ?? 6;
     }
 
 
@@ -2501,6 +2599,20 @@ class ConfigurationService
     }
 
     /**
+     * Get the access control merge strategy for a specific provider, collection, and endpoint.
+     * 
+     * @param string $provider Name of the API provider
+     * @param string|null $segment Name of the segment (optional)
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return string Merge strategy ('append' or 'override')
+     */
+    public function getAccessControlMergeStrategy(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string
+    {
+        return $this->getAccessControl($provider, $segment, $collection, $endpoint)['merge'] ?? 'append';
+    }
+
+    /**
      * Get the access control roles for a specific provider, collection, and endpoint.
      * 
      * @param string $provider Name of the API provider
@@ -2508,9 +2620,9 @@ class ConfigurationService
      * @param string|null $endpoint Name of the endpoint (optional)
      * @return array Array of access control roles
      */
-    public function getAccessControlRoles(?string $provider, ?string $collection = null, ?string $endpoint = null): array
+    public function getAccessControlRoles(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): array
     {
-        return $this->getAccessControl($provider, $collection, $endpoint)['roles'] ?? [];
+        return $this->getAccessControl($provider, $segment, $collection, $endpoint)['roles'] ?? [];
     }
 
     /**
@@ -2521,9 +2633,9 @@ class ConfigurationService
      * @param string|null $endpoint Name of the endpoint (optional)
      * @return string Voter class name
      */
-    public function getAccessControlVoter(?string $provider, ?string $collection = null, ?string $endpoint = null): string
+    public function getAccessControlVoter(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): ?string
     {
-        return $this->getAccessControl($provider, $collection, $endpoint)['voter'] ?? '';
+        return $this->getAccessControl($provider, $segment, $collection, $endpoint)['voter'] ?? null;
     }
 
 

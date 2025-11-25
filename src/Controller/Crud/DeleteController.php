@@ -1,6 +1,7 @@
 <?php 
 namespace OSW3\Api\Controller\Crud;
 
+use OSW3\Api\Enum\Template\Type;
 use OSW3\Api\Service\ContextService;
 use OSW3\Api\Service\TemplateService;
 use Doctrine\Persistence\ManagerRegistry;
@@ -37,7 +38,7 @@ final class DeleteController extends AbstractController
         $this->em->remove($entity);
         $this->em->flush();
 
-        $this->templateService->setType(TemplateService::TEMPLATE_TYPE_DELETE);
+        $this->templateService->setType(Type::DELETE->value);
 
         // Return response
         return $this->json(['success' => true, 'deleted_id' => $id]);

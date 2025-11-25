@@ -2,6 +2,7 @@
 namespace OSW3\Api\Subscribers;
 
 use OSW3\Api\Enum\MimeType;
+use OSW3\Api\Factory\ResponseEncoderFactory;
 use OSW3\Api\Service\ResponseService;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
@@ -11,6 +12,7 @@ class ResponseSubscriber implements EventSubscriberInterface
 {
     public function __construct(
         private readonly ResponseService $responseService,
+        private readonly ResponseEncoderFactory $responseEncoderFactory,
     ){}
     
     public static function getSubscribedEvents(): array
@@ -30,17 +32,17 @@ class ResponseSubscriber implements EventSubscriberInterface
         $response = $event->getResponse();
 
         // Get the output format
-        $format   = $this->responseService->getFormat();
+        // $format = $this->responseService->getFormat();
 
         // Get the output mime type
         $mimeType = $this->responseService->getMimeType();
 
         // Get current content
         $content = match ($mimeType) {
-            MimeType::CSV->value  => $this->responseService->getCsvResponse($response->getContent()),
-            MimeType::XML->value  => $this->responseService->getXmlResponse($response->getContent()),
-            MimeType::YAML->value => $this->responseService->getYamlResponse($response->getContent()),
-            MimeType::TOON->value => $this->responseService->getToonResponse($response->getContent()),
+            MimeType::CSV->value  => $this->responseEncoderFactory->encodeCsvResponse($response->getContent()),
+            MimeType::XML->value  => $this->responseEncoderFactory->encodeXmlResponse($response->getContent()),
+            MimeType::YAML->value => $this->responseEncoderFactory->encodeYamlResponse($response->getContent()),
+            MimeType::TOON->value => $this->responseEncoderFactory->encodeToonResponse($response->getContent()),
             default               => $response->getContent(),
         };
 

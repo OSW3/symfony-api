@@ -5,7 +5,11 @@ use OSW3\Api\Service\ExecutionTimeService;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
-class MetricsSubscriber implements EventSubscriberInterface
+/**
+ * Handles metrics tracking such as execution time during the request lifecycle.
+ * Used to monitor and analyze API performance.
+ */
+final class MetricsSubscriber implements EventSubscriberInterface
 {
     public function __construct(
         private readonly ExecutionTimeService $timer,

@@ -11,7 +11,11 @@ use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
-class DeprecationSubscriber implements EventSubscriberInterface
+/**
+ * Handle API deprecation and removal.
+ * Used to notify clients about deprecated endpoints and removed APIs.
+ */
+final class DeprecationSubscriber implements EventSubscriberInterface
 {
     public function __construct(
         private readonly TemplateService $templateService,

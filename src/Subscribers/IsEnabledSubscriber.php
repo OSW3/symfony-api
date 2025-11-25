@@ -3,10 +3,15 @@ namespace OSW3\Api\Subscribers;
 
 use OSW3\Api\Service\ContextService;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
+/**
+ * Subscriber to handle disabled API routes
+ * Used when the API is globally disabled in configuration
+ */
 final class IsEnabledSubscriber implements EventSubscriberInterface
 {
     public function __construct(

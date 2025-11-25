@@ -1,6 +1,7 @@
 <?php
 
 use OSW3\Api\Enum\MimeType;
+use OSW3\Api\Enum\MergeStrategy;
 use OSW3\Api\Resolver\ApiResolver;
 use OSW3\Api\Resolver\NameResolver;
 use OSW3\Api\Resolver\RouteResolver;
@@ -416,8 +417,16 @@ return static function($definition): void
                                 ->defaultNull()
                             ->end()
 
-                            // Format override via URL parameter
-                            ->booleanNode('override')
+                        ->end()
+                    ->end()
+
+                    // Content negotiation settings
+                    ->arrayNode('content_negotiation')
+                        ->info('Content negotiation settings for API responses.')
+                        ->addDefaultsIfNotSet()->children()
+
+                            // Enable format override via URL parameter
+                            ->booleanNode('enabled')
                                 ->info('If true, allows clients to override the response format using a URL parameter (e.g. ?format=xml).')
                                 ->defaultFalse()
                                 ->treatNullLike(false)
@@ -433,24 +442,32 @@ return static function($definition): void
                         ->end()
                     ->end()
 
-                    // Response checksum/hash settings
-                    ->arrayNode('checksum')
-                        ->info('Configuration for response checksum/hash settings.')
+                    // Security settings
+                    ->arrayNode('security')
+                        ->info('Security settings for API responses.')
                         ->addDefaultsIfNotSet()->children()
 
-                            // Enable response checksum/hash verification
-                            ->booleanNode('enabled')
-                                ->info('If true, enables response checksum/hash verification.')
-                                ->defaultTrue()
-                                ->treatNullLike(true)
-                            ->end()
-
-                            // Hash algorithm to use for response hashing
-                            ->enumNode('algorithm')
-                                ->info('Hash algorithm to use for response hashing. Options include "md5", "sha1", "sha256", etc.')
-                                ->values(['sha1', 'sha256', 'sha512'])
-                                ->defaultValue('sha256')
-                                ->treatNullLike('sha256')
+                            // Response checksum/hash settings
+                            ->arrayNode('checksum')
+                                ->info('Configuration for response checksum/hash settings.')
+                                ->addDefaultsIfNotSet()->children()
+        
+                                    // Enable response checksum/hash verification
+                                    ->booleanNode('enabled')
+                                        ->info('If true, enables response checksum/hash verification.')
+                                        ->defaultTrue()
+                                        ->treatNullLike(true)
+                                    ->end()
+        
+                                    // Hash algorithm to use for response hashing
+                                    ->enumNode('algorithm')
+                                        ->info('Hash algorithm to use for response hashing. Options include "md5", "sha1", "sha256", etc.')
+                                        ->values(['sha1', 'sha256', 'sha512'])
+                                        ->defaultValue('sha256')
+                                        ->treatNullLike('sha256')
+                                    ->end()
+        
+                                ->end()
                             ->end()
 
                         ->end()
@@ -501,9 +518,70 @@ return static function($definition): void
                         ->end()
                     ->end()
 
-                    // HTTP headers settings
-                    ->arrayNode('headers')
-                        ->info('HTTP headers to include in API responses.')
+                    // CORS configuration
+                    ->arrayNode('cors')
+                        ->info('CORS configuration for the API.')
+                        ->addDefaultsIfNotSet()->children()
+
+                            // Enable or disable CORS
+                            ->booleanNode('enabled')
+                                ->info('Enable or disable CORS for the API.')
+                                ->defaultTrue()
+                                ->treatNullLike(true)
+                            ->end()
+
+                            // Allowed origins for CORS requests
+                            ->arrayNode('origins')
+                                ->info('List of allowed origins for CORS requests.')
+                                ->scalarPrototype()->end()
+                                ->defaultValue(['*'])
+                                ->treatNullLike(['*'])
+                            ->end()
+
+                            // Allowed HTTP methods for CORS requests
+                            ->arrayNode('methods')
+                                ->info('List of allowed HTTP methods for CORS requests.')
+                                ->scalarPrototype()->end()
+                                ->defaultValue(['GET', 'POST', 'OPTIONS'])
+                                ->treatNullLike(['GET', 'POST', 'OPTIONS'])
+                                // ->defaultValue(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'])
+                                // ->treatNullLike(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'])
+                            ->end()
+
+                            // List of headers to expose in CORS requests
+                            ->arrayNode('headers')
+                                ->info('List of headers to expose in CORS requests.')
+                                ->scalarPrototype()->end()
+                                ->defaultValue([])
+                            ->end()
+
+                            // Headers to expose to the client
+                            ->arrayNode('expose')
+                                ->info('List of headers to expose to the client.')
+                                ->scalarPrototype()->end()
+                                ->defaultValue([])
+                            ->end()
+
+                            // Include credentials in CORS requests
+                            ->booleanNode('credentials')
+                                ->info('If true, includes credentials in CORS requests.')
+                                ->defaultFalse()
+                                ->treatNullLike(false)
+                            ->end()
+
+                            // Max age for CORS preflight requests
+                            ->integerNode('max_age')
+                                ->info('Maximum age for CORS preflight requests.')
+                                ->defaultValue(3600)
+                                ->treatNullLike(3600)
+                            ->end()
+
+                        ->end()
+                    ->end()
+
+                    // Behavior settings
+                    ->arrayNode('behavior')
+                        ->info('Behavior settings for API responses.')
                         ->addDefaultsIfNotSet()->children()
 
                             // Strip "X-" prefix from headers
@@ -520,73 +598,37 @@ return static function($definition): void
                                 ->treatNullLike(true)
                             ->end()
 
+                        ->end()
+                    ->end()
+
+                    // HTTP headers settings
+                    ->arrayNode('headers')
+                        ->info('HTTP headers to include in API responses.')
+                        ->addDefaultsIfNotSet()->children()
+
                             // List of headers to expose in CORS requests
                             ->arrayNode('exposed')
                                 ->info('List of headers to expose in CORS requests.')
-                                ->scalarPrototype()->end()
+                                ->variablePrototype()->end()
                                 ->defaultValue([])
-                            ->end()
-                            
-                            // CORS configuration
-                            ->arrayNode('cors')
-                                ->info('CORS configuration for the API.')
-                                ->addDefaultsIfNotSet()->children()
-
-                                    // Allowed origins for CORS requests
-                                    ->arrayNode('origins')
-                                        ->info('List of allowed origins for CORS requests.')
-                                        ->scalarPrototype()->end()
-                                        ->defaultValue(['*'])
-                                        ->treatNullLike(['*'])
-                                    ->end()
-
-                                    // Allowed HTTP methods for CORS requests
-                                    ->arrayNode('methods')
-                                        ->info('List of allowed HTTP methods for CORS requests.')
-                                        ->scalarPrototype()->end()
-                                        ->defaultValue(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'])
-                                        ->treatNullLike(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'])
-                                    ->end()
-
-                                    // List of headers to expose in CORS requests
-                                    ->arrayNode('attributes')
-                                        ->info('List of headers to expose in CORS requests.')
-                                        ->scalarPrototype()->end()
-                                        ->defaultValue([])
-                                    ->end()
-
-                                    // Include credentials in CORS requests
-                                    ->booleanNode('credentials')
-                                        ->info('If true, includes credentials in CORS requests.')
-                                        ->defaultFalse()
-                                        ->treatNullLike(false)
-                                    ->end()
-
-                                ->end()
                             ->end()
 
                             // Vary response header settings
-                            ->arrayNode('vary')
-                                ->info('List of headers to include in the Vary response header.')
-                                ->scalarPrototype()->end()
-                                ->defaultValue(['Origin', 'Accept', 'Accept-Language', 'Accept-Encoding', 'Accept', 'Authorization', 'API-Version'])
-                                ->treatNullLike(['Origin', 'Accept', 'Accept-Language', 'Accept-Encoding', 'Accept', 'Authorization', 'API-Version'])
-                            ->end()
-
-                            // Custom headers to always include in responses
-                            ->arrayNode('custom')
-                                ->info('Custom headers to always include in responses. Key is header name, value is header value.')
-                                ->normalizeKeys(false)
-                                ->scalarPrototype()->end()
-                                ->defaultValue([])
-                            ->end() 
+                            // ->arrayNode('vary')
+                            //     ->info('List of headers to include in the Vary response header.')
+                            //     ->scalarPrototype()->end()
+                            //     ->defaultValue([])
+                            //     ->treatNullLike([])
+                            //     // ->defaultValue(['Origin', 'Accept', 'Accept-Language', 'Accept-Encoding', 'Accept', 'Authorization', 'API-Version'])
+                            //     // ->treatNullLike(['Origin', 'Accept', 'Accept-Language', 'Accept-Encoding', 'Accept', 'Authorization', 'API-Version'])
+                            // ->end()
 
                             // Headers to remove from responses
-                            ->arrayNode('remove')
-                                ->info('List of headers to remove from responses.')
-                                ->scalarPrototype()->end()
-                                ->defaultValue([])
-                            ->end()
+                            // ->arrayNode('remove')
+                            //     ->info('List of headers to remove from responses.')
+                            //     ->scalarPrototype()->end()
+                            //     ->defaultValue([])
+                            // ->end()
 
                         ->end()
                     ->end()
@@ -685,9 +727,9 @@ return static function($definition): void
                     // Merge strategy for access control settings
                     ->enumNode('merge')
                         ->info('Defines how to handle merging access control settings: "replace" to overwrite existing settings, "append" to add to them, or "prepend" to add them at the beginning.')
-                        ->values(['replace', 'append', 'prepend'])
-                        ->defaultValue('append')
-                        ->treatNullLike('append')
+                        ->values(MergeStrategy::toArray(true))
+                        ->defaultValue(MergeStrategy::APPEND->value)
+                        ->treatNullLike(MergeStrategy::APPEND->value)
                     ->end()
 
                     // Required roles for accessing this API provider
@@ -2737,7 +2779,7 @@ return static function($definition): void
                                 // Merge strategy for access control settings
                                 ->enumNode('merge')
                                     ->info('Defines how to handle merging access control settings: "replace" to overwrite existing settings, "append" to add to them, or "prepend" to add them at the beginning.')
-                                    ->values(['replace', 'append', 'prepend', null])
+                                    ->values(array_merge(MergeStrategy::toArray(true), [null]))
                                     ->defaultNull()
                                 ->end()
 
@@ -3157,7 +3199,7 @@ return static function($definition): void
                                             // Merge strategy for access control settings
                                             ->enumNode('merge')
                                                 ->info('Defines how to handle merging access control settings: "replace" to overwrite existing settings, "append" to add to them, or "prepend" to add them at the beginning.')
-                                                ->values(['replace', 'append', 'prepend', null])
+                                                ->values(array_merge(MergeStrategy::toArray(true), [null]))
                                                 ->defaultNull()
                                             ->end()
 

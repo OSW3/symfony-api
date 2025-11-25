@@ -2,18 +2,20 @@
 namespace OSW3\Api\Subscribers;
 
 use OSW3\Api\Service\HeadersService;
-use OSW3\Api\Service\ResponseService;
 use OSW3\Api\Service\IntegrityService;
 use OSW3\Api\Service\CacheControlService;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
-class CacheControlSubscriber implements EventSubscriberInterface
+/**
+ * Handles setting Cache-Control headers on API responses.
+ * Used to control caching behavior for clients and intermediaries.
+ */
+final class CacheControlSubscriber implements EventSubscriberInterface
 {
     public function __construct(
         private readonly HeadersService $headersService,
-        private readonly ResponseService $responseService,
         private readonly IntegrityService $integrityService,
         private readonly CacheControlService $cacheControlService,
     ){}

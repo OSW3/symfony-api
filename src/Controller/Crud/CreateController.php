@@ -1,6 +1,7 @@
 <?php 
 namespace OSW3\Api\Controller\Crud;
 
+use OSW3\Api\Enum\Template\Type;
 use OSW3\Api\Service\ContextService;
 use OSW3\Api\Service\RequestService;
 use OSW3\Api\Service\TemplateService;
@@ -129,7 +130,7 @@ final class CreateController extends AbstractController
 
 
         // Set template type
-        $this->templateService->setType(TemplateService::TEMPLATE_TYPE_SINGLE);
+        $this->templateService->setType(Type::SINGLE->value);
 
         // Return response
         return $this->json($normalized);

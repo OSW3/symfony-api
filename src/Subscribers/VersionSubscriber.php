@@ -2,6 +2,7 @@
 namespace OSW3\Api\Subscribers;
 
 use OSW3\Api\Enum\Version\Headers;
+use OSW3\Api\Helper\HeaderHelper;
 use OSW3\Api\Service\HeadersService;
 use OSW3\Api\Service\VersionService;
 use Symfony\Component\HttpKernel\KernelEvents;
@@ -34,7 +35,7 @@ class VersionSubscriber implements EventSubscriberInterface
 
         foreach (Headers::values() as $directive) 
         {
-            $normalizedDirective = $this->headersService->toHeaderCase($directive);
+            $normalizedDirective = HeaderHelper::toHeaderCase($directive);
 
             if (!isset($exposed[$normalizedDirective]) || $exposed[$normalizedDirective] === false) {
                 continue;
@@ -46,7 +47,7 @@ class VersionSubscriber implements EventSubscriberInterface
                 Headers::API_SUPPORTED_VERSIONS->value  => $this->versionService->getSupportedVersions(),
                 Headers::API_DEPRECATED_VERSIONS->value => $this->versionService->getDeprecatedVersions(),
             };
-            $value = $this->headersService->toHeaderValue($value);
+            $value = HeaderHelper::toHeaderValue($value);
 
             if (empty($value)) {
                 continue;
@@ -62,6 +63,5 @@ class VersionSubscriber implements EventSubscriberInterface
                 $this->versionService->getHeaderPattern(),
             );
         }
-
     }
 }

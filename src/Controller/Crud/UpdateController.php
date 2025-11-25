@@ -1,6 +1,7 @@
 <?php 
 namespace OSW3\Api\Controller\Crud;
 
+use OSW3\Api\Enum\Template\Type;
 use OSW3\Api\Service\ContextService;
 use OSW3\Api\Service\RequestService;
 use OSW3\Api\Service\TemplateService;
@@ -88,7 +89,7 @@ final class UpdateController extends AbstractController
         $normalized = $this->serializeService->normalize($entity);
 
         // Define template type
-        $this->templateService->setType(TemplateService::TEMPLATE_TYPE_SINGLE);
+        $this->templateService->setType(Type::SINGLE->value);
 
         return $this->json($normalized);
     }

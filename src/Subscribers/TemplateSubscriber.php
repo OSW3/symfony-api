@@ -77,6 +77,9 @@ class TemplateSubscriber implements EventSubscriberInterface
         // Get the integrity algorithm
         $algorithm = $this->integrityService->getAlgorithm();
 
+        // Check if pagination is enabled
+        $hasPagination = $this->paginationService->isEnabled();
+
         // Build the template options
         $options = [
             // App 
@@ -163,20 +166,20 @@ class TemplateSubscriber implements EventSubscriberInterface
             'version.is_beta'              => $this->versionService->isBeta(),
 
             // Pagination
-            'pagination.pages'           => $this->paginationService->getTotalPages(),
-            'pagination.page'            => $this->paginationService->getPage(),
-            'pagination.total'           => $this->paginationService->getTotal(),
-            'pagination.limit'           => $this->paginationService->getLimit(),
-            'pagination.offset'          => $this->paginationService->getOffset(),
-            'pagination.prev'            => $this->paginationService->getPrevious(),
-            'pagination.next'            => $this->paginationService->getNext(),
-            'pagination.self'            => $this->paginationService->getSelf(),
-            'pagination.first'           => $this->paginationService->getFirst(),
-            'pagination.last'            => $this->paginationService->getLast(),
-            'pagination.is_first'        => $this->paginationService->isFirstPage(),
-            'pagination.is_last'         => $this->paginationService->isLastPage(),
-            'pagination.has_prev'        => $this->paginationService->hasPreviousPage(),
-            'pagination.has_next'        => $this->paginationService->hasNextPage(),
+            'pagination.pages'           => $hasPagination ? $this->paginationService->getTotalPages() : false,
+            'pagination.page'            => $hasPagination ? $this->paginationService->getPage() : false,
+            'pagination.total'           => $hasPagination ? $this->paginationService->getTotal() : false,
+            'pagination.limit'           => $hasPagination ? $this->paginationService->getLimit() : false,
+            'pagination.offset'          => $hasPagination ? $this->paginationService->getOffset() : false,
+            'pagination.prev'            => $hasPagination ? $this->paginationService->getPrevious() : false,
+            'pagination.next'            => $hasPagination ? $this->paginationService->getNext() : false,
+            'pagination.self'            => $hasPagination ? $this->paginationService->getSelf() : false,
+            'pagination.first'           => $hasPagination ? $this->paginationService->getFirst() : false,
+            'pagination.last'            => $hasPagination ? $this->paginationService->getLast() : false,
+            'pagination.is_first'        => $hasPagination ? $this->paginationService->isFirstPage() : false,
+            'pagination.is_last'         => $hasPagination ? $this->paginationService->isLastPage() : false,
+            'pagination.has_prev'        => $hasPagination ? $this->paginationService->hasPreviousPage() : false,
+            'pagination.has_next'        => $hasPagination ? $this->paginationService->hasNextPage() : false,
 
             // Security
             'user.is_authenticated'      => $this->securityService->isAuthenticated(),

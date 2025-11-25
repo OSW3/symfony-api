@@ -13,74 +13,107 @@ final class RateLimitService
         'year'   => 31536000,   // 365 days
     ];
 
+    private ?array $limitCache = null;
+
     public function __construct(
         private readonly ContextService $contextService,
         private readonly ConfigurationService $configurationService,
     ) {}
 
+    // Rate Limit Configuration
+    
+    /**
+     * Check if rate limiting is enabled
+     * 
+     * @return bool
+     */
     public function isEnabled(): bool
     {
-        $provider   = $this->contextService->getProvider();
-        $collection = $this->contextService->getCollection();
-        $endpoint   = $this->contextService->getEndpoint();
-
-        return $this->configurationService->isRateLimitEnabled($provider, $collection, $endpoint);
+        return $this->configurationService->isRateLimitEnabled(
+            provider  : $this->contextService->getProvider(),
+            segment   : $this->contextService->getSegment(),
+            collection: $this->contextService->getCollection(),
+            endpoint  : $this->contextService->getEndpoint(),
+        );
     }
 
-
-    // ──────────────────────────────
-    // Configuration
-    // ──────────────────────────────
-
+    /**
+     * Get the default rate limit value
+     * 
+     * @return string
+     */
     public function getDefaultLimit(): string
     {
-        $provider   = $this->contextService->getProvider();
-        $collection = $this->contextService->getCollection();
-        $endpoint   = $this->contextService->getEndpoint();
-
-        return $this->configurationService->getRateLimitValue($provider, $collection, $endpoint);
+        return $this->configurationService->getRateLimitValue(
+            provider  : $this->contextService->getProvider(),
+            segment   : $this->contextService->getSegment(),
+            collection: $this->contextService->getCollection(),
+            endpoint  : $this->contextService->getEndpoint(),
+        );
     }
-
+    
+    /**
+     * Get the rate limit configuration by role
+     * 
+     * @return array<string, string>
+     */
     public function getLimitByRole(): array
     {
-        $provider   = $this->contextService->getProvider();
-        $collection = $this->contextService->getCollection();
-        $endpoint   = $this->contextService->getEndpoint();
-
-        return $this->configurationService->getRateLimitByRole($provider, $collection, $endpoint);
+        return $this->configurationService->getRateLimitByRole(
+            provider  : $this->contextService->getProvider(),
+            segment   : $this->contextService->getSegment(),
+            collection: $this->contextService->getCollection(),
+            endpoint  : $this->contextService->getEndpoint(),
+        );
     }
 
+    /**
+     * Get the rate limit configuration by user
+     * 
+     * @return array<string, string>
+     */
     public function getLimitByUser(): array
     {
-        $provider   = $this->contextService->getProvider();
-        $collection = $this->contextService->getCollection();
-        $endpoint   = $this->contextService->getEndpoint();
-
-        return $this->configurationService->getRateLimitByUser($provider, $collection, $endpoint);
+        return $this->configurationService->getRateLimitByUser(
+            provider  : $this->contextService->getProvider(),
+            segment   : $this->contextService->getSegment(),
+            collection: $this->contextService->getCollection(),
+            endpoint  : $this->contextService->getEndpoint(),
+        );
     }
 
+    /**
+     * Get the rate limit configuration by IP
+     * 
+     * @return array<string, string>
+     */
     public function getLimitByIp(): array
     {
-        $provider   = $this->contextService->getProvider();
-        $collection = $this->contextService->getCollection();
-        $endpoint   = $this->contextService->getEndpoint();
-
-        return $this->configurationService->getRateLimitByIp($provider, $collection, $endpoint);
+        return $this->configurationService->getRateLimitByIp(
+            provider  : $this->contextService->getProvider(),
+            segment   : $this->contextService->getSegment(),
+            collection: $this->contextService->getCollection(),
+            endpoint  : $this->contextService->getEndpoint(),
+        );
     }
 
+    /**
+     * Get the rate limit configuration by application
+     * 
+     * @return array<string, string>
+     */
     public function getLimitByApplication(): array
     {
-        $provider   = $this->contextService->getProvider();
-        $collection = $this->contextService->getCollection();
-        $endpoint   = $this->contextService->getEndpoint();
-
-        return $this->configurationService->getRateLimitByApplication($provider, $collection, $endpoint);
+        return $this->configurationService->getRateLimitByApplication(
+            provider  : $this->contextService->getProvider(),
+            segment   : $this->contextService->getSegment(),
+            collection: $this->contextService->getCollection(),
+            endpoint  : $this->contextService->getEndpoint(),
+        );
     }
 
 
-    // ──────────────────────────────
-    // Statistics
-    // ──────────────────────────────
+    // Computed Rate Limit Values
 
     /**
      * Get the rate limit configuration
@@ -89,13 +122,18 @@ final class RateLimitService
      */
     public function getLimit(): array
     {
+        if ($this->limitCache !== null) {
+            return $this->limitCache;
+        }
+
         $fallback = [
             'requests' => 0,
             'period'   => self::TIME_UNITS['minute'],
         ];
 
         if (!$this->isEnabled()) {
-            return $fallback;
+            $this->limitCache = $fallback;
+            return $this->limitCache;
         }
 
         $limit       = explode('/', $this->getDefaultLimit());
@@ -105,13 +143,38 @@ final class RateLimitService
         $periodValue = self::TIME_UNITS[$periodName] ?? null;
 
         if ($requests <= 0 || !$periodValue) {
-            return $fallback;
+            $this->limitCache = $fallback;
+            return $this->limitCache;
         }
 
-        return [
+        $this->limitCache = [
             'requests' => $requests,
             'period'   => $periodValue,
         ];
+
+        return $this->limitCache;
+    }
+
+    /**
+     * Get the number of requests allowed
+     * 
+     * @return int
+     */
+    public function getRequestsLimit(): int
+    {
+        $limit = $this->getLimit();
+        return $limit['requests'];
+    }
+
+    /**
+     * Get the time period for the rate limit in seconds
+     * 
+     * @return int
+     */
+    public function getPeriodLimit(): int
+    {
+        $limit = $this->getLimit();
+        return $limit['period'];
     }
 
     /**

@@ -1,6 +1,7 @@
 <?php 
 namespace OSW3\Api\Controller\Crud;
 
+use OSW3\Api\Enum\Template\Type;
 use OSW3\Api\Service\ContextService;
 use OSW3\Api\Service\TemplateService;
 use OSW3\Api\Service\SerializeService;
@@ -52,7 +53,7 @@ final class ReadController extends AbstractController
         $normalized = $this->serializeService->normalize($raw);
 
         // Define template type
-        $this->templateService->setType(TemplateService::TEMPLATE_TYPE_SINGLE);
+        $this->templateService->setType(Type::SINGLE->value);
 
         // Return response
         return $this->json($normalized);
