@@ -132,6 +132,7 @@ final class RequestService
      * Get the URI Path
      * 
      * @deprecated use getPath() or getPathInfo() instead
+     * @use getPathInfo()
      * @var string
      */
     public function getPath(): string 

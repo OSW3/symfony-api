@@ -92,25 +92,25 @@ final class ClientService
     // Browser
     // ──────────────────────────────
 
-    public function getBrowser(): ?string
+    public function getBrowser(): string
     {
-        return $this->getUserAgent('browser_family');
+        return $this->getUserAgent('browser_family') ?? 'unknown';
     }
-    public function getBrowserVersion(): ?string
+    public function getBrowserVersion(): string
     {
-        return $this->getUserAgent('browser_version');
+        return $this->getUserAgent('browser_version') ?? '';
     }
-    public function getBrowserVersionMajor(): ?string
+    public function getBrowserVersionMajor(): string
     {
-        return $this->getUserAgent('browser_major');
+        return $this->getUserAgent('browser_major') ?? '';
     }
-    public function getBrowserVersionMinor(): ?string
+    public function getBrowserVersionMinor(): string
     {
-        return $this->getUserAgent('browser_minor');
+        return $this->getUserAgent('browser_minor') ?? '';
     }
-    public function getBrowserVersionPatch(): ?string
+    public function getBrowserVersionPatch(): string
     {
-        return $this->getUserAgent('browser_patch');
+        return $this->getUserAgent('browser_patch') ?? '';
     }
 
     
@@ -118,25 +118,25 @@ final class ClientService
     // OS
     // ──────────────────────────────
 
-    public function getOs(): ?string
+    public function getOs(): string
     {
-        return $this->getUserAgent('os_family');
+        return $this->getUserAgent('os_family') ?? 'unknown';
     }
-    public function getOsVersion(): ?string
+    public function getOsVersion(): string
     {
-        return $this->getUserAgent('os_version');
+        return $this->getUserAgent('os_version') ?? '';
     }
-    public function getOsVersionMajor(): ?string
+    public function getOsVersionMajor(): string
     {
-        return $this->getUserAgent('os_major');
+        return $this->getUserAgent('os_major') ?? '';
     }
-    public function getOsVersionMinor(): ?string
+    public function getOsVersionMinor(): string
     {
-        return $this->getUserAgent('os_minor');
+        return $this->getUserAgent('os_minor') ?? '';
     }
-    public function getOsVersionPatch(): ?string
+    public function getOsVersionPatch(): string
     {
-        return $this->getUserAgent('os_patch');
+        return $this->getUserAgent('os_patch') ?? '';
     }
 
     

@@ -1,5 +1,5 @@
-## Custom callable
-## --
+# ## Custom callable
+# ## --
 
 # callable: 
 #     method: App\Callable\TestCallable::myCustomData
@@ -9,8 +9,8 @@
 #     with_replacement: "{app.name}"
 #     with_default: "{app.xxx,'Default value'}"
 
-## APP
-## --
+# # ## APP
+# # ## --
 
 # app:
 
@@ -45,8 +45,8 @@
 #     license: "{app.license}"
 
 
-## Context
-## --
+# ## Context
+# ## --
 
 # context:
 
@@ -54,6 +54,11 @@
 #     ## 
 #     ## @var string
 #     provider: "{context.provider}"
+
+#     ## Current Segment name
+#     ##
+#     ## @var string
+#     segment: "{context.segment}"
 
 #     ## Current Collection name
 #     ##
@@ -66,8 +71,8 @@
 #     endpoint: "{context.endpoint}"
 
 
-## Versioning
-## --
+# ## Versioning
+# ## --
 
 # versioning: 
 
@@ -118,26 +123,8 @@
 #     is_beta: "{version.is_beta}"
 
 
-## Documentation
-## --
-
-documentation:
-
-    ## API Documentation Title
-    ## The title of the documentation
-    ## 
-    ## @var string
-    title: "{documentation.title}"
-
-    ## API Documentation Description
-    ## The description of the documentation
-    ## 
-    ## @var string
-    description: "{documentation.description}"
-
-
-## Status
-## --
+# ## Status
+# ## --
 
 # status:
 
@@ -178,8 +165,8 @@ documentation:
 #     is_error: "{status.is_error}"
 
 
-## Request
-## --
+# ## Request
+# ## --
 
 # request:
 
@@ -234,8 +221,8 @@ documentation:
 #     locale: "{request.locale}"
 
 
-## Client
-## --
+# ## Client
+# ## --
 
 # client:
 
@@ -341,8 +328,8 @@ documentation:
 #     fingerprint: "{client.fingerprint}"
 
 
-## Server
-## --
+# ## Server
+# ## --
 
 # server:
 
@@ -381,6 +368,11 @@ documentation:
 #     ##
 #     ## @var string
 #     software: "{server.software}"
+
+#     ## Server Software Name
+#     ##
+#     ## @var string
+#     software_name: "{server.software_name}"
 
 #     ## Server Software Version
 #     ##
@@ -428,8 +420,8 @@ documentation:
 #     region: "{server.region}"
 
 
-## Pagination
-## --
+# ## Pagination
+# ## --
 
 # pagination:
 
@@ -504,8 +496,8 @@ documentation:
 #     has_next: "{pagination.has_next}"
 
 
-## User
-## --
+# ## User
+# ## --
 
 # user:
 
@@ -545,8 +537,34 @@ documentation:
 #     mfa_enabled: "{user.mfa_enabled}"
 
 
-## Debug
-## --
+# ## Rate Limit
+# ## --
+
+# rate_limit:
+
+#     ## Maximum number of requests allowed in the current time window
+#     ##
+#     ## @var int
+#     limit: "{rate_limit.limit}"
+
+#     ## Time window period in seconds
+#     ##
+#     ## @var int
+#     period: "{rate_limit.period}"
+
+#     ## Number of requests remaining in the current time window
+#     ##
+#     ## @var int
+#     remaining: "{rate_limit.remaining}"
+
+#     ## Time at which the current rate limit window resets in UTC epoch seconds
+#     ##
+#     ## @var int
+#     reset: "{rate_limit.reset}"
+
+
+# ## Debug
+# ## --
 
 # debug:
 
@@ -564,6 +582,10 @@ documentation:
 #     ##
 #     ## @var float
 #     execution_time: "{debug.execution_time}"
+
+#     ## Execution Time Unit
+#     ##
+#     ## @var string
 #     execution_time_unit: "{debug.execution_time_unit}"
 
 #     ## Log level
@@ -584,7 +606,29 @@ documentation:
 #     ## Measure the latency between the reception of the request by the server and its actual processing
 #     ##
 #     ## @var ?flaot
-#     queue_time: "{debug.queue_time}"
+#     # queue_time: "{debug.queue_time}"
+
+
+# ## Metadata
+# ## --
+
+# meta:
+#     description: "{meta.description}"       # Description de l'API
+#     category: "{meta.category}"            # e.g. “Public API”, “Internal”
+#     tags: "{meta.tags}"                    # Tags (tableau)
+#     tests: "{meta.tests}"                # Tests associés (tableau)
+#     # deprecated: "{meta.deprecated}"         # Dépréciation spécifique
+#     # cache_ttl: "{meta.cache_ttl}"          # TTL pour cache
+#     # operation_id: "{meta.operation_id}"    # ID pour OpenAPI
+#     # license: "{app.license}"
+#     # author: "{meta.author}"                # Maintainer / author
+#     # contact: "{meta.contact}"              # Support or contact email
+#     # visibility: "{meta.visibility}"        # public/private
+#     # links: "{meta.links}"                  # Array of doc or resource links
+#     # example_request: "{meta.example_request}" # Optional for doc tools
+#     # example_response: "{meta.example_response}" # Optional for doc tools
+#     # version_history: "{meta.version_history}" # Liste des versions précédentes (utile pour les docs).
+#     # changelog: "{meta.changelog}" # Derniers changements (utile pour les outils de versioning).
 
 
 ## Response
@@ -666,47 +710,24 @@ response:
     validated: "{response.validated}"  # : Booléen indiquant si la réponse a passé une validation JSON Schema.
     signature: "{response.signature}"  # : Signature numérique (si tu veux signer les payloads).
     cache_key: "{response.cache_key}"  #  : clé de cache utilisée pour cette réponse.
-    cors: "{response.cors}"  #  pour indiquer les politiques CORS (ex. Access-Control-Allow-Origin).
 
 
 
 
-## Metadata
+
+## Documentation
 ## --
 
-# meta.description: "{meta.description}"       # Description de l'API
-# meta.deprecated: "{meta.deprecated}"         # Dépréciation spécifique
-# meta.cache_ttl: "{meta.cache_ttl}"          # TTL pour cache
-# meta.tags: "{meta.tags}"                    # Tags (tableau)
-# meta.operation_id: "{meta.operation_id}"    # ID pour OpenAPI
-# meta.license: "{app.license}"
-# meta.author: "{meta.author}"                # Maintainer / author
-# meta.contact: "{meta.contact}"              # Support or contact email
-# meta.category: "{meta.category}"            # e.g. “Public API”, “Internal”
-# meta.visibility: "{meta.visibility}"        # public/private
-# meta.links: "{meta.links}"                  # Array of doc or resource links
-# meta.example_request: "{meta.example_request}" # Optional for doc tools
-# meta.example_response: "{meta.example_response}" # Optional for doc tools
-# meta.version_history: "{meta.version_history}" # Liste des versions précédentes (utile pour les docs).
-# meta.changelog: "{meta.changelog}" # Derniers changements (utile pour les outils de versioning).
+documentation:
 
+    ## API Documentation Title
+    ## The title of the documentation
+    ## 
+    ## @var string
+    title: "{documentation.title}"
 
-## Rate Limit
-## --
-
-# rate_limit:
-
-#     ## Maximum number of requests allowed in the current time window
-#     ##
-#     ## @var int
-#     limit: "{rate_limit.limit}"
-
-#     ## Number of requests remaining in the current time window
-#     ##
-#     ## @var int
-#     remaining: "{rate_limit.remaining}"
-
-#     ## Time at which the current rate limit window resets in UTC epoch seconds
-#     ##
-#     ## @var int
-#     reset: "{rate_limit.reset}"
+    ## API Documentation Description
+    ## The description of the documentation
+    ## 
+    ## @var string
+    description: "{documentation.description}"

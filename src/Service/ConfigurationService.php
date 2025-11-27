@@ -2195,40 +2195,8 @@ class ConfigurationService
         }
 
         $providerOptions = $this->getProvider($provider);
-        return $providerOptions['response']['headers']['exposed'] ?? [];
+        return $providerOptions['response']['headers'] ?? [];
     }
-
-    /**
-     * Get the headers vary directives for a specific provider.
-     * 
-     * @param string $provider Name of the API provider
-     * @return array Array of header names for Vary directive
-     */
-    // public function getHeadersVaryDirectives(?string $provider): array
-    // {
-    //     if (! $this->hasProvider($provider)) {
-    //         return [];
-    //     }
-
-    //     $providerOptions = $this->getProvider($provider);
-    //     return $providerOptions['response']['headers']['vary'] ?? [];
-    // }
-
-    /**
-     * Get the headers remove directives for a specific provider.
-     * 
-     * @param string $provider Name of the API provider
-     * @return array Array of header names to be removed
-     */
-    // public function getHeadersRemoveDirectives(?string $provider): array
-    // {
-    //     if (! $this->hasProvider($provider)) {
-    //         return [];
-    //     }
-
-    //     $providerOptions = $this->getProvider($provider);
-    //     return $providerOptions['response']['headers']['remove'] ?? [];
-    // }
 
 
     // RESPONSE -> CORS

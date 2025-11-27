@@ -1,3 +1,39 @@
+
+
+
+
+## App Name
+## Need to define the "name" property in composer.json
+## 
+## @var string
+name: "{app.name}"
+
+## App Vendor
+## Need to define the "name" property in composer.json
+## 
+## @var string
+vendor: "{app.vendor}"
+
+## App Version
+## Need to define the "version" property in composer.json
+## 
+## @var string
+version: "{app.version}"
+
+## App Description
+## Need to define the "description" property in composer.json
+## 
+## @var string
+description: "{app.description}"
+
+## App License
+## Need to define the "license" property in composer.json
+##
+## @var string
+license: "{app.license}"
+
+
+
 success: "{status.is_success}"
 status: "{status.code}"
 message: "{status.text}"

@@ -175,8 +175,8 @@ final class VersionService
             $provider = $this->contextService->getProvider();
         }
 
-        $prefix   = $this->configurationService->getVersionPrefix($provider);
-        $number   = $this->configurationService->getVersionNumber($provider);
+        $prefix   = $this->getPrefix();
+        $number   = $this->getNumber();
         $beta     = $this->isBeta($provider);
         
         $label = $prefix;

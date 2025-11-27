@@ -1,9 +1,14 @@
 <?php
 namespace OSW3\Api\Subscribers;
 
+use OSW3\Api\Service\AppService;
 use OSW3\Api\Helper\HeaderHelper;
 use OSW3\Api\Service\ServerService;
+use OSW3\Api\Builder\OptionsBuilder;
+use OSW3\Api\Service\ContextService;
 use OSW3\Api\Service\HeadersService;
+use OSW3\Api\Service\VersionService;
+use OSW3\Api\Service\SecurityService;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
@@ -12,8 +17,13 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 final class HeadersSubscriber implements EventSubscriberInterface
 {
     public function __construct(
-        private readonly HeadersService $headersService,
+        private readonly AppService $appService,
         private readonly ServerService $serverService,
+        private readonly ContextService $contextService,
+        private readonly HeadersService $headersService,
+        private readonly VersionService $versionService,
+        private readonly SecurityService $securityService,
+        private readonly OptionsBuilder $optionsBuilder,
     ){}
     
     public static function getSubscribedEvents(): array
@@ -36,8 +46,7 @@ final class HeadersSubscriber implements EventSubscriberInterface
         $exposed = $this->headersService->getExposedDirectives();
 
         // Get removed headers
-        $removed = [];//$this->headersService->getRemovedDirectives();
-
+        $removed = [];
 
         // Exposed headers
         foreach ($exposed as $key => $value) 
@@ -53,14 +62,12 @@ final class HeadersSubscriber implements EventSubscriberInterface
             $response->headers->set($key, $value);
         }
 
-
         // Remove headers
         foreach ($removed as $key) 
         {
             $key = HeaderHelper::toHeaderCase($key);
             $response->headers->remove($key);
         }
-
 
         // Strip X Prefix
         foreach ($response->headers->all() as $key => $value) {
@@ -82,17 +89,32 @@ final class HeadersSubscriber implements EventSubscriberInterface
 
     private function resolveHeaderValue(string $key, mixed $value, ResponseEvent $event): mixed
     {
-        $keyLower = strtolower($key);
-
         if ($value === true && $event->getResponse()->headers->has($key)) {
             return $event->getResponse()->headers->get($key);
         }
 
-        return match ($keyLower) {
-            'server' => $this->serverService->getSoftware(),
-            'vary'   => $this->computeVary($event, $value),
-            default  => $this->resolveDynamicValue($value, $event->getResponse()),
-        };
+        if ($value === false) {
+            return null;
+        }
+
+        $response = $event->getResponse();
+
+        $this->optionsBuilder->setContext('headers');
+
+        return $this->optionsBuilder->build($key, $value,[
+                'response' => $response,
+            ]) 
+            ?? $this->resolveDynamicValue($value, $response) 
+            ?? $value;
+
+        // $value = match ($keyAlt) {
+
+        //     'server' => $this->serverService->getSoftware(),
+        //     'vary'   => $this->computeVary($event, $value),
+        //     default  => $this->resolveDynamicValue($value, $event->getResponse()),
+        // };
+        // dump([$keyAlt, $value]);
+        // return $value;
     }
 
     private function resolveDynamicValue(mixed $value, Response $response): mixed

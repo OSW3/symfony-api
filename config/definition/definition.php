@@ -488,8 +488,8 @@ return static function($definition): void
                             // Public Cache-Control directive
                             ->booleanNode('public')
                                 ->info('If true, sets Cache-Control to "public", allowing shared caches. If false, sets to "private".')
-                                ->defaultTrue()
-                                ->treatNullLike(true)
+                                ->defaultFalse()
+                                ->treatNullLike(false)
                             ->end()
 
                             // No store Cache-Control directive
@@ -587,50 +587,25 @@ return static function($definition): void
                             // Strip "X-" prefix from headers
                             ->booleanNode('strip_x_prefix')
                                 ->info('If true, strips "X-" prefix from headers when exposing them.')
-                                ->defaultTrue()
-                                ->treatNullLike(true)
+                                ->defaultFalse()
+                                ->treatNullLike(false)
                             ->end()
 
                             // Keep "X-" prefix in headers
                             ->booleanNode('keep_legacy')
                                 ->info('If true, keeps "X-" prefix in headers when exposing them.')
-                                ->defaultTrue()
-                                ->treatNullLike(true)
+                                ->defaultFalse()
+                                ->treatNullLike(false)
                             ->end()
 
                         ->end()
                     ->end()
 
-                    // HTTP headers settings
+                    // Headers directives
                     ->arrayNode('headers')
-                        ->info('HTTP headers to include in API responses.')
-                        ->addDefaultsIfNotSet()->children()
-
-                            // List of headers to expose in CORS requests
-                            ->arrayNode('exposed')
-                                ->info('List of headers to expose in CORS requests.')
-                                ->variablePrototype()->end()
-                                ->defaultValue([])
-                            ->end()
-
-                            // Vary response header settings
-                            // ->arrayNode('vary')
-                            //     ->info('List of headers to include in the Vary response header.')
-                            //     ->scalarPrototype()->end()
-                            //     ->defaultValue([])
-                            //     ->treatNullLike([])
-                            //     // ->defaultValue(['Origin', 'Accept', 'Accept-Language', 'Accept-Encoding', 'Accept', 'Authorization', 'API-Version'])
-                            //     // ->treatNullLike(['Origin', 'Accept', 'Accept-Language', 'Accept-Encoding', 'Accept', 'Authorization', 'API-Version'])
-                            // ->end()
-
-                            // Headers to remove from responses
-                            // ->arrayNode('remove')
-                            //     ->info('List of headers to remove from responses.')
-                            //     ->scalarPrototype()->end()
-                            //     ->defaultValue([])
-                            // ->end()
-
-                        ->end()
+                        ->info('List of headers to expose in CORS requests.')
+                        ->variablePrototype()->end()
+                        ->defaultValue([])
                     ->end()
 
                     // Compression settings

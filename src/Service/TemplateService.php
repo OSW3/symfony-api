@@ -3,8 +3,10 @@ namespace OSW3\Api\Service;
 
 use OSW3\Api\Enum\Template\Type;
 use Symfony\Component\Yaml\Yaml;
+use OSW3\Api\Builder\OptionsBuilder;
 use Symfony\Component\Filesystem\Path;
 use OSW3\Api\Service\ConfigurationService;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -19,6 +21,7 @@ final class TemplateService
         private readonly KernelInterface $kernel,
         private readonly RouteService $routeService,
         private readonly ConfigurationService $configuration,
+        private readonly OptionsBuilder $optionsBuilder,
     ){}
 
     /**
@@ -52,12 +55,15 @@ final class TemplateService
      * @param bool $hasArray Whether to return as array or JSON string
      * @return string|array The rendered template
      */
-    public function render(string $type, array $options = [], bool $hasArray = false): string|array
+    // public function render(string $type, array $options = [], bool $hasArray = false): string|array
+    public function render(Response $response, string $type, bool $hasArray = false): string|array
     {
         $path       = $this->resolvePath($type);
         $template   = $this->getContent($path);
 
-        array_walk_recursive($template, function (&$v, $k) use ($options) {
+        $this->optionsBuilder->setContext('template');
+
+        array_walk_recursive($template, function (&$v, $k) use ($response) {
 
             if (!is_string($v)) return;
 
@@ -81,9 +87,15 @@ final class TemplateService
             }
 
             // Replace with option value or default
-            $v = $options[$key] ?? $default ?? $v ??  null;
+            // $v = $options[$key] ?? $default ?? $v ??  null;
+            $v = $this->optionsBuilder->build($key, $default, [
+                'response' => $response,
+            ]) ?? $default ?? $v ??  null;
+
+            // dump($this->optionsBuilder->build($key));
         });
 
+        // dd('--');
         return !$hasArray 
             ? json_encode($template, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
             : $template 
