@@ -384,6 +384,13 @@ return static function($definition): void
                         ->treatNullLike('Resources/templates/yaml/not_found.yaml')
                     ->end()
 
+                    // Login response template path
+                    ->scalarNode('login')
+                        ->info('Path to the response template file used as a model for formatting login responses.')
+                        ->defaultValue('Resources/templates/yaml/login.yaml')
+                        ->treatNullLike('Resources/templates/yaml/login.yaml')
+                    ->end()
+
                 ->end()
             ->end()
 

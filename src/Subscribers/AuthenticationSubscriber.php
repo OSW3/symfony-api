@@ -35,10 +35,10 @@ final class AuthenticationSubscriber implements EventSubscriberInterface
             return;
         }
 
-        $provider   = $this->contextService->getProvider();
+        // $provider   = $this->contextService->getProvider();
         $segment    = $this->contextService->getSegment();
-        $collection = $this->contextService->getCollection();
-        $endpoint   = $this->contextService->getEndpoint();
+        // $collection = $this->contextService->getCollection();
+        // $endpoint   = $this->contextService->getEndpoint();
         $isGranted  = false;
 
         // Skip if not in collection segment

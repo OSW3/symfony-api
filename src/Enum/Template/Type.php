@@ -13,4 +13,5 @@ enum Type: string
     case ACCOUNT   = 'account';
     case ERROR     = 'error';
     case NOT_FOUND = 'not_found';
+    case LOGIN     = 'login';
 } 

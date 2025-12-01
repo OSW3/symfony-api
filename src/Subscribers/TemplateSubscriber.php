@@ -60,71 +60,10 @@ class TemplateSubscriber implements EventSubscriberInterface
         // Get current content
         $content = $response->getContent();
 
-        // Get the template data
-        $data = json_decode($content, true);
-
         // Get the template type
         $type = $this->templateService->getType();
 
-        // Get the context provider
-        $provider = $this->contextService->getProvider();
-
-        // // Determine the state from the status code
-        // $state = match (true) {
-        //     $response->getStatusCode() >= 200 && $response->getStatusCode() < 300 => 'success',
-        //     $response->getStatusCode() >= 400 && $response->getStatusCode() < 500 => 'failed',
-        //     default                    => 'error',
-        // };
-
-        // Get the integrity algorithm
-        $algorithm = $this->integrityService->getAlgorithm();
-
-        // Check if pagination is enabled
-        // $hasPagination = $this->paginationService->isEnabled();
-
-        // Build the template options
-        // $this->optionsBuilder->setContext('template');
-        // $options = [
-        //  
-
-        //     // Debug
-        //     'debug.memory'               => $this->debugService->getMemoryUsage(),
-        //     'debug.peak_memory'          => $this->debugService->getMemoryPeak(),
-        //     'debug.execution_time'       => $this->timerService->getDuration(),
-        //     'debug.execution_time_unit'  => $this->timerService->getUnit(),
-        //     'debug.log_level'            => $this->debugService->getLogLevel(),
-        //     'debug.count_included_files' => $this->debugService->getCountIncludedFiles(),
-        //     'debug.included_files'       => $this->debugService->getIncludedFiles(),
-
-        //     // Response
-        //     'response.timestamp'          => gmdate('c'),
-        //     'response.data'               => $data,
-        //     'response.count'              => $this->responseService->getCount(),
-        //     'response.size'               => $this->responseService->getSize(),
-        //     'response.algorithm'          => $this->integrityService->getAlgorithm(),
-        //     'response.hash'               => $this->integrityService->getHash($algorithm),
-        //     'response.hash_md5'           => $this->integrityService->getHash('md5'),
-        //     'response.hash_sha1'          => $this->integrityService->getHash('sha1'),
-        //     'response.hash_sha256'        => $this->integrityService->getHash('sha256'),
-        //     'response.hash_sha512'        => $this->integrityService->getHash('sha512'),
-
-
-            // 'response.is_compressed'      => $this->responseService->isCompressed(),
-            // 'response.compression_format' => $this->responseService->getCompressionFormat(),
-            // 'response.compression_level'  => $this->responseService->getCompressionLevel(),
-            // 'response.etag'                => null,
-            // 'response.validated'           => null,
-            // 'response.signature'           => null,
-            // 'response.cache_key'           => null,
-            // 'response.cors'                => null,
-            // 'response.error.code'          => null,
-            // 'response.error.message'       => null,
-            // 'response.error.details'       => null,
-            // 'response.error.doc_url'       => null,
-        // ];
-
         // Render the template content
-        // $content = $this->templateService->render($type, $options, false);
         $content = $this->templateService->render($response, $type, false);
 
         // Set the formatted content

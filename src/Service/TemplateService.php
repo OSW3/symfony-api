@@ -55,7 +55,6 @@ final class TemplateService
      * @param bool $hasArray Whether to return as array or JSON string
      * @return string|array The rendered template
      */
-    // public function render(string $type, array $options = [], bool $hasArray = false): string|array
     public function render(Response $response, string $type, bool $hasArray = false): string|array
     {
         $path       = $this->resolvePath($type);
@@ -87,15 +86,12 @@ final class TemplateService
             }
 
             // Replace with option value or default
-            // $v = $options[$key] ?? $default ?? $v ??  null;
             $v = $this->optionsBuilder->build($key, $default, [
                 'response' => $response,
             ]) ?? $default ?? $v ??  null;
 
-            // dump($this->optionsBuilder->build($key));
         });
 
-        // dd('--');
         return !$hasArray 
             ? json_encode($template, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
             : $template 
@@ -133,9 +129,6 @@ final class TemplateService
             default => throw new \Exception("Unsupported template format: $path"),
         };
     }
-
-
-
 
     /**
      * Resolves the absolute path to the template file based on provider and type.
@@ -176,6 +169,7 @@ final class TemplateService
             Type::ACCOUNT->value   => $this->configuration->getAccountTemplate($provider, $segment),
             Type::ERROR->value     => $this->configuration->getErrorTemplate($provider, $segment),
             Type::NOT_FOUND->value => $this->configuration->getNotFoundTemplate($provider, $segment),
+            Type::LOGIN->value     => $this->configuration->getLoginTemplate($provider, $segment),
             default => throw new \Exception("Unknown template type"),
         };
 

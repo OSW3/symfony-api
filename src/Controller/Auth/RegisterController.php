@@ -6,8 +6,8 @@ use OSW3\Api\Service\ContextService;
 use OSW3\Api\Service\TemplateService;
 use OSW3\Api\Service\SerializeService;
 use Doctrine\ORM\EntityManagerInterface;
+use OSW3\Api\Service\AuthenticationService;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
 use OSW3\Api\Exception\UserAlreadyExistsException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\PropertyAccess\PropertyAccess;
@@ -22,6 +22,7 @@ final class RegisterController extends AbstractController
         private readonly ContextService $contextService,
         private readonly TemplateService $templateService,
         private readonly SerializeService $serializeService,
+        private readonly AuthenticationService $authenticationService,
         // private readonly PaginationService $paginationService,
         // private readonly ConfigurationService $configurationService,
     ){
@@ -40,29 +41,28 @@ final class RegisterController extends AbstractController
     ): JsonResponse
     {
         // --- 1. Request context
-        $provider   = $this->contextService->getContext('provider');
-        $collection = $this->contextService->getContext('collection');
-        $endpoint   = $this->contextService->getContext('endpoint');
-        
+        // $provider   = $this->contextService->getProvider();
+        $collection = $this->contextService->getCollection();
+        // $endpoint   = $this->contextService->getEndpoint();
+        // $segment    = ContextService::SEGMENT_AUTHENTICATION;
 
         // --- 2. Validate endpoint
-        if (!$this->authenticationService->isEndpointEnabled($provider, $collection, $endpoint)) {
+        if (!$this->authenticationService->isEnabled()) {
             throw $this->createNotFoundException('Registration endpoint is disabled.');
         }
 
-        if (empty($collection)) {
-            throw $this->createNotFoundException('Collection not specified for registration.');
-        }
+        // if (empty($collection)) {
+        //     throw $this->createNotFoundException('Collection not specified for registration.');
+        // }
 
 
         // --- 3. Handle request data
         $data       = json_decode($request->getContent(), true);
         $classname  = $collection;
-        $properties = $this->authenticationService->getProperties($provider, $collection, $endpoint);
-
+        $properties = $this->authenticationService->getProperties();
 
         // --- 4. Check required fields
-        $identifier = $properties['username'] ?? 'email';
+        $identifier = $properties['identifier'] ?? 'email';
         $password   = $properties['password'] ?? 'password';
 
         if (
@@ -104,18 +104,27 @@ final class RegisterController extends AbstractController
         $em->persist($user);
         $em->flush();
         
-
         // Normalize data
         $normalized = $this->serializeService->normalize($user);
-
+        
+        
         // Define template type
         $this->templateService->setType(Type::ACCOUNT->value);
+        // dd($user, $normalized);
         
         // Return response
-        return new JsonResponse([
-            'message' => 'User registered successfully',
-            'user' => $user,
-            'normalized' => $normalized,
-        ], Response::HTTP_CREATED);
+        // return new JsonResponse([
+        //     'message' => 'User registered successfully',
+        //     'user' => $user,
+        //     'normalized' => $normalized,
+        // ], Response::HTTP_CREATED);
+
+        // return $this->json([
+        //     'message' => 'User registered successfully',
+        //     'user' => $user,
+        //     'normalized' => $normalized,
+        // ]);
+        
+        return $this->json($normalized);
     }
 }

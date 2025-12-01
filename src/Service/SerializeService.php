@@ -156,7 +156,7 @@ final class SerializeService
             return [];
         }
 
-        if (empty($groups)) {
+        if (empty($groups) && $this->contextService->getSegment() === ContextService::SEGMENT_COLLECTION) {
             return [];
         }
 

@@ -9,11 +9,15 @@ use OSW3\Api\Service\ServerService;
 use OSW3\Api\Service\ContextService;
 use OSW3\Api\Service\RequestService;
 use OSW3\Api\Service\VersionService;
+use OSW3\Api\Service\ResponseService;
 use OSW3\Api\Service\SecurityService;
+use OSW3\Api\Service\IntegrityService;
 use OSW3\Api\Service\RateLimitService;
 use OSW3\Api\Service\PaginationService;
+use OSW3\Api\Service\CompressionService;
 use OSW3\Api\Service\ExecutionTimeService;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Event\ResponseEvent;
 
 final class OptionsBuilder 
 {
@@ -28,10 +32,13 @@ final class OptionsBuilder
         private readonly ContextService $contextService,
         private readonly VersionService $versionService,
         private readonly RequestService $requestService,
+        private readonly ResponseService $responseService,
         private readonly SecurityService $securityService,
         private readonly ExecutionTimeService $timerService,
+        private readonly IntegrityService $integrityService,
         private readonly RateLimitService $rateLimitService,
         private readonly PaginationService $paginationService,
+        private readonly CompressionService $compressionService,
     ) {}
 
     public function setContext(string $context): void 
@@ -60,6 +67,45 @@ final class OptionsBuilder
         // e.g. Headers key => 'X-App-Name', 'X-App-Version', 'X-App-Description', etc.
 
         $value =match (strtok($key, '.')) {
+
+            'response' => (function() use ($key, $options): mixed {
+                
+                $content = $options['response']->getContent();
+
+                // Get the template data
+                $data = json_decode($content, true);
+                
+                // Get the integrity algorithm
+                $algorithm = $this->integrityService->getAlgorithm();
+
+                return match ($key) {
+                    'response.timestamp'          => gmdate('c'),
+                    'response.data'               => $data,
+                    'response.count'              => $this->responseService->getCount(),
+                    'response.size'               => $this->responseService->getSize(),
+                    'response.algorithm'          => $this->integrityService->getAlgorithm(),
+                    'response.hash'               => $this->integrityService->getHash($algorithm),
+                    'response.hash.md5'           => $this->integrityService->getHash('md5'),
+                    'response.hash.sha1'          => $this->integrityService->getHash('sha1'),
+                    'response.hash.sha256'        => $this->integrityService->getHash('sha256'),
+                    'response.hash.sha512'        => $this->integrityService->getHash('sha512'),
+                    'response.is.compressed'      => $this->compressionService->isEnabled(),
+                    'response.compression.format' => $this->compressionService->getFormat(),
+                    'response.compression.level'  => $this->compressionService->getLevel(),
+
+                    // 'response.etag'                => null,
+                    // 'response.validated'           => null,
+                    // 'response.signature'           => null,
+                    // 'response.cache_key'           => null,
+                    // 'response.cors'                => null,
+                    // 'response.error.code'          => null,
+                    // 'response.error.message'       => null,
+                    // 'response.error.details'       => null,
+                    // 'response.error.doc_url'       => null,
+
+                    default           => null
+                };
+            })(),
 
             'app' => match ($key) {
                 'app.name'        => $this->appService->getName() ?? null,
@@ -375,52 +421,28 @@ final class OptionsBuilder
             })(),
 
             'meta' => (function() use ($key): mixed {
-                $part = str_replace('meta.', '', $key);
+                $part  = str_replace('meta.', '', $key);
+                $value = $this->metaService->getAll()[$part] ?? null;
 
-                $meta = $this->metaService->getAll()[$part] ?? null;
-
-                if (is_callable($meta)) {
-                    $meta = $meta();
+                if (is_null($value)) {
+                    return 'null';
+                } 
+                else if (is_array($value)) {
+                    return $this->inContext(['headers']) 
+                        ? json_encode($value) 
+                        : $value;
+                }
+                else if (is_callable($value)) {
+                    return $value();
                 }
 
-                return $meta;
+                return $value;
             })(),
 
             default => null,
         };
 
-
         return $value;
-
-        
-
-        //     // Response
-        //     'response.timestamp'          => gmdate('c'),
-        //     'response.data'               => $data,
-        //     'response.count'              => $this->responseService->getCount(),
-        //     'response.size'               => $this->responseService->getSize(),
-        //     'response.algorithm'          => $this->integrityService->getAlgorithm(),
-        //     'response.hash'               => $this->integrityService->getHash($algorithm),
-        //     'response.hash_md5'           => $this->integrityService->getHash('md5'),
-        //     'response.hash_sha1'          => $this->integrityService->getHash('sha1'),
-        //     'response.hash_sha256'        => $this->integrityService->getHash('sha256'),
-        //     'response.hash_sha512'        => $this->integrityService->getHash('sha512'),
-
-
-            // 'response.is_compressed'      => $this->responseService->isCompressed(),
-            // 'response.compression_format' => $this->responseService->getCompressionFormat(),
-            // 'response.compression_level'  => $this->responseService->getCompressionLevel(),
-            // 'response.etag'                => null,
-            // 'response.validated'           => null,
-            // 'response.signature'           => null,
-            // 'response.cache_key'           => null,
-            // 'response.cors'                => null,
-            // 'response.error.code'          => null,
-            // 'response.error.message'       => null,
-            // 'response.error.details'       => null,
-            // 'response.error.doc_url'       => null,
-
-        // ];
     }
 
 
@@ -431,5 +453,30 @@ final class OptionsBuilder
             ? ($yesNo ? 'yes' : 'true')
             : ($yesNo ? 'no' : 'false')
         ;
+    }
+
+
+
+
+
+    private function computeVary(ResponseEvent $event, mixed $data): ?string 
+    {
+        $response = $event->getResponse();
+        
+        $store = $response->headers->all('vary');
+        $response->headers->remove('vary');
+
+        if ($data === false || $data === null) {
+            return null;
+        }
+
+        if (!is_array($data)) {
+            $data = [$data];
+        }
+        
+        return implode(', ', array_values(array_unique(array_merge(
+            $store,
+            $data
+        ))));
     }
 }

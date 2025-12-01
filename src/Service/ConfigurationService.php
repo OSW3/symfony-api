@@ -1661,41 +1661,43 @@ class ConfigurationService
     // ──────────────────────────────
 
     /**
-     * Get the templates configuration with optional fallback at endpoint, collection or provider level.
-     * e.g.: $this->getTemplates('my_custom_api_v1', 'collections', 'App\Entity\Book', 'index');
+     * Gat a specific type of templates for a specific provider, collection, and endpoint.
+     * Falls back to collection-level or provider-level templates if not found.
+     * e.g.: $this->getTemplate('type', 'my_custom_api_v1', 'collections', 'App\Entity\Book', 'index');
      * 
+     * @param string $type Type of the template (e.g., 'list', 'single', 'delete')
      * @param string $provider Name of the API provider
      * @param string|null $segment Name of the segment (optional)
      * @param string|null $collection Name of the collection (optional)
      * @param string|null $endpoint Name of the endpoint (optional)
      * @return array Templates configuration array
      */
-    // public function getTemplates(string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): array
-    // {
-    //     if (! $this->hasProvider($provider)) {
-    //         return [];
-    //     }
+    public function getTemplate(string $type, string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string
+    {
+        if (! $this->hasProvider($provider)) {
+            return '';
+        }
 
-    //     // 1. Endpoint-specific templates
-    //     if ($collection && $endpoint) {
-    //         $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
-    //         if ($endpointOptions && isset($endpointOptions['templates'])) {
-    //             return $endpointOptions['templates'];
-    //         }
-    //     }
+        // 1. Endpoint-specific templates
+        if ($collection && $endpoint) {
+            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
+            if ($endpointOptions && isset($endpointOptions['templates'][$type])) {
+                return $endpointOptions['templates'][$type] ?? '';
+            }
+        }
 
-    //     // 2. Collection-level templates
-    //     if ($collection) {
-    //         $collectionOptions = $this->getCollection($provider, $segment, $collection);
-    //         if ($collectionOptions && isset($collectionOptions['templates'])) {
-    //             return $collectionOptions['templates'];
-    //         }
-    //     }
+        // 2. Collection-level templates
+        if ($collection) {
+            $collectionOptions = $this->getCollection($provider, $segment, $collection);
+            if ($collectionOptions && isset($collectionOptions['templates'][$type])) {
+                return $collectionOptions['templates'][$type] ?? '';
+            }
+        }
 
-    //     // 3. Global default templates
-    //     $providerOptions = $this->getProvider($provider);
-    //     return $providerOptions['templates'] ?? [];
-    // }
+        // 3. Global default templates
+        $providerOptions = $this->getProvider($provider);
+        return $providerOptions['templates'][$type] ?? '';
+    }
 
     /**
      * Get the list template for a specific provider, collection, and endpoint.
@@ -1923,6 +1925,44 @@ class ConfigurationService
         // 3. Global default templates
         $providerOptions = $this->getProvider($provider);
         return $providerOptions['templates']['not_found'] ?? '';
+    }
+
+    /**
+     * Get the not found template for a specific API provider, collection, and endpoint.
+     * Falls back to collection-level or provider-level templates if not defined at lower levels.
+     * e.g.: $this->getNotFoundTemplate('my_custom_api_v1', 'collections', 'App\Entity\Book', 'show');
+     * 
+     * @param string $provider Name of the API provider
+     * @param string|null $segment Name of the segment (optional)
+     * @param string|null $collection Name of the collection (optional)
+     * @param string|null $endpoint Name of the endpoint (optional)
+     * @return string Not found template
+     */
+    public function getLoginTemplate(string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string
+    {
+        if (! $this->hasProvider($provider)) {
+            return '';
+        }
+
+        // 1. Endpoint-specific templates
+        if ($collection && $endpoint) {
+            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
+            if ($endpointOptions && isset($endpointOptions['templates']['login'])) {
+                return $endpointOptions['templates']['login'];
+            }
+        }
+
+        // 2. Collection-level templates
+        if ($collection) {
+            $collectionOptions = $this->getCollection($provider, $segment, $collection);
+            if ($collectionOptions && isset($collectionOptions['templates']['login'])) {
+                return $collectionOptions['templates']['login'];
+            }
+        }
+
+        // 3. Global default templates
+        $providerOptions = $this->getProvider($provider);
+        return $providerOptions['templates']['login'] ?? '';
     }
 
 
@@ -2611,118 +2651,118 @@ class ConfigurationService
     // AUTHENTICATION
     // ──────────────────────────────
 
-    // // Authentication -> PROVIDER
+    // Authentication -> PROVIDER
 
-    // /**
-    //  * Get the security configuration for a specific API provider.
-    //  * 
-    //  * @param string $provider Name of the API provider
-    //  * @return array Security configuration array
-    //  */
-    // public function getAuthentication(?string $provider): array
+    /**
+     * Get the security configuration for a specific API provider.
+     * 
+     * @param string $provider Name of the API provider
+     * @return array Security configuration array
+     */
+    public function getAuthentication(?string $provider): array
+    {
+        if (! $this->hasProvider($provider)) {
+            return [];
+        }
+
+        return $this->getProvider($provider)[ContextService::SEGMENT_AUTHENTICATION] ?? [];
+    }
+
+
+    // AUTHENTICATION -> COLLECTIONS
+
+    public function getAuthenticationName(?string $provider, ?string $collection): string 
+    {
+        if (! $this->hasProvider($provider)) {
+            return '';
+        }
+
+        return $this->getAuthentication($provider)[$collection]['name'] ?? '';
+    }
+
+    public function getAuthenticationRoutePrefix(?string $provider, ?string $collection): string 
+    {
+        if (! $this->hasProvider($provider)) {
+            return '';
+        }
+
+        return $this->getAuthentication($provider)[$collection]['route']['prefix'] ?? '';
+    }
+
+    // public function getAuthenticationRouteHosts(?string $provider, ?string $collection): array 
     // {
     //     if (! $this->hasProvider($provider)) {
     //         return [];
     //     }
 
-    //     return $this->getProvider($provider)['authentication'] ?? [];
+    //     return $this->getAuthentication($provider)[$collection]['route']['hosts'] ?? [];
     // }
 
-
-    // // AUTHENTICATION -> COLLECTIONS
-
-    // public function getAuthenticationName(?string $provider, ?string $collection): string 
-    // {
-    //     if (! $this->hasProvider($provider)) {
-    //         return '';
-    //     }
-
-    //     return $this->getAuthentication($provider)[$collection]['name'] ?? '';
-    // }
-
-    // public function getAuthenticationRoutePrefix(?string $provider, ?string $collection): string 
-    // {
-    //     if (! $this->hasProvider($provider)) {
-    //         return '';
-    //     }
-
-    //     return $this->getAuthentication($provider)[$collection]['route']['prefix'] ?? '';
-    // }
-
-    // public function getAuthenticationRouteHosts(?string $provider, ?string $collection): string 
-    // {
-    //     if (! $this->hasProvider($provider)) {
-    //         return '';
-    //     }
-
-    //     return $this->getAuthentication($provider)[$collection]['route']['hosts'] ?? '';
-    // }
-
-    // public function getAuthenticationRouteSchemes(?string $provider, ?string $collection): string 
-    // {
-    //     if (! $this->hasProvider($provider)) {
-    //         return '';
-    //     }
-
-    //     return $this->getAuthentication($provider)[$collection]['route']['schemes'] ?? '';
-    // }
-
-
-    // // AUTHENTICATION -> ENDPOINTS
-
-    // public function isAuthenticationEndpointEnabled(?string $provider, ?string $collection, ?string $endpoint): bool 
-    // {
-    //     if (! $this->hasProvider($provider)) {
-    //         return false;
-    //     }
-
-    //     return $this->getAuthentication($provider)[$collection][$endpoint]['enabled'] ?? false;
-    // }
-
-    // public function getAuthenticationEndpointPath(?string $provider, ?string $collection, ?string $endpoint): string 
-    // {
-    //     if (! $this->hasProvider($provider)) {
-    //         return '';
-    //     }
-
-    //     return $this->getAuthentication($provider)[$collection][$endpoint]['path'] ?? '';
-    // }
-
-    // public function getAuthenticationEndpointHosts(?string $provider, ?string $collection, ?string $endpoint): array 
+    // public function getAuthenticationRouteSchemes(?string $provider, ?string $collection): array 
     // {
     //     if (! $this->hasProvider($provider)) {
     //         return [];
     //     }
 
-    //     return $this->getAuthentication($provider)[$collection][$endpoint]['hosts'] ?? [];
+    //     return $this->getAuthentication($provider)[$collection]['route']['schemes'] ?? [];
     // }
 
-    // public function getAuthenticationEndpointSchemes(?string $provider, ?string $collection, ?string $endpoint): array 
-    // {
-    //     if (! $this->hasProvider($provider)) {
-    //         return [];
-    //     }
 
-    //     return $this->getAuthentication($provider)[$collection][$endpoint]['schemes'] ?? [];
-    // }
+    // AUTHENTICATION -> ENDPOINTS
 
-    // public function getAuthenticationEndpointController(?string $provider, ?string $collection, ?string $endpoint): ?string 
-    // {
-    //     if (! $this->hasProvider($provider)) {
-    //         return null;
-    //     }
+    public function isAuthenticationEndpointEnabled(?string $provider, ?string $collection, ?string $endpoint): bool 
+    {
+        if (! $this->hasProvider($provider)) {
+            return false;
+        }
 
-    //     return $this->getAuthentication($provider)[$collection][$endpoint]['controller'] ?? null;
-    // }
+        return $this->getAuthentication($provider)[$collection]['endpoints'][$endpoint]['enabled'] ?? false;
+    }
 
-    // public function getAuthenticationEndpointProperties(?string $provider, ?string $collection, ?string $endpoint): array 
-    // {
-    //     if (! $this->hasProvider($provider)) {
-    //         return [];
-    //     }
+    public function getAuthenticationEndpointPath(?string $provider, ?string $collection, ?string $endpoint): string 
+    {
+        if (! $this->hasProvider($provider)) {
+            return '';
+        }
 
-    //     return $this->getAuthentication($provider)[$collection][$endpoint]['properties'] ?? [];
-    // }
+        return $this->getAuthentication($provider)[$collection]['endpoints'][$endpoint]['path'] ?? '';
+    }
+
+    public function getAuthenticationEndpointHosts(?string $provider, ?string $collection, ?string $endpoint): array 
+    {
+        if (! $this->hasProvider($provider)) {
+            return [];
+        }
+
+        return $this->getAuthentication($provider)[$collection]['endpoints'][$endpoint]['hosts'] ?? [];
+    }
+
+    public function getAuthenticationEndpointSchemes(?string $provider, ?string $collection, ?string $endpoint): array 
+    {
+        if (! $this->hasProvider($provider)) {
+            return [];
+        }
+
+        return $this->getAuthentication($provider)[$collection]['endpoints'][$endpoint]['schemes'] ?? [];
+    }
+
+    public function getAuthenticationEndpointController(?string $provider, ?string $collection, ?string $endpoint): ?string 
+    {
+        if (! $this->hasProvider($provider)) {
+            return null;
+        }
+
+        return $this->getAuthentication($provider)[$collection]['endpoints'][$endpoint]['controller'] ?? null;
+    }
+
+    public function getAuthenticationEndpointProperties(?string $provider, ?string $collection, ?string $endpoint): array 
+    {
+        if (! $this->hasProvider($provider)) {
+            return [];
+        }
+
+        return $this->getAuthentication($provider)[$collection]['endpoints'][$endpoint]['properties'] ?? [];
+    }
 
 
 

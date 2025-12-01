@@ -609,107 +609,102 @@
 #     # queue_time: "{debug.queue_time}"
 
 
-# ## Metadata
-# ## --
+# # ## Metadata
+# # ## --
 
 # meta:
-#     description: "{meta.description}"       # Description de l'API
-#     category: "{meta.category}"            # e.g. “Public API”, “Internal”
-#     tags: "{meta.tags}"                    # Tags (tableau)
-#     tests: "{meta.tests}"                # Tests associés (tableau)
-#     # deprecated: "{meta.deprecated}"         # Dépréciation spécifique
-#     # cache_ttl: "{meta.cache_ttl}"          # TTL pour cache
-#     # operation_id: "{meta.operation_id}"    # ID pour OpenAPI
-#     # license: "{app.license}"
-#     # author: "{meta.author}"                # Maintainer / author
-#     # contact: "{meta.contact}"              # Support or contact email
-#     # visibility: "{meta.visibility}"        # public/private
-#     # links: "{meta.links}"                  # Array of doc or resource links
-#     # example_request: "{meta.example_request}" # Optional for doc tools
-#     # example_response: "{meta.example_response}" # Optional for doc tools
-#     # version_history: "{meta.version_history}" # Liste des versions précédentes (utile pour les docs).
-#     # changelog: "{meta.changelog}" # Derniers changements (utile pour les outils de versioning).
+
+#     string: "{meta.string}"
+#     array: "{meta.array}"
+#     float: "{meta.float}"
+#     integer: "{meta.integer}"
+#     boolean: "{meta.boolean}"
+#     callable: "{meta.callable}"
+#     'null': "{meta.null}"
+#     date: "{meta.date}"
+#     time: "{meta.time}"
+#     datetime: "{meta.datetime}"
 
 
-## Response
-## --
+# ## Response
+# ## --
 
-response:
+# response:
 
-    ## Response Timestamp
-    ## ISO 8601 date format
-    ##
-    ## @var string
-    timestamp: "{response.timestamp}"
+#     ## Response Timestamp
+#     ## ISO 8601 date format
+#     ##
+#     ## @var string
+#     timestamp: "{response.timestamp}"
 
-    ## Response Data
-    ##
-    ## @var array
-    data: "{response.data}"
+#     ## Response Data
+#     ##
+#     ## @var array
+#     data: "{response.data}"
 
-    ## Response data Count
-    ##
-    ## @var int
-    count: "{response.count}"
+#     ## Response data Count
+#     ##
+#     ## @var int
+#     count: "{response.count}"
 
-    ## Response Size in bytes
-    ##
-    ## @var int
-    size: "{response.size}"
+#     ## Response Size in bytes
+#     ##
+#     ## @var int
+#     size: "{response.size}"
 
-    ## Response Hash Algorithm
-    ##
-    ## @var string
-    algorithm: "{response.algorithm}"
+#     ## Response Hash Algorithm
+#     ##
+#     ## @var string
+#     algorithm: "{response.algorithm}"
 
-    ## Response Hash
-    ##
-    ## @var string
-    hash: "{response.hash}"
+#     ## Response Hash
+#     ##
+#     ## @var string
+#     hash: "{response.hash}"
 
-    ## MD5 Hash of the response data
-    ##
-    ## @var string
-    hash_md5: "{response.hash_md5}"
+#     ## MD5 Hash of the response data
+#     ##
+#     ## @var string
+#     hash_md5: "{response.hash_md5}"
 
-    ## SHA-1 Hash of the response data
-    ##
-    ## @var string
-    hash_sha1: "{response.hash_sha1}"
+#     ## SHA-1 Hash of the response data
+#     ##
+#     ## @var string
+#     hash_sha1: "{response.hash_sha1}"
 
-    ## SHA-256 Hash of the response data
-    ##
-    ## @var string
-    hash_sha256: "{response.hash_sha256}"
+#     ## SHA-256 Hash of the response data
+#     ##
+#     ## @var string
+#     hash_sha256: "{response.hash_sha256}"
 
-    ## SHA-512 Hash of the response data
-    ##
-    ## @var string
-    hash_sha512: "{response.hash_sha512}"
+#     ## SHA-512 Hash of the response data
+#     ##
+#     ## @var string
+#     hash_sha512: "{response.hash_sha512}"
 
-    ## Is Response Compressed
-    ##
-    ## @var bool
-    is_compressed: "{response.is_compressed}"
+#     ## Is Response Compressed
+#     ##
+#     ## @var bool
+#     is_compressed: "{response.is_compressed}"
 
-    ## Compression Format
-    ##
-    ## @var string
-    compression_format: "{response.compression_format}"
+#     ## Compression Format
+#     ##
+#     ## @var string
+#     compression_format: "{response.compression_format}"
 
-    ## Compression Level
-    ##
-    ## @var int
-    compression_level: "{response.compression_level}"
+#     ## Compression Level
+#     ##
+#     ## @var int
+#     compression_level: "{response.compression_level}"
 
-    error.code: "{error.code}"                 # Code d'erreur interne
-    error.message: "{error.message}"           # Message lisible
-    error.details: "{error.details}"           # Détails supplémentaires
-    error.doc_url: "{error.doc_url}"           # Lien vers doc
-    etag: "{response.etag}"                # ETag pour cache conditionnel
-    validated: "{response.validated}"  # : Booléen indiquant si la réponse a passé une validation JSON Schema.
-    signature: "{response.signature}"  # : Signature numérique (si tu veux signer les payloads).
-    cache_key: "{response.cache_key}"  #  : clé de cache utilisée pour cette réponse.
+#     error.code: "{error.code}"                 # Code d'erreur interne
+#     error.message: "{error.message}"           # Message lisible
+#     error.details: "{error.details}"           # Détails supplémentaires
+#     error.doc_url: "{error.doc_url}"           # Lien vers doc
+#     etag: "{response.etag}"                # ETag pour cache conditionnel
+#     validated: "{response.validated}"  # : Booléen indiquant si la réponse a passé une validation JSON Schema.
+#     signature: "{response.signature}"  # : Signature numérique (si tu veux signer les payloads).
+#     cache_key: "{response.cache_key}"  #  : clé de cache utilisée pour cette réponse.
 
 
 

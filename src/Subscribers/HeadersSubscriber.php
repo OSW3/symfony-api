@@ -1,14 +1,9 @@
 <?php
 namespace OSW3\Api\Subscribers;
 
-use OSW3\Api\Service\AppService;
 use OSW3\Api\Helper\HeaderHelper;
-use OSW3\Api\Service\ServerService;
 use OSW3\Api\Builder\OptionsBuilder;
-use OSW3\Api\Service\ContextService;
 use OSW3\Api\Service\HeadersService;
-use OSW3\Api\Service\VersionService;
-use OSW3\Api\Service\SecurityService;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
@@ -17,12 +12,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 final class HeadersSubscriber implements EventSubscriberInterface
 {
     public function __construct(
-        private readonly AppService $appService,
-        private readonly ServerService $serverService,
-        private readonly ContextService $contextService,
         private readonly HeadersService $headersService,
-        private readonly VersionService $versionService,
-        private readonly SecurityService $securityService,
         private readonly OptionsBuilder $optionsBuilder,
     ){}
     
@@ -34,7 +24,7 @@ final class HeadersSubscriber implements EventSubscriberInterface
     }
 
     public function onResponse(ResponseEvent $event): void
-    {        
+    {
         if (!$event->isMainRequest()) {
             return;
         }
@@ -53,7 +43,7 @@ final class HeadersSubscriber implements EventSubscriberInterface
         {
             $key    = HeaderHelper::toHeaderCase($key);
             $value  = $this->resolveHeaderValue($key, $value, $event);
-
+            
             if ($this->shouldRemoveHeader($value)) {
                 $removed[] = $key;
                 continue;
@@ -105,16 +95,9 @@ final class HeadersSubscriber implements EventSubscriberInterface
                 'response' => $response,
             ]) 
             ?? $this->resolveDynamicValue($value, $response) 
-            ?? $value;
-
-        // $value = match ($keyAlt) {
-
-        //     'server' => $this->serverService->getSoftware(),
-        //     'vary'   => $this->computeVary($event, $value),
-        //     default  => $this->resolveDynamicValue($value, $event->getResponse()),
-        // };
-        // dump([$keyAlt, $value]);
-        // return $value;
+            ?? $value
+        ;
+        return null;
     }
 
     private function resolveDynamicValue(mixed $value, Response $response): mixed
@@ -130,6 +113,7 @@ final class HeadersSubscriber implements EventSubscriberInterface
             if ($reflection->isStatic()) {
                 return call_user_func($value, $response);
             } else {
+                // dump(['class' => $class, 'method' => $method]);
                 return call_user_func([new $class(), $method], $response);
             }
         }
@@ -144,29 +128,5 @@ final class HeadersSubscriber implements EventSubscriberInterface
     private function shouldRemoveHeader(mixed $value): bool
     {
         return is_bool($value) || $value === null || $value === '';
-    }
-
-
-
-
-    private function computeVary(ResponseEvent $event, mixed $data): ?string 
-    {
-        $response = $event->getResponse();
-        
-        $store = $response->headers->all('vary');
-        $response->headers->remove('vary');
-
-        if ($data === false || $data === null) {
-            return null;
-        }
-
-        if (!is_array($data)) {
-            $data = [$data];
-        }
-        
-        return implode(', ', array_values(array_unique(array_merge(
-            $store,
-            $data
-        ))));
     }
 }
