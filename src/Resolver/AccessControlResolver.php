@@ -6,20 +6,19 @@ use OSW3\Api\Service\ContextService;
 
 final class AccessControlResolver
 {
-    public static function execute(array &$providers): array 
-    {
-        // Segments to treat
-        $segments = [
-            ContextService::SEGMENT_COLLECTION,
-        ];
+    private const SEGMENTS = [
+        ContextService::SEGMENT_COLLECTION,
+    ];
 
-        foreach ($providers as &$provider) {
+    public static function execute(array &$config): array 
+    {
+        foreach ($config['providers'] as &$provider) {
 
             $providerMerge = $provider['access_control']['merge'] ?? MergeStrategy::APPEND->value;
             $providerRoles = $provider['access_control']['roles'] ?? [];
             $providerVoter = $provider['access_control']['voter'] ?? null;
 
-            foreach ($segments as $segment) {
+            foreach (static::SEGMENTS as $segment) {
 
                 // Security: missing segment
                 if (empty($provider[$segment]) || !is_array($provider[$segment])) {
@@ -112,12 +111,12 @@ final class AccessControlResolver
 
         // ---- Merging roles ----
 
-        foreach ($providers as &$provider) {
+        foreach ($config['providers'] as &$provider) {
             $provider['access_control']['roles'] = static::mergeRoles([
                 $provider['access_control']['roles'],
             ], $provider['access_control']['merge']);
 
-            foreach ($segments as $segment) {
+            foreach (static::SEGMENTS as $segment) {
                 foreach ($provider[$segment] as &$collection) {
                     $collection['access_control']['roles'] = static::mergeRoles([
                         $provider['access_control']['roles'],
@@ -135,7 +134,7 @@ final class AccessControlResolver
             }
         }
 
-        return $providers;
+        return $config;
     }
 
     /**

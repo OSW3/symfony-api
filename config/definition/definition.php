@@ -4319,69 +4319,68 @@ return static function($definition): void
     ->validate()
         ->always(function($config) {
 
-
             // Enabled
             // -> Provider level
             // -> Collections level
             // -> Endpoint level
             IsEnabledResolver::execute($config);
 
-    //         // Collections names (alias)
-    //         // -> Collections level
-    //         NameResolver::execute($config);
+            // Collections names (alias)
+            // -> Collections level
+            NameResolver::execute($config);
 
-    //         // Deprecation
-    //         // -> Provider level
-    //         // -> Collections level
-    //         // -> Endpoint level
-    //         DeprecationResolver::execute($config);
+            // Deprecation
+            // -> Provider level
+            // -> Collections level
+            // -> Endpoint level
+            DeprecationResolver::execute($config);
 
-    //         // API Resolver (API Versioning)
-    //         // -> Provider level
-    //         ApiResolver::execute($config);
+            // API Resolver (API Versioning)
+            // -> Provider level
+            ApiResolver::execute($config);
 
-    //         // Route 
-    //         // -> Provider level
-    //         // -> Collections level
-    //         // -> Endpoint level
-    //         RouteResolver::execute($config);
+            // Route 
+            // -> Provider level
+            // -> Collections level
+            // -> Endpoint level
+            RouteResolver::execute($config);
 
-    //         // Pagination
-    //         // -> Provider level
-    //         // -> Collections level
-    //         // -> Endpoint level
-    //         PaginationResolver::execute($config);
+            // Pagination
+            // -> Provider level
+            // -> Collections level
+            // -> Endpoint level
+            PaginationResolver::execute($config);
 
-    //         // URL Support
-    //         // -> Provider level
-    //         // -> Collections level
-    //         UrlSupportResolver::execute($config);
+            // URL Support
+            // -> Provider level
+            // -> Collections level
+            UrlSupportResolver::execute($config);
 
-    //         // Rate limit
-    //         // -> Provider level
-    //         // -> Collections level (collections)
-    //         // -> Endpoint level
-    //         RateLimitResolver::execute($config);
+            // Rate limit
+            // -> Provider level
+            // -> Collections level (collections)
+            // -> Endpoint level
+            RateLimitResolver::execute($config);
 
-    //         // Templates paths
-    //         // -> Provider level
-    //         // -> Collections level
-    //         // -> Endpoint level
-    //         TemplatesResolver::execute($config);
+            // Templates paths
+            // -> Provider level
+            // -> Collections level
+            // -> Endpoint level
+            // TemplatesResolver::execute($config);
 
-    //         // Response
+            // Response
 
-    //         // Serialization
-    //         // -> Provider level
-    //         // -> Collections level
-    //         // -> Endpoint level
-    //         SerializationResolver::execute($config);
+            // Serialization
+            // -> Provider level
+            // -> Collections level
+            // -> Endpoint level
+            SerializationResolver::execute($config);
 
-    //         // Access Control
-    //         // -> Provider level
-    //         // -> Collections level
-    //         // -> Endpoint level
-    //         AccessControlResolver::execute($config);
+            // Access Control
+            // -> Provider level
+            // -> Collections level
+            // -> Endpoint level
+            AccessControlResolver::execute($config);
 
             return $config;
         })

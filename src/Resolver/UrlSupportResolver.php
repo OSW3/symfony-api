@@ -5,20 +5,19 @@ use OSW3\Api\Service\ContextService;
 
 final class UrlSupportResolver
 {
-    public static function execute(array &$providers): array 
-    {
-        // Segments to treat
-        $segments = [
-            ContextService::SEGMENT_AUTHENTICATION,
-            ContextService::SEGMENT_COLLECTION,
-        ];
-        
-        foreach ($providers as &$provider) {
+    private const SEGMENTS = [
+        ContextService::SEGMENT_AUTHENTICATION,
+        ContextService::SEGMENT_COLLECTION,
+    ];
+
+    public static function execute(array &$config): array 
+    {   
+        foreach ($config['providers'] as &$provider) {
             $providerSupport = $provider['url']['support'] ?? true;
             $providerAbsolute = $provider['url']['absolute'] ?? true;
             $providerProperty = $provider['url']['property'] ?? 'url';
 
-            foreach ($segments as $segment) {
+            foreach (static::SEGMENTS as $segment) {
 
                 // Security: missing segment
                 if (empty($provider[$segment]) || !is_array($provider[$segment])) {
@@ -60,6 +59,6 @@ final class UrlSupportResolver
             }
         }
 
-        return $providers;
+        return $config;
     }
 }

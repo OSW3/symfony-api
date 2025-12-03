@@ -5,23 +5,23 @@ use OSW3\Api\Service\ContextService;
 
 final class SerializationResolver
 {
-    public static function execute(array &$providers): array 
+    // Segments to treat
+    private const SEGMENTS = [
+        ContextService::SEGMENT_AUTHENTICATION,
+        ContextService::SEGMENT_COLLECTION,
+    ];
+    
+    public static function execute(array &$config): array 
     {
-        // Segments to treat
-        $segments = [
-            ContextService::SEGMENT_AUTHENTICATION,
-            ContextService::SEGMENT_COLLECTION,
-        ];
-        
-        foreach ($providers as &$provider) {
+        foreach ($config['providers'] as &$provider) {
 
             $providerGroups = [];
             $providerIgnore = $provider['serialization']['ignore'] ?? [];
-            $providerDatetime = $provider['serialization']['datetime'] ?? [];
-            $providerSkipNull = $provider['serialization']['skip_null'] ?? false;
+            // $providerDatetime = $provider['serialization']['datetime'] ?? [];
+            // $providerSkipNull = $provider['serialization']['skip_null'] ?? false;
             $providerTransformer = null;
 
-            foreach ($segments as $segment) {
+            foreach (static::SEGMENTS as $segment) {
 
                 // Security: missing segment
                 if (empty($provider[$segment]) || !is_array($provider[$segment])) {
@@ -118,6 +118,6 @@ final class SerializationResolver
 
         }
 
-        return $providers;
+        return $config;
     }
 }

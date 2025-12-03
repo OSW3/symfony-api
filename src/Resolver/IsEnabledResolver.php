@@ -5,20 +5,20 @@ use OSW3\Api\Service\ContextService;
 
 final class IsEnabledResolver
 {
-    public static function execute(array &$providers): array
-    {
-        // Segments to treat
-        $segments = [
-            ContextService::SEGMENT_AUTHENTICATION,
-            ContextService::SEGMENT_COLLECTION,
-        ];
+    // Segments to treat
+    const SEGMENTS = [
+        ContextService::SEGMENT_AUTHENTICATION,
+        ContextService::SEGMENT_COLLECTION,
+    ];
 
-        foreach ($providers as &$provider) {
+    public static function execute(array &$config): array
+    {
+        foreach ($config['providers'] as &$provider) {
 
             // Secure the key 'enabled' of the provider
             $providerEnabled = (bool)($provider['enabled'] ?? false);
 
-            foreach ($segments as $segment) {
+            foreach (static::SEGMENTS as $segment) {
 
                 // Security: missing segment
                 if (empty($provider[$segment]) || !is_array($provider[$segment])) {
@@ -66,6 +66,6 @@ final class IsEnabledResolver
             }
         }
 
-        return $providers;
+        return $config;
     }
 }

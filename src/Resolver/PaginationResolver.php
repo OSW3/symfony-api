@@ -5,9 +5,9 @@ use OSW3\Api\Service\ContextService;
 
 final class PaginationResolver
 {
-    public static function execute(array &$providers): array
+    public static function execute(array &$config): array
     {
-        foreach ($providers as &$provider) {
+        foreach ($config['providers'] as &$provider) {
             $providerEnabled = $provider['pagination']['enabled'] ?? true;
             $providerLimit = $provider['pagination']['limit'] ?? 10;
             $providerMaxLimit = $provider['pagination']['max_limit'] ?? 100;
@@ -130,6 +130,6 @@ final class PaginationResolver
             }
         }
 
-        return $providers;
+        return $config;
     }
 }

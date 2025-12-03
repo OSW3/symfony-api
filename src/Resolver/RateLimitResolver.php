@@ -5,14 +5,13 @@ use OSW3\Api\Service\ContextService;
 
 final class RateLimitResolver
 {
-    public static function execute(array &$providers): array
+    private const SEGMENTS = [
+        ContextService::SEGMENT_COLLECTION,
+    ];
+    
+    public static function execute(array &$config): array
     {
-        // Segments to treat
-        $segments = [
-            ContextService::SEGMENT_COLLECTION,
-        ];
-
-        foreach ($providers as &$provider) {
+        foreach ($config['providers'] as &$provider) {
 
             $providerEnabled = $provider['rate_limit']['enabled'] ?? false;
             $providerLimit = $provider['rate_limit']['limit'] ?? '100/hour';
@@ -23,7 +22,7 @@ final class RateLimitResolver
             $providerIncludeHeaders = $provider['rate_limit']['include_headers'] ?? true;
 
 
-            foreach ($segments as $segment) {
+            foreach (static::SEGMENTS as $segment) {
 
                 // Security: missing segment
                 if (empty($provider[$segment]) || !is_array($provider[$segment])) {
@@ -177,6 +176,6 @@ final class RateLimitResolver
             }
         }
 
-        return $providers;
+        return $config;
     }
 }

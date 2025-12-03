@@ -6,15 +6,15 @@ use OSW3\Api\Service\ContextService;
 
 final class DeprecationResolver
 {
-    public static function execute(array &$providers): array 
+    // Segments to treat
+    const SEGMENTS = [
+        ContextService::SEGMENT_AUTHENTICATION,
+        ContextService::SEGMENT_COLLECTION,
+    ];
+    
+    public static function execute(array &$config): array 
     {
-        // Segments to treat
-        $segments = [
-            ContextService::SEGMENT_AUTHENTICATION,
-            ContextService::SEGMENT_COLLECTION,
-        ];
-
-        foreach ($providers as &$provider) {
+        foreach ($config['providers'] as &$provider) {
 
             // Secure the keys of the provider
             $providerEnabled   = (bool)($provider['deprecation']['enabled'] ?? false);
@@ -35,8 +35,7 @@ final class DeprecationResolver
                 $provider['deprecation']['sunset_at'] = UtilsService::to_http_date($provider['deprecation']['sunset_at']);
             }
 
-
-            foreach ($segments as $segment) {
+            foreach (static::SEGMENTS as $segment) {
 
                 // Security: missing segment
                 if (empty($provider[$segment]) || !is_array($provider[$segment])) {
@@ -155,6 +154,6 @@ final class DeprecationResolver
             }
         }
 
-        return $providers;
+        return $config;
     }
 }

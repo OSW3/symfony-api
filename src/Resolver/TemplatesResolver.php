@@ -5,16 +5,16 @@ use OSW3\Api\Service\ContextService;
 
 final class TemplatesResolver
 {
-    public static function execute(array &$providers): array 
+    // Segments to treat
+    private const SEGMENTS = [
+        ContextService::SEGMENT_AUTHENTICATION,
+        ContextService::SEGMENT_COLLECTION,
+    ];
+
+    public static function execute(array &$config): array 
     {
-        // Segments to treat
-        $segments = [
-            ContextService::SEGMENT_AUTHENTICATION,
-            ContextService::SEGMENT_COLLECTION,
-        ];
-        
-        foreach ($providers as &$provider) {
-            foreach ($segments as $segment) {
+        foreach ($config['providers'] as &$provider) {
+            foreach (static::SEGMENTS as $segment) {
 
                 if (empty($provider[$segment]) || !is_array($provider[$segment])) {
                     continue;
@@ -50,7 +50,6 @@ final class TemplatesResolver
             }
         }
 
-        return $providers;
+        return $config;
     }
-
 }

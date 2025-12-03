@@ -11,16 +11,15 @@ use OSW3\Api\Enum\Route\DefaultEndpoint;
 
 final class RouteResolver
 {
-    public static function execute(array &$providers): array
-    {
-        // Segments to treat
-        $segments = [
-            ContextService::SEGMENT_AUTHENTICATION,
-            ContextService::SEGMENT_COLLECTION,
-        ];
+    // Segments to treat
+    private const SEGMENTS = [
+        ContextService::SEGMENT_AUTHENTICATION,
+        ContextService::SEGMENT_COLLECTION,
+    ];
 
-        
-        foreach ($providers as &$provider) {
+    public static function execute(array &$config): array
+    {
+        foreach ($config['providers'] as &$provider) {
             $version = static::version($provider);
 
             $providerPattern  = $provider['routes']['pattern'];
@@ -29,7 +28,7 @@ final class RouteResolver
             $providerHosts    = $provider['routes']['hosts'];
             $providerSchemes  = $provider['routes']['schemes'];
 
-            foreach ($segments as $segment) {
+            foreach (static::SEGMENTS as $segment) {
 
                 // Security: missing segment
                 if (empty($provider[$segment]) || !is_array($provider[$segment])) {
@@ -298,7 +297,7 @@ final class RouteResolver
             }
         }
 
-        return $providers;
+        return $config;
     }
 
     private static function version(array $provider): string 

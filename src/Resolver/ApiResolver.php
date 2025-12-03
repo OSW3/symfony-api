@@ -3,14 +3,14 @@ namespace OSW3\Api\Resolver;
 
 final class ApiResolver
 {
-    public static function execute(array &$providers): array
+    public static function execute(array &$config): array
     {
         $usedNumbers  = [];
         $vendor       = static::getAppVendor();
         $vendor       = $vendor ?: 'app';
 
         // Collect all previously defined versions
-        foreach ($providers as $name => $provider) {
+        foreach ($config['providers'] as $name => $provider) {
             $number = $provider['version']['number'] ?? null;
 
             if (!empty($number)) {
@@ -19,7 +19,7 @@ final class ApiResolver
         }
 
         // Step 2: Automatically assign the missing ones with the first available number
-        foreach ($providers as $name => &$provider) {
+        foreach ($config['providers'] as $name => &$provider) {
             if (
                 empty($provider['version']) ||
                 !is_array($provider['version'])
@@ -58,9 +58,8 @@ final class ApiResolver
             }
         }
 
-        return $providers;
+        return $config;
     }
-
 
     private static function getAppVendor(): ?string
     {

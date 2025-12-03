@@ -6,15 +6,15 @@ use OSW3\Api\Service\ContextService;
 
 final class NameResolver
 {
-    public static function execute(array &$providers): array
+    public static function execute(array &$config): array
     {
-        foreach ($providers as &$provider) {
+        foreach ($config['providers'] as &$provider) {
 
             self::resolveAuthenticationNames($provider);
             self::resolveCollectionNames($provider);
         }
 
-        return $providers;
+        return $config;
     }
 
     private static function resolveAuthenticationNames(array &$provider): void

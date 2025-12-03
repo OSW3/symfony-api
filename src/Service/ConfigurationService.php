@@ -101,7 +101,7 @@ class ConfigurationService
      */
     public function getProviders(): array
     {
-        return $this->configuration;
+        return $this->configuration['providers'];
     }
 
     public function getProviderNames(): array
