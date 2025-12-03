@@ -20,15 +20,919 @@ use Symfony\Component\HttpFoundation\Request;
 
 return static function($definition): void
 {
-    $definition->rootNode()
-        ->info('Configure all API providers and their behavior.')
+    $definition->rootNode()->children()
+    
+    // ──────────────────────────────
+    // Versioning
+    // ──────────────────────────────
+    ->arrayNode('versioning')
+        ->info('API versioning configuration.')
+        ->addDefaultsIfNotSet()->children()
 
-        // ──────────────────────────────
-        // Version Providers (v1, v2…)
-        // ──────────────────────────────
+            // Versioning mode
+            // --
+            // -> auto: automatically handle versioning based on defined versions
+            // -> manual: manually specify versioning details
+            ->enumNode('mode')
+                ->info('API versioning mode.')
+                ->values(['auto', 'manual'])
+                ->defaultValue('auto')
+                ->treatNullLike('auto')
+            ->end()
+
+            // Version prefix
+            // --
+            // (e.g. "v" to have versions like v1, v2, etc.)
+            ->scalarNode('prefix')
+                ->info('API version prefix (e.g. "v").')
+                ->defaultValue('v')
+                ->treatNullLike('v')
+            ->end()
+
+            // Version location
+            // --
+            // How the version is exposed: in URL path, HTTP header, query parameter, or subdomain
+            // -> path: /api/v1/resource
+            // -> header: X-API-Version: 1
+            // -> param: ?version=1
+            // -> subdomain: v1.api.example.com
+            ->enumNode('location')
+                ->info('How the version is exposed: in URL path, HTTP header, query parameter, or subdomain.')
+                ->values(['path', 'header', 'param', 'subdomain'])
+                ->defaultValue('path')
+                ->treatNullLike('path')
+            ->end()
+
+        ->end()
+    ->end() // of versioning
+
+    // ──────────────────────────────
+    // Pagination
+    // ──────────────────────────────
+    ->arrayNode('pagination')
+        ->info('API pagination configuration.')
+        ->addDefaultsIfNotSet()->children()
+
+            // Enable or disable pagination globally
+            // --
+            // If true, pagination is enabled for all collections by default
+            ->booleanNode('enabled')
+                ->info('Enable or disable pagination globally.')
+                ->defaultTrue()
+                ->treatNullLike(true)
+            ->end()
+
+            // Default number of items returned per page
+            // --
+            // Sets the default limit for paginated responses
+            ->integerNode('default_limit')
+                ->info('Default number of items returned per page.')
+                ->defaultValue(10)
+                ->treatNullLike(10)
+            ->end()
+
+            // Maximum number of items returned per page
+            // --
+            // Sets the maximum limit for paginated responses
+            // helps prevent performance issues from excessively large responses
+            // -> if a client requests a limit higher than this, it will be capped to this value
+            // -> if default_limit is higher than max_limit, default_limit will be used
+            // -> if set to 0, there is no maximum limit
+            ->integerNode('max_limit')
+                ->info('Maximum number of items returned per page.')
+                ->defaultValue(100)
+                ->treatNullLike(100)
+            ->end()
+
+            // Allow limit override via URL parameter
+            // --
+            // If true, clients can override the default limit by specifying a "limit" parameter in the URL
+            // (e.g. ?limit=50)
+            ->booleanNode('allow_limit_override')
+                ->info('Allow limit override via URL parameter.')
+                ->defaultTrue()
+                ->treatNullLike(true)
+            ->end()
+
+            // Pagination parameter names
+            // --
+            // Defines the names of the query parameters used for pagination
+            // -> page: the page number parameter
+            // -> limit: the number of items per page parameter
+            ->arrayNode('parameters')
+                ->info('Pagination parameter names.')
+                ->addDefaultsIfNotSet()->children()
+
+                    // Page parameter name
+                    ->scalarNode('page')
+                        ->info('Page parameter name.')
+                        ->defaultValue('page')
+                        ->treatNullLike('page')
+                    ->end()
+
+                    // Limit parameter name
+                    ->scalarNode('limit')
+                        ->info('Limit parameter name.')
+                        ->defaultValue('limit')
+                        ->treatNullLike('limit')
+                    ->end()
+
+                ->end()
+            ->end()
+
+        ->end()
+    ->end() // of pagination
+
+    // ──────────────────────────────
+    // Support URL
+    // ──────────────────────────────
+    ->arrayNode('support_url')
+        ->info('API support URL configuration.')
+        ->addDefaultsIfNotSet()->children()
+
+            // Support URLs in response
+            // --
+            // If true, includes URL elements in API responses
+            ->booleanNode('enabled')
+                ->info('Whether to include URL elements in API responses.')
+                ->defaultTrue()
+                ->treatNullLike(true)
+            ->end()
+
+            // Absolute URLs
+            // --
+            // If true, generates absolute URLs; otherwise, generates relative URLs
+            ->booleanNode('absolute')
+                ->info('Generate absolute URLs if true, relative otherwise')
+                ->defaultTrue()
+                ->treatNullLike(true)
+            ->end()
+
+            // URL property name
+            // --
+            // The name of the property in the response that holds the URL
+            ->scalarNode('property')
+                ->info('The name of the URL property in response.')
+                ->defaultValue('url')
+                ->treatNullLike('url')
+            ->end()
+
+        ->end()
+    ->end() // of support_url
+
+    // ──────────────────────────────
+    // Templates
+    // ──────────────────────────────
+    ->arrayNode('templates')
+        // Define template paths for various response types
+        // --
+        // Each template defines the structure of the API response for different scenarios
+        // e.g., list responses, single item responses, error responses, etc.
+        // Paths are relative to the bundle directory or can be absolute paths
+        // Default templates are provided, but can be overridden here
+        ->info('API templates configuration.')
+        ->addDefaultsIfNotSet()->children()
+        
+            // -- Error templates --
+
+            // General error template
+            ->scalarNode('error')
+                ->info('Path to the response template file used as a model for formatting error responses.')
+                ->defaultValue('Resources/templates/yaml/error.yaml')
+                ->treatNullLike('Resources/templates/yaml/error.yaml')
+            ->end()
+            
+            // 400 Bad Request
+            ->scalarNode('error_400')
+                ->info('Path to the response template file used as a model for formatting bad request responses (e.g. 400 Bad Request).')
+                ->defaultValue('Resources/templates/yaml/error_400.yaml')
+                ->treatNullLike('Resources/templates/yaml/error_400.yaml')
+            ->end()
+            
+            // 401 Unauthorized
+            ->scalarNode('error_401')
+                ->info('Path to the response template file used as a model for formatting unauthorized responses (e.g. 401 Unauthorized).')
+                ->defaultValue('Resources/templates/yaml/error_401.yaml')
+                ->treatNullLike('Resources/templates/yaml/error_401.yaml')
+            ->end()
+            
+            // 403 Forbidden
+            ->scalarNode('error_403')
+                ->info('Path to the response template file used as a model for formatting forbidden responses (e.g. 403 Forbidden).')
+                ->defaultValue('Resources/templates/yaml/error_403.yaml')
+                ->treatNullLike('Resources/templates/yaml/error_403.yaml')
+            ->end()
+            
+            // 404 Not Found
+            ->scalarNode('error_404')
+                ->info('Path to the response template file used as a model for formatting not found responses (e.g. 404 Not Found).')
+                ->defaultValue('Resources/templates/yaml/error_404.yaml')
+                ->treatNullLike('Resources/templates/yaml/error_404.yaml')
+            ->end()
+
+            // 405 Method Not Allowed
+            ->scalarNode('error_405')
+                ->info('Path to the response template file used as a model for formatting method not allowed responses (e.g. 405 Method Not Allowed).')
+                ->defaultValue('Resources/templates/yaml/error_405.yaml')
+                ->treatNullLike('Resources/templates/yaml/error_405.yaml')
+            ->end()
+
+            // 409 Conflict
+            ->scalarNode('error_409')
+                ->info('Path to the response template file used as a model for formatting conflict responses (e.g. 409 Conflict).')
+                ->defaultValue('Resources/templates/yaml/error_409.yaml')
+                ->treatNullLike('Resources/templates/yaml/error_409.yaml')
+            ->end()
+
+            // 422 Unprocessable Entity
+            ->scalarNode('error_422')
+                ->info('Path to the response template file used as a model for formatting unprocessable entity responses (e.g. 422 Unprocessable Entity).')
+                ->defaultValue('Resources/templates/yaml/error_422.yaml')
+                ->treatNullLike('Resources/templates/yaml/error_422.yaml')
+            ->end()
+
+            // 429 Too Many Requests
+            ->scalarNode('error_429')
+                ->info('Path to the response template file used as a model for formatting too many requests responses (e.g. 429 Too Many Requests).')
+                ->defaultValue('Resources/templates/yaml/error_429.yaml')
+                ->treatNullLike('Resources/templates/yaml/error_429.yaml')
+            ->end()
+
+            // 500 Internal Server Error
+            ->scalarNode('error_500')
+                ->info('Path to the response template file used as a model for formatting internal server error responses (e.g. 500 Internal Server Error).')
+                ->defaultValue('Resources/templates/yaml/error_500.yaml')
+                ->treatNullLike('Resources/templates/yaml/error_500.yaml')
+            ->end()
+
+            // 502 Bad Gateway
+            ->scalarNode('error_502')
+                ->info('Path to the response template file used as a model for formatting bad gateway responses (e.g. 502 Bad Gateway).')
+                ->defaultValue('Resources/templates/yaml/error_502.yaml')
+                ->treatNullLike('Resources/templates/yaml/error_502.yaml')
+            ->end()
+
+            // 503 Service Unavailable
+            ->scalarNode('error_503')
+                ->info('Path to the response template file used as a model for formatting service unavailable responses (e.g. 503 Service Unavailable).')
+                ->defaultValue('Resources/templates/yaml/error_503.yaml')
+                ->treatNullLike('Resources/templates/yaml/error_503.yaml')
+            ->end()
+
+            // 504 Gateway Timeout
+            ->scalarNode('error_504')
+                ->info('Path to the response template file used as a model for formatting gateway timeout responses (e.g. 504 Gateway Timeout).')
+                ->defaultValue('Resources/templates/yaml/error_504.yaml')
+                ->treatNullLike('Resources/templates/yaml/error_504.yaml')
+            ->end()
+
+
+            // -- Auth templates --
+
+            // Auth: Login
+            ->scalarNode('login')
+                ->info('Path to the response template file used as a model for formatting login responses.')
+                ->defaultValue('Resources/templates/yaml/auth/login.yaml')
+                ->treatNullLike('Resources/templates/yaml/auth/login.yaml')
+            ->end()
+
+            // Auth: Logout
+            ->scalarNode('logout')
+                ->info('Path to the response template file used as a model for formatting logout responses.')
+                ->defaultValue('Resources/templates/yaml/auth/logout.yaml')
+                ->treatNullLike('Resources/templates/yaml/auth/logout.yaml')
+            ->end()
+
+            // Auth: Refresh Token
+            ->scalarNode('refresh_token')
+                ->info('Path to the response template file used as a model for formatting refresh token responses.')
+                ->defaultValue('Resources/templates/yaml/auth/refresh_token.yaml')
+                ->treatNullLike('Resources/templates/yaml/auth/refresh_token.yaml')
+            ->end()
+
+            // Auth: Register
+            ->scalarNode('register')
+                ->info('Path to the response template file used as a model for formatting registration responses.')
+                ->defaultValue('Resources/templates/yaml/auth/register.yaml')
+                ->treatNullLike('Resources/templates/yaml/auth/register.yaml')
+            ->end()
+
+            // Auth: Me
+            ->scalarNode('me')
+                ->info('Path to the response template file used as a model for formatting "me" responses.')
+                ->defaultValue('Resources/templates/yaml/auth/me.yaml')
+                ->treatNullLike('Resources/templates/yaml/auth/me.yaml')
+            ->end()
+
+            // Auth: Account
+            ->scalarNode('account')
+                ->info('Path to the response template file used as a model for formatting account responses.')
+                ->defaultValue('Resources/templates/yaml/auth/account.yaml')
+                ->treatNullLike('Resources/templates/yaml/auth/account.yaml')
+            ->end()
+
+            // Auth: Update Password
+            ->scalarNode('update_password')
+                ->info('Path to the response template file used as a model for formatting update password responses.')
+                ->defaultValue('Resources/templates/yaml/auth/update_password.yaml')
+                ->treatNullLike('Resources/templates/yaml/auth/update_password.yaml')
+            ->end()
+
+            // Auth: Reset Password
+            ->scalarNode('reset_password')
+                ->info('Path to the response template file used as a model for formatting reset password responses.')
+                ->defaultValue('Resources/templates/yaml/auth/reset_password.yaml')
+                ->treatNullLike('Resources/templates/yaml/auth/reset_password.yaml')
+            ->end()
+                
+
+            // -- Entities templates --
+            
+            // Entity: Empty
+            ->scalarNode('empty')
+                ->info('Path to the response template file used as a model for formatting empty responses.')
+                ->defaultValue('Resources/templates/yaml/entities/empty.yaml')
+                ->treatNullLike('Resources/templates/yaml/entities/empty.yaml')
+            ->end()
+
+            // Entity: List
+            ->scalarNode('list')
+                ->info('Path to the response template file used as a model for formatting entity list responses.')
+                ->defaultValue('Resources/templates/yaml/entities/list.yaml')
+                ->treatNullLike('Resources/templates/yaml/entities/list.yaml')
+            ->end()
+            
+            // Entity: Single
+            ->scalarNode('item')
+                ->info('Path to the response template file used as a model for formatting single entity responses.')
+                ->defaultValue('Resources/templates/yaml/entities/item.yaml')
+                ->treatNullLike('Resources/templates/yaml/entities/item.yaml')
+            ->end()
+
+            // Entity: Created
+            ->scalarNode('created')
+                ->info('Path to the response template file used as a model for formatting entity creation responses.')
+                ->defaultValue('Resources/templates/yaml/entities/created.yaml')
+                ->treatNullLike('Resources/templates/yaml/entities/created.yaml')
+            ->end()
+
+            // Entity: Updated
+            ->scalarNode('updated')
+                ->info('Path to the response template file used as a model for formatting entity update responses.')
+                ->defaultValue('Resources/templates/yaml/entities/updated.yaml')
+                ->treatNullLike('Resources/templates/yaml/entities/updated.yaml')
+            ->end()
+
+            // Entity: Deleted
+            ->scalarNode('deleted')
+                ->info('Path to the response template file used as a model for formatting entity deletion responses.')
+                ->defaultValue('Resources/templates/yaml/entities/deleted.yaml')
+                ->treatNullLike('Resources/templates/yaml/entities/deleted.yaml')
+            ->end()
+
+
+            // -- System templates --
+
+            // System: Health
+            ->scalarNode('health')
+                ->info('Path to the response template file used as a model for formatting system health check responses.')
+                ->defaultValue('Resources/templates/yaml/system/health.yaml')
+                ->treatNullLike('Resources/templates/yaml/system/health.yaml')
+            ->end()
+
+            // System: Maintenance
+            ->scalarNode('maintenance')
+                ->info('Path to the response template file used as a model for formatting system maintenance responses.')
+                ->defaultValue('Resources/templates/yaml/system/maintenance.yaml')
+                ->treatNullLike('Resources/templates/yaml/system/maintenance.yaml')
+            ->end()
+
+            // System: Rate_limit
+            ->scalarNode('rate_limit')
+                ->info('Path to the response template file used as a model for formatting system rate limit responses.')
+                ->defaultValue('Resources/templates/yaml/system/rate_limit.yaml')
+                ->treatNullLike('Resources/templates/yaml/system/rate_limit.yaml')
+            ->end()
+
+            
+            // -- Files templates --
+
+            // Files: Upload
+            ->scalarNode('upload')
+                ->info('Path to the response template file used as a model for formatting file upload responses.')
+                ->defaultValue('Resources/templates/yaml/files/upload.yaml')
+                ->treatNullLike('Resources/templates/yaml/files/upload.yaml')
+            ->end()
+
+            // Files: Download
+            ->scalarNode('download')
+                ->info('Path to the response template file used as a model for formatting file download responses.')
+                ->defaultValue('Resources/templates/yaml/files/download.yaml')
+                ->treatNullLike('Resources/templates/yaml/files/download.yaml')
+            ->end()
+
+        ->end()
+    ->end() // of templates
+
+    // ──────────────────────────────
+    // Response
+    // ──────────────────────────────
+    ->arrayNode('response')
+        ->info('API response configuration.')
+        ->addDefaultsIfNotSet()->children()
+
+            // Response format
+            // --
+            // Defines the format of the API responses (e.g. json, xml, yaml)
+            ->arrayNode('format')
+                ->info('API response format configuration.')
+                ->addDefaultsIfNotSet()->children()
+
+                    // Response format type
+                    // --
+                    // Specifies the format of the API responses
+                    // Supported formats are defined in the MimeType enum
+                    // Default is 'json'
+                    // Possible values: json, xml, yaml, csv, etc.
+                    ->enumNode('type')
+                        ->info('Format of the API responses.')
+                        ->values(array_keys(MimeType::toArray(true)))
+                        ->defaultValue('json')
+                        ->treatNullLike('json')
+                        ->beforeNormalization()
+                            ->ifString()
+                            ->then(fn($v) => strtolower($v))
+                        ->end()
+                    ->end()
+
+                    // MIME type override
+                    // --
+                    // If set, this value will be used as the Content-Type header.
+                    ->scalarNode('mime_type')
+                        ->info('MIME type override for the API responses. If set, this value will be used as the Content-Type header.')
+                        ->defaultNull()
+                    ->end()
+
+                ->end()
+            ->end()
+
+            // Content negotiation
+            // --
+            // Settings for content negotiation in API responses
+            ->arrayNode('content_negotiation')
+                ->info('API content negotiation configuration.')
+                ->addDefaultsIfNotSet()->children()
+
+                    // Enable format override via URL parameter
+                    // --
+                    // If true, allows clients to override the response format by specifying a URL parameter
+                    // (e.g. ?format=xml)
+                    ->booleanNode('enabled')
+                        ->info('Enable format override via URL parameter.')
+                        ->defaultFalse()
+                        ->treatNullLike(false)
+                    ->end()
+
+                    // URL parameter name for format override
+                    // --
+                    // The name of the URL parameter that specifies the desired response format
+                    // (e.g. "format" in ?format=xml)
+                    ->scalarNode('parameter')
+                        ->info('URL parameter name for format override.')
+                        ->defaultValue('format')
+                        ->treatNullLike('format')
+                    ->end()
+
+                ->end()
+            ->end()
+
+            // Pretty print JSON responses
+            // --
+            // If true, JSON responses will be pretty-printed for better readability
+            ->arrayNode('pretty_print')
+                ->info('Pretty print JSON responses for better readability.')
+                ->addDefaultsIfNotSet()->children()
+
+                    ->booleanNode('enabled')
+                        ->info('Enable JSONP support for API responses.')
+                        ->defaultFalse()
+                        ->treatNullLike(false)
+                    ->end()
+
+                ->end()
+            ->end()
+
+            // JSONP support
+            // --
+            // Settings for JSONP support in API responses
+            ->arrayNode('jsonp')
+                ->info('API JSONP support configuration.')
+                ->addDefaultsIfNotSet()->children()
+
+                    // Enable JSONP support
+                    // --
+                    // If true, enables JSONP support for API responses
+                    ->booleanNode('enabled')
+                        ->info('Enable JSONP support for API responses.')
+                        ->defaultFalse()
+                        ->treatNullLike(false)
+                    ->end()
+
+                    // URL parameter name for JSONP callback
+                    // --
+                    // The name of the URL parameter that specifies the JSONP callback function
+                    ->scalarNode('parameter')
+                        ->info('URL parameter name for JSONP callback.')
+                        ->defaultValue('callback')
+                        ->treatNullLike('callback')
+                    ->end()
+
+                ->end()
+            ->end()
+
+            // Security settings
+            // --
+            // Settings to enhance the security of API responses
+            ->arrayNode('security')
+                ->info('Security settings for API responses.')
+                ->addDefaultsIfNotSet()->children()
+
+                    // Prevent JSON hijacking
+                    // --
+                    // If true, secures JSON responses against JSON hijacking attacks
+                    ->arrayNode('hijacking_prevent')
+                        ->info('Prevent JSON hijacking attacks.')
+                        ->addDefaultsIfNotSet()->children()
+
+                            ->booleanNode('enabled')
+                                ->info('Enable JSON hijacking prevention.')
+                                ->defaultTrue()
+                                ->treatNullLike(true)
+                            ->end()
+
+                            // X-Frame-Options prefix
+                            // --
+                            // Prefix added to JSON responses to prevent hijacking
+                            ->enumNode('x_frame_options')
+                                ->info('Prefix added to JSON responses to prevent hijacking.')
+                                ->values(['DENY', 'SAMEORIGIN', 'ALLOW-FROM'])
+                                ->defaultValue("DENY")
+                                ->treatNullLike("DENY")
+                            ->end()
+                        ->end()
+                    ->end()
+
+                    // Response checksum/hash settings
+                    // --
+                    // Settings for generating and verifying checksums/hashes for API responses
+                    ->arrayNode('checksum')
+                        ->info('Response checksum/hash settings.')
+                        ->addDefaultsIfNotSet()->children()
+
+                            // Enable checksum/hash verification
+                            // --
+                            // If true, enables checksum/hash verification for API responses
+                            ->booleanNode('enabled')
+                                ->info('Enable checksum/hash verification for API responses.')
+                                ->defaultTrue()
+                                ->treatNullLike(true)
+                            ->end()
+
+                            // Hash algorithm
+                            // --
+                            // Hash algorithm used for generating response checksums/hashes
+                            ->enumNode('algorithm')
+                                ->info('Hash algorithm used for generating response checksums/hashes.')
+                                ->values(['sha1', 'sha256', 'sha512'])
+                                ->defaultValue('sha256')
+                                ->treatNullLike('sha256')
+                            ->end()
+
+                        ->end()
+                    ->end()
+
+                ->end()
+            ->end()
+
+            // Cache Control
+            // --
+            // Settings for cache control headers in API responses
+            ->arrayNode('cache_control')
+                ->info('API Cache-Control header configuration.')
+                ->addDefaultsIfNotSet()->children()
+
+                    // Enable Cache-Control headers
+                    // --
+                    // If true, adds Cache-Control headers to API responses
+                    ->booleanNode('enabled')
+                        ->info('Enable Cache-Control headers in API responses.')
+                        ->defaultFalse()
+                        ->treatNullLike(false)
+                    ->end()
+
+                    // Public Cache-Control directive
+                    // --
+                    // If true, sets Cache-Control to "public", allowing shared caches. If false, sets to "private".
+                    ->booleanNode('public')
+                        ->info('If true, sets Cache-Control to "public". If false, sets to "private".')
+                        ->defaultFalse()
+                        ->treatNullLike(false)
+                    ->end()
+
+                    // No store Cache-Control directive
+                    // --
+                    // If true, adds "no-store" to Cache-Control.
+                    ->booleanNode('no_store')
+                        ->info('If true, adds "no-store" to Cache-Control.')
+                        ->defaultFalse()
+                        ->treatNullLike(false)
+                    ->end()
+
+                    // Must revalidate Cache-Control directive
+                    // --
+                    // If true, adds "must-revalidate" to Cache-Control.
+                    ->booleanNode('must_revalidate')
+                        ->info('If true, adds "must-revalidate" to Cache-Control.')
+                        ->defaultTrue()
+                        ->treatNullLike(true)
+                    ->end()
+
+                    // Max age for Cache-Control
+                    // --
+                    // Specifies the max-age directive in seconds for Cache-Control header
+                    // (0 = no cache, higher values specify cache duration)
+                    ->integerNode('max_age')
+                        ->info('Max age in seconds (0 = no cache).')
+                        ->defaultValue(3600)
+                        ->treatNullLike(3600)
+                        ->min(0)->max(31536000)
+                    ->end()
+
+                ->end()
+            ->end()
+
+            // CORS
+            // --
+            // Settings for CORS (Cross-Origin Resource Sharing) in API responses
+            ->arrayNode('cors')
+                ->info('API CORS (Cross-Origin Resource Sharing) configuration.')
+                ->addDefaultsIfNotSet()->children()
+                
+                    // Enable CORS
+                    // --
+                    // If true, enables CORS support for API responses
+                    ->booleanNode('enabled')
+                        ->info('Enable CORS support for API responses.')
+                        ->defaultTrue()
+                        ->treatNullLike(true)
+                    ->end()
+                    
+                    // Allowed origins
+                    // --
+                    // List of allowed origins for CORS
+                    // See: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#access-control-allow-origin
+                    ->arrayNode('origins')
+                        ->info('List of allowed origins for CORS.')
+                        ->prototype('scalar')->end()
+                        ->defaultValue(['*'])
+                    ->end()
+                    
+                    // Allowed methods
+                    // --
+                    // List of allowed HTTP methods for CORS
+                    // See: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#access-control-allow-methods
+                    ->arrayNode('methods')
+                        ->info('List of allowed HTTP methods for CORS.')
+                        ->prototype('scalar')->end()
+                        ->defaultValue(['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
+                    ->end()
+                    
+                    // Allowed headers
+                    // --
+                    // List of allowed HTTP headers for CORS
+                    // See: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#access-control-allow-headers
+                    ->arrayNode('expose')
+                        ->info('List of allowed HTTP headers for CORS.')
+                        ->prototype('scalar')->end()
+                        ->defaultValue(['Content-Type', 'Authorization'])
+                    ->end()
+                    
+                    // Allow credentials
+                    // --
+                    // Indicates whether the response to the request can be exposed when the credentials flag is true.
+                    // When used as part of a response to a preflight request, it indicates that the actual request can include user credentials.
+                    // See: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#access-control-allow-credentials
+                    ->booleanNode('credentials')
+                        ->info('Allow credentials in CORS requests.')
+                        ->defaultFalse()
+                        ->treatNullLike(false)
+                    ->end()
+
+                    // Max age for preflight requests
+                    // --
+                    // Specifies how long the results of a preflight request can be cached
+                    // See: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#access-control-max-age
+                    ->integerNode('max_age')
+                        ->info('Max age in seconds for preflight requests.')
+                        ->defaultValue(3600)
+                        ->treatNullLike(3600)
+                        ->min(0)->max(86400)
+                    ->end()
+                    
+                ->end()
+            ->end()
+
+            // Compression
+            // --
+            // Settings for response compression in API responses
+            // See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding
+            ->arrayNode('compression')
+                ->info('API response compression configuration.')
+                ->addDefaultsIfNotSet()->children()
+
+                    // Enable or disable response compression
+                    // --
+                    // If true, enables compression for API responses
+                    ->booleanNode('enabled')
+                        ->info('Enable or disable response compression.')
+                        ->defaultFalse()
+                        ->treatNullLike(false)
+                    ->end()
+
+                    // Compression format to use
+                    // --
+                    // Specifies the compression format to use for API responses
+                    // Supported formats: gzip, deflate, brotli
+                    ->enumNode('format')
+                        ->info('Compression format to use.')
+                        ->defaultValue('gzip')
+                        ->values(['gzip', 'deflate', 'brotli'])
+                        ->treatNullLike('gzip')
+                    ->end()
+
+                    // Compression level (0-9) for the selected format
+                    // --
+                    // Specifies the compression level (0-9) for the selected compression format
+                    // 0 = no compression, 9 = maximum compression
+                    ->integerNode('level')
+                        ->info('Compression level (0-9) for the selected format.')
+                        ->defaultValue(6)
+                        ->treatNullLike(6)
+                        ->min(0)
+                        ->max(9)
+                    ->end()
+
+                ->end()
+            ->end()
+
+            // Behavior
+            // --
+            // Settings to customize the behavior of API responses
+            ->arrayNode('behavior')
+                ->info('API response behavior configuration.')
+                ->addDefaultsIfNotSet()->children()
+
+                    // Strip "X-" prefix from headers
+                    // --
+                    // If true, strips "X-" prefix from headers when exposing them
+                    ->booleanNode('strip_x_prefix')
+                        ->info('If true, strips "X-" prefix from headers when exposing them.')
+                        ->defaultFalse()
+                        ->treatNullLike(false)
+                    ->end()
+
+                    // Keep "X-" prefix in headers
+                    // --
+                    // If true, keeps "X-" prefix in headers for legacy support
+                    ->booleanNode('keep_legacy')
+                        ->info('If true, keeps "X-" prefix in headers for legacy support.')
+                        ->defaultFalse()
+                        ->treatNullLike(false)
+                    ->end()
+
+                ->end()
+            ->end()
+
+            // Headers
+            // --
+            // List of headers to expose in CORS requests
+            //   !!!  Remplacer par 'expose' dans CORS ci-dessus  !!!
+            // ->arrayNode('headers')
+            //     ->info('List of headers to expose in CORS requests.')
+            //     ->variablePrototype()->end()
+            //     ->defaultValue([])
+            // ->end()
+
+        ->end()
+    ->end() // of response
+
+    // ──────────────────────────────
+    // Serialization
+    // ──────────────────────────────
+    ->arrayNode('serialization')
+        ->info('API serialization configuration.')
+        ->addDefaultsIfNotSet()
+        ->children()
+
+            // Attributes to ignore during serialization
+            // --
+            // List of attribute names that should be excluded from the serialized response
+            // (e.g. sensitive data like passwords)
+            ->arrayNode('ignore')
+                ->info('Attributes to ignore during serialization.')
+                ->scalarPrototype()->end()
+                ->defaultValue(['password', 'secret'])
+                ->treatNullLike(['password', 'secret'])
+            ->end()
+
+            // Datetime formatting
+            // --
+            // Settings for formatting datetime objects during serialization
+            // e.g. date format, timezone
+            ->arrayNode('datetime')
+                ->info('Datetime formatting settings for serialization.')
+                ->addDefaultsIfNotSet()
+                ->children()
+
+                    // Date/time output format
+                    // --
+                    // Specifies the format used when serializing date/time values
+                    // (e.g. "Y-m-d H:i:s" or ISO 8601)
+                    ->scalarNode('format')
+                        ->info('Format used when serializing date/time values.')
+                        ->defaultValue('Y-m-d H:i:s')
+                        ->treatNullLike('Y-m-d H:i:s')
+                    ->end()
+
+                    // Timezone for datetime serialization
+                    // --
+                    // Specifies the timezone applied when serializing datetime values
+                    ->scalarNode('timezone')
+                        ->info('Timezone applied when serializing datetime values.')
+                        ->defaultValue('UTC')
+                        ->treatNullLike('UTC')
+                    ->end()
+
+                ->end()
+            ->end()
+
+            // Skip null values in serialization
+            // --
+            // If true, fields with null values are omitted from the serialized response
+            ->booleanNode('skip_null')
+                ->info('Skip fields with null values during serialization.')
+                ->defaultFalse()
+                ->treatNullLike(false)
+            ->end()
+
+        ->end()
+    ->end() // of serialization
+
+    // ──────────────────────────────
+    // Access Control
+    // ──────────────────────────────
+    ->arrayNode('access_control')
+        ->info('API access control configuration.')
+        ->addDefaultsIfNotSet()->children()
+
+            // Merge strategy for access control settings
+            // --
+            // Defines how access control settings are merged with other configurations
+            // (e.g. append, override)
+            ->enumNode('merge')
+                ->info('Strategy for merging access control settings.')
+                ->values(MergeStrategy::toArray(true))
+                ->defaultValue(MergeStrategy::APPEND->value)
+                ->treatNullLike(MergeStrategy::APPEND->value)
+            ->end()
+
+            // Required roles for accessing this API provider
+            // --
+            // List of Symfony security roles required to access this API provider
+            ->arrayNode('roles')
+                ->info('Required roles for accessing this API provider.')
+                ->scalarPrototype()->end()
+                ->defaultValue([])
+            ->end()
+
+            // Custom voter for access control
+            // --
+            // Optional custom voter FQCN. If set, Symfony will use this voter to determine access instead of roles or expressions.
+            ->scalarNode('voter')
+                ->info('Custom voter FQCN for access control.')
+                ->defaultNull()
+            ->end()
+
+        ->end()
+    ->end() // of access_control
+
+    // ──────────────────────────────
+    // Version Providers (v1, v2…)
+    // ──────────────────────────────
+    ->arrayNode('providers')
+        ->info('Each key is an API provider. Typically used to group routes, versions and settings.')
         ->useAttributeAsKey('version_provider')
         ->arrayPrototype()
-        ->info('Each key is an API provider. Typically used to group routes, versions and settings.')
         ->children()
 
             // ──────────────────────────────
@@ -38,7 +942,7 @@ return static function($definition): void
                 ->info('Enable or disable this provider.')
                 ->defaultTrue()
                 ->treatNullLike(true)
-            ->end()
+            ->end() // of provider enabled
 
             // ──────────────────────────────
             // Deprecation
@@ -85,7 +989,7 @@ return static function($definition): void
                     ->end()
 
                 ->end()
-            ->end()
+            ->end() // of provider deprecation
 
             // ──────────────────────────────
             // Versioning
@@ -137,7 +1041,7 @@ return static function($definition): void
                     ->end()
                     
                 ->end()
-            ->end()
+            ->end() // of provider version
             
             // ──────────────────────────────
             // Routes
@@ -177,7 +1081,7 @@ return static function($definition): void
                     ->end()
                     
                 ->end()
-            ->end()
+            ->end() // of provider routes
 
             // ──────────────────────────────
             // Pagination defaults
@@ -239,7 +1143,7 @@ return static function($definition): void
                     ->end()
 
                 ->end()
-            ->end()
+            ->end() // of provider pagination
 
             // ──────────────────────────────
             // URL support
@@ -270,7 +1174,7 @@ return static function($definition): void
                     ->end()
 
                 ->end()
-            ->end()
+            ->end() // of provider url support
 
             // ──────────────────────────────
             // Rate Limit
@@ -333,7 +1237,7 @@ return static function($definition): void
                     ->end()
 
                 ->end()
-            ->end()
+            ->end() // of provider rate limit
 
             // ──────────────────────────────
             // Template
@@ -342,57 +1246,214 @@ return static function($definition): void
                 ->info('Paths to the response template files used as models for formatting the API output for lists and single items.')
                 ->addDefaultsIfNotSet()->children()
 
-                    // List template path
-                    ->scalarNode('list')
-                        ->info('Path to the response template file used as a model for formatting the API output for lists.')
-                        ->defaultValue('Resources/templates/yaml/list.yaml')
-                        ->treatNullLike('Resources/templates/yaml/list.yaml')
-                    ->end()
+                    // -- Error templates --
 
-                    // Single item template path
-                    ->scalarNode('single')
-                        ->info('Path to the response template file used as a model for formatting the API output for single items.')
-                        ->defaultValue('Resources/templates/yaml/single.yaml')
-                        ->treatNullLike('Resources/templates/yaml/single.yaml')
-                    ->end()
-
-                    // Delete operation template path
-                    ->scalarNode('delete')
-                        ->info('Path to the response template file used as a model for formatting the API output for delete operations.')
-                        ->defaultValue('Resources/templates/yaml/delete.yaml')
-                        ->treatNullLike('Resources/templates/yaml/delete.yaml')
-                    ->end()
-
-                    // Account operation template path
-                    ->scalarNode('account')
-                        ->info('Path to the response template file used as a model for formatting the API output for account operations.')
-                        ->defaultValue('Resources/templates/yaml/account.yaml')
-                        ->treatNullLike('Resources/templates/yaml/account.yaml')
-                    ->end()
-
-                    // Error response template path
+                    // General error template
                     ->scalarNode('error')
-                        ->info('Path to the response template file used as a model for formatting error responses.')
-                        ->defaultValue('Resources/templates/yaml/error.yaml')
-                        ->treatNullLike('Resources/templates/yaml/error.yaml')
+                        ->info('Path to the general response template file used as a model for formatting error responses.')
+                        ->defaultNull()
                     ->end()
-
-                    // Not found response template path
-                    ->scalarNode('not_found')
+                    
+                    // 400 Bad Request
+                    ->scalarNode('error_400')
+                        ->info('Path to the response template file used as a model for formatting bad request responses (e.g. 400 Bad Request).')
+                        ->defaultNull()
+                    ->end()
+                    
+                    // 401 Unauthorized
+                    ->scalarNode('error_401')
+                        ->info('Path to the response template file used as a model for formatting unauthorized responses (e.g. 401 Unauthorized).')
+                        ->defaultNull()
+                    ->end()
+                    
+                    // 403 Forbidden
+                    ->scalarNode('error_403')
+                        ->info('Path to the response template file used as a model for formatting forbidden responses (e.g. 403 Forbidden).')
+                        ->defaultNull()
+                    ->end()
+                    
+                    // 404 Not Found
+                    ->scalarNode('error_404')
                         ->info('Path to the response template file used as a model for formatting not found responses (e.g. 404 Not Found).')
-                        ->defaultValue('Resources/templates/yaml/not_found.yaml')
-                        ->treatNullLike('Resources/templates/yaml/not_found.yaml')
+                        ->defaultNull()
                     ->end()
 
-                    // Login response template path
+                    // 405 Method Not Allowed
+                    ->scalarNode('error_405')
+                        ->info('Path to the response template file used as a model for formatting method not allowed responses (e.g. 405 Method Not Allowed).')
+                        ->defaultNull()
+                    ->end()
+
+                    // 409 Conflict
+                    ->scalarNode('error_409')
+                        ->info('Path to the response template file used as a model for formatting conflict responses (e.g. 409 Conflict).')
+                        ->defaultNull()
+                    ->end()
+
+                    // 422 Unprocessable Entity
+                    ->scalarNode('error_422')
+                        ->info('Path to the response template file used as a model for formatting unprocessable entity responses (e.g. 422 Unprocessable Entity).')
+                        ->defaultNull()
+                    ->end()
+
+                    // 429 Too Many Requests
+                    ->scalarNode('error_429')
+                        ->info('Path to the response template file used as a model for formatting too many requests responses (e.g. 429 Too Many Requests).')
+                        ->defaultNull()
+                    ->end()
+
+                    // 500 Internal Server Error
+                    ->scalarNode('error_500')
+                        ->info('Path to the response template file used as a model for formatting internal server error responses (e.g. 500 Internal Server Error).')
+                        ->defaultNull()
+                    ->end()
+
+                    // 502 Bad Gateway
+                    ->scalarNode('error_502')
+                        ->info('Path to the response template file used as a model for formatting bad gateway responses (e.g. 502 Bad Gateway).')
+                        ->defaultNull()
+                    ->end()
+
+                    // 503 Service Unavailable
+                    ->scalarNode('error_503')
+                        ->info('Path to the response template file used as a model for formatting service unavailable responses (e.g. 503 Service Unavailable).')
+                        ->defaultNull()
+                    ->end()
+
+                    // 504 Gateway Timeout
+                    ->scalarNode('error_504')
+                        ->info('Path to the response template file used as a model for formatting gateway timeout responses (e.g. 504 Gateway Timeout).')
+                        ->defaultNull()
+                    ->end()
+
+
+                    // -- Auth templates --
+
+                    // Auth: Login
                     ->scalarNode('login')
                         ->info('Path to the response template file used as a model for formatting login responses.')
-                        ->defaultValue('Resources/templates/yaml/login.yaml')
-                        ->treatNullLike('Resources/templates/yaml/login.yaml')
+                        ->defaultNull()
+                    ->end()
+
+                    // Auth: Logout
+                    ->scalarNode('logout')
+                        ->info('Path to the response template file used as a model for formatting logout responses.')
+                        ->defaultNull()
+                    ->end()
+
+                    // Auth: Refresh Token
+                    ->scalarNode('refresh_token')
+                        ->info('Path to the response template file used as a model for formatting refresh token responses.')
+                        ->defaultNull()
+                    ->end()
+
+                    // Auth: Register
+                    ->scalarNode('register')
+                        ->info('Path to the response template file used as a model for formatting registration responses.')
+                        ->defaultNull()
+                    ->end()
+
+                    // Auth: Me
+                    ->scalarNode('me')
+                        ->info('Path to the response template file used as a model for formatting "me" responses.')
+                        ->defaultNull()
+                    ->end()
+
+                    // Auth: Account
+                    ->scalarNode('account')
+                        ->info('Path to the response template file used as a model for formatting account responses.')
+                        ->defaultNull()
+                    ->end()
+
+                    // Auth: Update Password
+                    ->scalarNode('update_password')
+                        ->info('Path to the response template file used as a model for formatting update password responses.')
+                        ->defaultNull()
+                    ->end()
+
+                    // Auth: Reset Password
+                    ->scalarNode('reset_password')
+                        ->info('Path to the response template file used as a model for formatting reset password responses.')
+                        ->defaultNull()
+                    ->end()
+                        
+
+                    // -- Entities templates --
+                    
+                    // Entity: Empty
+                    ->scalarNode('empty')
+                        ->info('Path to the response template file used as a model for formatting empty responses.')
+                        ->defaultNull()
+                    ->end()
+
+                    // Entity: List
+                    ->scalarNode('list')
+                        ->info('Path to the response template file used as a model for formatting entity list responses.')
+                        ->defaultNull()
+                    ->end()
+                    
+                    // Entity: Single
+                    ->scalarNode('item')
+                        ->info('Path to the response template file used as a model for formatting single entity responses.')
+                        ->defaultNull()
+                    ->end()
+
+                    // Entity: Created
+                    ->scalarNode('created')
+                        ->info('Path to the response template file used as a model for formatting entity creation responses.')
+                        ->defaultNull()
+                    ->end()
+
+                    // Entity: Updated
+                    ->scalarNode('updated')
+                        ->info('Path to the response template file used as a model for formatting entity update responses.')
+                        ->defaultNull()
+                    ->end()
+
+                    // Entity: Deleted
+                    ->scalarNode('deleted')
+                        ->info('Path to the response template file used as a model for formatting entity deletion responses.')
+                        ->defaultNull()
+                    ->end()
+
+
+                    // -- System templates --
+
+                    // System: Health
+                    ->scalarNode('health')
+                        ->info('Path to the response template file used as a model for formatting system health check responses.')
+                        ->defaultNull()
+                    ->end()
+
+                    // System: Maintenance
+                    ->scalarNode('maintenance')
+                        ->info('Path to the response template file used as a model for formatting system maintenance responses.')
+                        ->defaultNull()
+                    ->end()
+
+                    // System: Rate_limit
+                    ->scalarNode('rate_limit')
+                        ->info('Path to the response template file used as a model for formatting system rate limit responses.')
+                        ->defaultNull()
+                    ->end()
+
+                    
+                    // -- Files templates --
+
+                    // Files: Upload
+                    ->scalarNode('upload')
+                        ->info('Path to the response template file used as a model for formatting file upload responses.')
+                        ->defaultNull()
+                    ->end()
+
+                    // Files: Download
+                    ->scalarNode('download')
+                        ->info('Path to the response template file used as a model for formatting file download responses.')
+                        ->defaultNull()
                     ->end()
 
                 ->end()
-            ->end()
+            ->end() // of provider templates
 
             // ──────────────────────────────
             // Response 
@@ -608,13 +1669,6 @@ return static function($definition): void
                         ->end()
                     ->end()
 
-                    // Headers directives
-                    ->arrayNode('headers')
-                        ->info('List of headers to expose in CORS requests.')
-                        ->variablePrototype()->end()
-                        ->defaultValue([])
-                    ->end()
-
                     // Compression settings
                     ->arrayNode('compression')
                         ->info('Configuration for response compression settings.')
@@ -648,7 +1702,7 @@ return static function($definition): void
                     ->end()
 
                 ->end()
-            ->end()
+            ->end() // of provider response
 
             // ──────────────────────────────
             // Serialization
@@ -697,7 +1751,7 @@ return static function($definition): void
                     ->end()
 
                 ->end()
-            ->end()
+            ->end() // of provider serialization
 
             // ──────────────────────────────
             // Access control
@@ -728,7 +1782,7 @@ return static function($definition): void
                     ->end()
 
                 ->end()
-            ->end()
+            ->end() // of provider access_control
 
             // ──────────────────────────────
             // Authentication
@@ -746,7 +1800,7 @@ return static function($definition): void
                             ->info('Enable or disable this authentication provider.')
                             ->defaultNull()
                             ->treatNullLike(true)
-                        ->end()
+                        ->end() // of authentication enabled
 
                         // ──────────────────────────────
                         // Collection name
@@ -755,7 +1809,7 @@ return static function($definition): void
                             ->info('Name / Alias of the entity')
                             ->defaultNull()
                             ->treatNullLike(null)
-                        ->end()
+                        ->end() // of authentication name
 
                         // ──────────────────────────────
                         // Deprecation
@@ -802,7 +1856,7 @@ return static function($definition): void
                                 ->end()
 
                             ->end()
-                        ->end()
+                        ->end() // of authentication deprecation
 
                         // ──────────────────────────────
                         // Route
@@ -847,7 +1901,7 @@ return static function($definition): void
                                 ->end()
 
                             ->end()
-                        ->end()
+                        ->end() // of authentication routes
 
                         // ──────────────────────────────
                         // URL support
@@ -875,7 +1929,7 @@ return static function($definition): void
                                 ->end()
 
                             ->end()
-                        ->end()
+                        ->end() // of authentication URL support
 
                         // ──────────────────────────────
                         // Template
@@ -909,7 +1963,7 @@ return static function($definition): void
                                 ->end()
 
                             ->end()
-                        ->end()
+                        ->end() // of authentication templates
 
                         // ──────────────────────────────
                         // Serialization
@@ -946,7 +2000,7 @@ return static function($definition): void
                                 ->end()
 
                             ->end()
-                        ->end()
+                        ->end() // of authentication serialization
 
                         // ──────────────────────────────
                         // Endpoints
@@ -1060,7 +2114,7 @@ return static function($definition): void
                                         ->end()
 
                                     ->end()
-                                ->end()
+                                ->end() // of authentication register endpoint
                                 
                                 // Login endpoint
                                 ->arrayNode('login')
@@ -1171,7 +2225,7 @@ return static function($definition): void
                                         ->end()
 
                                     ->end()
-                                ->end()
+                                ->end() // of authentication login endpoint
                                 
                                 // Logout endpoint
                                 ->arrayNode('logout')
@@ -1254,7 +2308,7 @@ return static function($definition): void
                                         ->end()
 
                                     ->end()
-                                ->end()
+                                ->end() // of authentication logout endpoint
                                 
                                 // Logout all sessions endpoint
                                 ->arrayNode('logout_all')
@@ -1335,7 +2389,7 @@ return static function($definition): void
                                         ->end()
 
                                     ->end()
-                                ->end()
+                                ->end() // of authentication logout endpoint
                                 
                                 // Refresh token endpoint
                                 ->arrayNode('refresh')
@@ -1416,7 +2470,7 @@ return static function($definition): void
                                         ->end()
 
                                     ->end()
-                                ->end()
+                                ->end() // of authentication password reset endpoint
                                 
                                 // Email verification endpoint
                                 ->arrayNode('email_verification')
@@ -1513,7 +2567,7 @@ return static function($definition): void
                                         ->end()
 
                                     ->end()
-                                ->end()
+                                ->end() // of email verification endpoint
                                 
                                 // Email resend verification endpoint
                                 ->arrayNode('email_resend')
@@ -1610,7 +2664,7 @@ return static function($definition): void
                                         ->end()
 
                                     ->end()
-                                ->end()
+                                ->end() // of email verification endpoint
 
                                 // Password reset request endpoint
                                 ->arrayNode('password_reset_request')
@@ -1706,7 +2760,7 @@ return static function($definition): void
                                         ->end()
 
                                     ->end()
-                                ->end()
+                                ->end() // of password reset properties
 
                                 // Password reset endpoint
                                 ->arrayNode('password_reset')
@@ -1815,7 +2869,7 @@ return static function($definition): void
                                         ->end()
 
                                     ->end()
-                                ->end()
+                                ->end() // of authentication registration endpoint
 
                                 // Password change endpoint
                                 ->arrayNode('password_change')
@@ -1924,7 +2978,7 @@ return static function($definition): void
                                         ->end()
 
                                     ->end()
-                                ->end()
+                                ->end() // of authentication password change endpoint
 
                                 // Account endpoint
                                 ->arrayNode('account')
@@ -2005,7 +3059,7 @@ return static function($definition): void
                                         ->end()
 
                                     ->end()
-                                ->end()
+                                ->end() // of authentication password change endpoint
 
                                 // Profile endpoint
                                 ->arrayNode('profile')
@@ -2126,7 +3180,7 @@ return static function($definition): void
                                         ->end()
 
                                     ->end()
-                                ->end()
+                                ->end() // of authentication profile endpoint
 
                                 // 2FA enable endpoint
                                 ->arrayNode('2fa_enable')
@@ -2229,7 +3283,7 @@ return static function($definition): void
                                         ->end()
 
                                     ->end()
-                                ->end()
+                                ->end() // of authentication 2FA enable endpoint
 
                                 // 2FA disable endpoint
                                 ->arrayNode('2fa_disable')
@@ -2326,7 +3380,7 @@ return static function($definition): void
                                         ->end()
 
                                     ->end()
-                                ->end()
+                                ->end() // of authentication 2FA enable endpoint
 
                                 // 2FA verify endpoint
                                 ->arrayNode('2fa_verify')
@@ -2423,14 +3477,14 @@ return static function($definition): void
                                         ->end()
 
                                     ->end()
-                                ->end()
+                                ->end() // of authentication 2FA verify endpoint
 
                             ->end()
-                        ->end()
+                        ->end() // of authentication 2FA verify endpoint
 
                     ->end()
                 ->end()
-            ->end()
+            ->end() // of authentication segment
 
             // ──────────────────────────────
             // Collections (Doctrine Entities)
@@ -2449,7 +3503,7 @@ return static function($definition): void
                             ->info('Enable or disable this collection.')
                             ->defaultNull()
                             ->treatNullLike(true)
-                        ->end()
+                        ->end() // of collection enabled
 
                         // ──────────────────────────────
                         // Collection name
@@ -2457,7 +3511,7 @@ return static function($definition): void
                         ->scalarNode('name')
                             ->info('Collection name in URLs and route names. Auto-generated from entity if null (e.g. App\\Entity\\Book → books).')
                             ->defaultNull()
-                        ->end()
+                        ->end() // of collection name
 
                         // ──────────────────────────────
                         // Deprecation
@@ -2504,7 +3558,7 @@ return static function($definition): void
                                 ->end()
 
                             ->end()
-                        ->end()
+                        ->end() // of collection deprecation
 
                         // ──────────────────────────────
                         // Route
@@ -2542,7 +3596,7 @@ return static function($definition): void
                                 ->end()
                             
                             ->end()
-                        ->end()
+                        ->end() // of collection routes
 
                         // ──────────────────────────────
                         // Pagination
@@ -2584,7 +3638,7 @@ return static function($definition): void
                                 ->end()
 
                             ->end()
-                        ->end()
+                        ->end() // of collection pagination
 
                         // ──────────────────────────────
                         // URL support
@@ -2612,7 +3666,7 @@ return static function($definition): void
                                 ->end()
 
                             ->end()
-                        ->end()
+                        ->end() // of collection url support
 
                         // ──────────────────────────────
                         // Rate Limit
@@ -2675,7 +3729,7 @@ return static function($definition): void
                                 ->end()
 
                             ->end()
-                        ->end()
+                        ->end() // of collection rate limit
 
                         // ──────────────────────────────
                         // Template
@@ -2715,7 +3769,7 @@ return static function($definition): void
                                 ->end()
 
                             ->end()
-                        ->end()
+                        ->end() // of collection templates
 
                         // ──────────────────────────────
                         // Serialization
@@ -2749,7 +3803,7 @@ return static function($definition): void
                                 ->end()
 
                             ->end()
-                        ->end()
+                        ->end() // of collection serialization
 
                         // ──────────────────────────────
                         // Access control
@@ -2779,7 +3833,7 @@ return static function($definition): void
                                 ->end()
 
                             ->end()
-                        ->end()
+                        ->end() // of collection access control
 
                         // ──────────────────────────────
                         // REST endpoints
@@ -2798,7 +3852,7 @@ return static function($definition): void
                                         ->info('Enable or disable this endpoint.')
                                         ->defaultNull()
                                         ->treatNullLike(true)
-                                    ->end()
+                                    ->end() // of collection endpoint enabled
                                     
                                     // ──────────────────────────────
                                     // Deprecation
@@ -2839,14 +3893,13 @@ return static function($definition): void
                                             ->end()
 
                                         ->end()
-                                    ->end()
+                                    ->end() // of collection endpoint deprecation
 
                                     // ──────────────────────────────
                                     // Route config
                                     // ──────────────────────────────
                                     ->arrayNode('route')
                                         ->info('Defines the HTTP configuration for the endpoint: route name, path, HTTP methods, controller, constraints, and routing options.')
-                                        // ->isRequired()
                                         ->addDefaultsIfNotSet()
                                         ->children()
 
@@ -2923,7 +3976,7 @@ return static function($definition): void
                                             ->end()
 
                                         ->end()
-                                    ->end()
+                                    ->end() // of collection endpoint routes
 
                                     // ──────────────────────────────
                                     // Pagination config
@@ -2963,7 +4016,7 @@ return static function($definition): void
                                             ->end()
 
                                         ->end()
-                                    ->end()
+                                    ->end() // of collection endpoint pagination
 
                                     // ──────────────────────────────
                                     // Rate Limit
@@ -3027,7 +4080,7 @@ return static function($definition): void
                                             ->end()
 
                                         ->end()
-                                    ->end()
+                                    ->end() // of collection endpoint rate limit
 
                                     // ──────────────────────────────
                                     // Template
@@ -3062,7 +4115,7 @@ return static function($definition): void
                                             ->end()
 
                                         ->end()
-                                    ->end()
+                                    ->end() // of collection endpoint templates
 
                                     // ──────────────────────────────
                                     // Serialization
@@ -3096,7 +4149,7 @@ return static function($definition): void
                                             ->end()
 
                                         ->end()
-                                    ->end()
+                                    ->end() // of collection endpoint serialization
 
                                     // ──────────────────────────────
                                     // Repository config
@@ -3159,7 +4212,7 @@ return static function($definition): void
                                             ->end()
 
                                         ->end()
-                                    ->end()
+                                    ->end() // of collection endpoint repository
 
                                     // ──────────────────────────────
                                     // Metadata config
@@ -3169,7 +4222,7 @@ return static function($definition): void
                                         ->normalizeKeys(false)
                                         ->useAttributeAsKey('name')
                                         ->variablePrototype()->end()
-                                    ->end()
+                                    ->end() // of collection endpoint metadata
 
                                     // ──────────────────────────────
                                     // Access control
@@ -3199,13 +4252,13 @@ return static function($definition): void
                                             ->end()
 
                                         ->end()
-                                    ->end()
+                                    ->end() // of collection access control
 
                                 ->end()
                             ->end()
-                        ->end()
+                        ->end() // of collection endpoints
 
-                    ->end() // of collections  arrayPrototype children
+                    ->end() // of collections arrayPrototype children
                 ->end() // of collections arrayPrototype
 
                 // Validation: entity existence
@@ -3216,21 +4269,21 @@ return static function($definition): void
 
             ->end() // of collections
 
-        //     // ──────────────────────────────
-        //     // Debug
-        //     // ──────────────────────────────
-		// 	->arrayNode('debug')
-        //         ->info('Debug configuration')
-        //         ->addDefaultsIfNotSet()->children()
+            // ──────────────────────────────
+            // Debug
+            // ──────────────────────────────
+            // 	->arrayNode('debug')
+            //         ->info('Debug configuration')
+            //         ->addDefaultsIfNotSet()->children()
 
-        //             ->booleanNode('enabled')
-        //                 ->info('Enable or disable debug.')
-        //                 ->defaultFalse()
-        //                 ->treatNullLike(false)
-        //             ->end()
+            //             ->booleanNode('enabled')
+            //                 ->info('Enable or disable debug.')
+            //                 ->defaultFalse()
+            //                 ->treatNullLike(false)
+            //             ->end()
 
-		// 	    ->end()
-        //     ->end()
+            // 	    ->end()
+            //     ->end()
 
             // ──────────────────────────────
             // Documentation
@@ -3252,7 +4305,11 @@ return static function($definition): void
             //     ->end()
             // ->end()
 
-        ->end() // of version_provider
+        ->end()
+
+    ->end() // of providers
+
+    ->end() // of rootNode > children
     ->end() // of rootNode
 
 
@@ -3260,73 +4317,73 @@ return static function($definition): void
     // Final post-processing
     // ──────────────────────────────
     ->validate()
-        ->always(function($providers) {
+        ->always(function($config) {
 
 
             // Enabled
             // -> Provider level
             // -> Collections level
             // -> Endpoint level
-            IsEnabledResolver::execute($providers);
+            IsEnabledResolver::execute($config);
 
-            // Collections names (alias)
-            // -> Collections level
-            NameResolver::execute($providers);
+    //         // Collections names (alias)
+    //         // -> Collections level
+    //         NameResolver::execute($config);
 
-            // Deprecation
-            // -> Provider level
-            // -> Collections level
-            // -> Endpoint level
-            DeprecationResolver::execute($providers);
+    //         // Deprecation
+    //         // -> Provider level
+    //         // -> Collections level
+    //         // -> Endpoint level
+    //         DeprecationResolver::execute($config);
 
-            // API Resolver (API Versioning)
-            // -> Provider level
-            ApiResolver::execute($providers);
+    //         // API Resolver (API Versioning)
+    //         // -> Provider level
+    //         ApiResolver::execute($config);
 
-            // Route 
-            // -> Provider level
-            // -> Collections level
-            // -> Endpoint level
-            RouteResolver::execute($providers);
+    //         // Route 
+    //         // -> Provider level
+    //         // -> Collections level
+    //         // -> Endpoint level
+    //         RouteResolver::execute($config);
 
-            // Pagination
-            // -> Provider level
-            // -> Collections level
-            // -> Endpoint level
-            PaginationResolver::execute($providers);
+    //         // Pagination
+    //         // -> Provider level
+    //         // -> Collections level
+    //         // -> Endpoint level
+    //         PaginationResolver::execute($config);
 
-            // URL Support
-            // -> Provider level
-            // -> Collections level
-            UrlSupportResolver::execute($providers);
+    //         // URL Support
+    //         // -> Provider level
+    //         // -> Collections level
+    //         UrlSupportResolver::execute($config);
 
-            // Rate limit
-            // -> Provider level
-            // -> Collections level (collections)
-            // -> Endpoint level
-            RateLimitResolver::execute($providers);
+    //         // Rate limit
+    //         // -> Provider level
+    //         // -> Collections level (collections)
+    //         // -> Endpoint level
+    //         RateLimitResolver::execute($config);
 
-            // Templates paths
-            // -> Provider level
-            // -> Collections level
-            // -> Endpoint level
-            TemplatesResolver::execute($providers);
+    //         // Templates paths
+    //         // -> Provider level
+    //         // -> Collections level
+    //         // -> Endpoint level
+    //         TemplatesResolver::execute($config);
 
-            // Response
+    //         // Response
 
-            // Serialization
-            // -> Provider level
-            // -> Collections level
-            // -> Endpoint level
-            SerializationResolver::execute($providers);
+    //         // Serialization
+    //         // -> Provider level
+    //         // -> Collections level
+    //         // -> Endpoint level
+    //         SerializationResolver::execute($config);
 
-            // Access Control
-            // -> Provider level
-            // -> Collections level
-            // -> Endpoint level
-            AccessControlResolver::execute($providers);
+    //         // Access Control
+    //         // -> Provider level
+    //         // -> Collections level
+    //         // -> Endpoint level
+    //         AccessControlResolver::execute($config);
 
-            return $providers;
+            return $config;
         })
     ->end() // of Version generator
     ;

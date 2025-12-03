@@ -7,11 +7,50 @@ enum Type: string
 {
     use EnumTrait;
     
+    // -- Core templates --
+    // success.yaml
+    case ERROR     = 'error';
+    // validation_error.yaml
+    // unauthorized.yaml
+    // forbidden.yaml
+    case NOT_FOUND = 'not_found';
+    // empty.yaml
+    // created.yaml
+    // updated.yaml
+    // delete.yaml
+    // pagination.yaml
+    // meta.yaml
+    
+    // -- Auth templates --
+    case LOGIN     = 'login';
+    // logout.yaml
+    // refresh_token.yaml
+    // register.yaml
+    // me.yaml
+    case ACCOUNT   = 'account';
+    // update_password.yaml
+    // reset_password.yaml
+    
+    // -- Entities templates --
     case LIST      = 'list';
     case SINGLE    = 'single';
+    // create.yaml
+    // update.yaml
     case DELETE    = 'delete';
-    case ACCOUNT   = 'account';
-    case ERROR     = 'error';
-    case NOT_FOUND = 'not_found';
-    case LOGIN     = 'login';
+    
+    // -- System templates --
+    // health.yaml
+    // maintenance.yaml
+    // rate_limit.yaml
+    // diagnostics.yaml
+    // version.yaml
+    
+    // -- Files templates --
+    // upload.yaml
+    // download.yaml
+    
+    // -- Bulk templates --
+    // bulk_action.yaml
+    // bulk_update.yaml
+    // bulk_delete.yaml
 } 

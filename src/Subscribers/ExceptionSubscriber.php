@@ -1,7 +1,10 @@
 <?php 
 namespace OSW3\Api\Subscribers;
 
+use OSW3\Api\Enum\Template\Type;
+use OSW3\Api\Service\TemplateService;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -11,23 +14,19 @@ final class ExceptionSubscriber implements EventSubscriberInterface
     public function __construct(
         // private readonly ResponseService $responseService,
         // private readonly ResponseStatusService $statusService,
-        // private readonly TemplateService $templateService,
+        private readonly TemplateService $templateService,
         // private readonly ConfigurationService $configurationService,
     ){}
 
     public static function getSubscribedEvents(): array
     {
         return [
-            // KernelEvents::EXCEPTION => ['onKernelException', 0]
+            KernelEvents::EXCEPTION => ['onKernelException', 0]
         ];
     }
 
     public function onKernelException(ExceptionEvent $event): void
     {
-        // TODO: Prise ne charge des erreur 404 si le provider n'est pas activé
-        
-        // dump('0 - ExceptionSubscriber::onKernelException');
-
         if (!$event->isMainRequest()) {
             return;
         }
@@ -46,18 +45,44 @@ final class ExceptionSubscriber implements EventSubscriberInterface
         $statusText = method_exists($exception, 'getMessage')
             ? $exception->getMessage()
             : Response::$statusTexts[$statusCode];
+        $statusText = addslashes($statusText);
 
         // Only handle client errors (4xx)
-        if ($statusCode < 400 || $statusCode >= 500) {
-            // return;
-        }
+        // if ($statusCode < 400 || $statusCode >= 500) {
+        //     // return;
+        // }
+
+
+        // dd($statusCode, $statusText);
 
 
 
+
+        // Create a new JsonResponse
         $response = new JsonResponse();
         
         // Set the response status code
         $response->setStatusCode($statusCode);
+
+        // Set the response content
+        $content = '{"error": "' . $statusText . '"}';
+        $response->setContent($content);
+
+
+        // Define template type
+        // $this->templateService->setType(Type::ERROR->value);
+
+        // Get the template type
+        // $type = $this->templateService->getType();
+        $type = Type::ERROR->value;
+
+        // Render the template content
+        $content = $this->templateService->render($response, $type, false);
+
+        // Set the formatted content
+        $response->setContent($content);
+
+
 
 
         // $template = $this->templateService->getTemplate('error');
@@ -66,16 +91,31 @@ final class ExceptionSubscriber implements EventSubscriberInterface
 
 
 
-        // Set the response content
-        $content = '{"error": "' . $statusText . '"}';
-        $response->setContent($content);
 
         // Stop the event propagation
         $event->setResponse($response);
-        $event->stopPropagation();
+        // $event->stopPropagation();
 
 
 
+
+
+
+
+        // Get current response
+        // $response = $event->getResponse();
+
+        // Get current content
+        // $content = $response->getContent();
+
+        // // Get the template type
+        // $type = $this->templateService->getType();
+
+        // // Render the template content
+        // $content = $this->templateService->render($response, $type, false);
+
+        // // Set the formatted content
+        // $response->setContent($content);
 
         // dd($template, $response, $statusText);
         // // dd($event->getRequest()->attributes);
