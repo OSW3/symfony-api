@@ -11,7 +11,6 @@ use OSW3\Api\Enum\Route\DefaultEndpoint;
 
 final class RouteResolver
 {
-    // Segments to treat
     private const SEGMENTS = [
         ContextService::SEGMENT_AUTHENTICATION,
         ContextService::SEGMENT_COLLECTION,

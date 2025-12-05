@@ -6,7 +6,6 @@ use OSW3\Api\Service\ContextService;
 
 final class DeprecationResolver
 {
-    // Segments to treat
     const SEGMENTS = [
         ContextService::SEGMENT_AUTHENTICATION,
         ContextService::SEGMENT_COLLECTION,

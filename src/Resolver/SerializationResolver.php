@@ -5,7 +5,6 @@ use OSW3\Api\Service\ContextService;
 
 final class SerializationResolver
 {
-    // Segments to treat
     private const SEGMENTS = [
         ContextService::SEGMENT_AUTHENTICATION,
         ContextService::SEGMENT_COLLECTION,

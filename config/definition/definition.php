@@ -363,10 +363,10 @@ return static function($definition): void
             ->end()
             
             // Entity: Single
-            ->scalarNode('item')
+            ->scalarNode('single')
                 ->info('Path to the response template file used as a model for formatting single entity responses.')
-                ->defaultValue('Resources/templates/yaml/entities/item.yaml')
-                ->treatNullLike('Resources/templates/yaml/entities/item.yaml')
+                ->defaultValue('Resources/templates/yaml/entities/single.yaml')
+                ->treatNullLike('Resources/templates/yaml/entities/single.yaml')
             ->end()
 
             // Entity: Created
@@ -1393,7 +1393,7 @@ return static function($definition): void
                     ->end()
                     
                     // Entity: Single
-                    ->scalarNode('item')
+                    ->scalarNode('single')
                         ->info('Path to the response template file used as a model for formatting single entity responses.')
                         ->defaultNull()
                     ->end()
@@ -1938,27 +1938,51 @@ return static function($definition): void
                             ->info('Paths to the response template files used as models for formatting the API output for lists and single items.')
                             ->addDefaultsIfNotSet()->children()
 
-                                // Account template path
+                                // Auth: Login
+                                ->scalarNode('login')
+                                    ->info('Path to the response template file used as a model for formatting login responses.')
+                                    ->defaultNull()
+                                ->end()
+
+                                // Auth: Logout
+                                ->scalarNode('logout')
+                                    ->info('Path to the response template file used as a model for formatting logout responses.')
+                                    ->defaultNull()
+                                ->end()
+
+                                // Auth: Refresh Token
+                                ->scalarNode('refresh_token')
+                                    ->info('Path to the response template file used as a model for formatting refresh token responses.')
+                                    ->defaultNull()
+                                ->end()
+
+                                // Auth: Register
+                                ->scalarNode('register')
+                                    ->info('Path to the response template file used as a model for formatting registration responses.')
+                                    ->defaultNull()
+                                ->end()
+
+                                // Auth: Me
+                                ->scalarNode('me')
+                                    ->info('Path to the response template file used as a model for formatting "me" responses.')
+                                    ->defaultNull()
+                                ->end()
+
+                                // Auth: Account
                                 ->scalarNode('account')
-                                    ->info('Path to the response template file used as a model for formatting the API output for account operations.')
+                                    ->info('Path to the response template file used as a model for formatting account responses.')
                                     ->defaultNull()
                                 ->end()
 
-                                // Delete template path
-                                ->scalarNode('delete')
-                                    ->info('Path to the response template file used as a model for formatting the API output for delete operations.')
+                                // Auth: Update Password
+                                ->scalarNode('update_password')
+                                    ->info('Path to the response template file used as a model for formatting update password responses.')
                                     ->defaultNull()
                                 ->end()
 
-                                // Error template path
-                                ->scalarNode('error')
-                                    ->info('Path to the response template file used as a model for formatting error responses.')
-                                    ->defaultNull()
-                                ->end()
-
-                                // Not found template path
-                                ->scalarNode('not_found')
-                                    ->info('Path to the response template file used as a model for formatting not found responses (e.g. 404 Not Found).')
+                                // Auth: Reset Password
+                                ->scalarNode('reset_password')
+                                    ->info('Path to the response template file used as a model for formatting reset password responses.')
                                     ->defaultNull()
                                 ->end()
 
@@ -3737,34 +3761,40 @@ return static function($definition): void
                         ->arrayNode('templates')
                             ->info('Paths to the response template files used as models for formatting the API output for lists and single items.')
                             ->addDefaultsIfNotSet()->children()
+                    
+                                // Entity: Empty
+                                ->scalarNode('empty')
+                                    ->info('Path to the response template file used as a model for formatting empty entity responses.')
+                                    ->defaultNull()
+                                ->end()
 
-                                // List template path
+                                // Entity: List
                                 ->scalarNode('list')
-                                    ->info('Path to the response template file used as a model for formatting the API output for lists.')
+                                    ->info('Path to the response template file used as a model for formatting entity list responses.')
                                     ->defaultNull()
                                 ->end()
-
-                                // Single template path
+                                
+                                // Entity: Single
                                 ->scalarNode('single')
-                                    ->info('Path to the response template file used as a model for formatting the API output for single items.')
+                                    ->info('Path to the response template file used as a model for formatting single entity responses.')
                                     ->defaultNull()
                                 ->end()
 
-                                // Delete template path
-                                ->scalarNode('delete')
-                                    ->info('Path to the response template file used as a model for formatting the API output for delete operations.')
+                                // Entity: Created
+                                ->scalarNode('created')
+                                    ->info('Path to the response template file used as a model for formatting entity creation responses.')
                                     ->defaultNull()
                                 ->end()
 
-                                // Error template path
-                                ->scalarNode('error')
-                                    ->info('Path to the response template file used as a model for formatting error responses.')
+                                // Entity: Updated
+                                ->scalarNode('updated')
+                                    ->info('Path to the response template file used as a model for formatting entity update responses.')
                                     ->defaultNull()
                                 ->end()
 
-                                // Not found template path
-                                ->scalarNode('not_found')
-                                    ->info('Path to the response template file used as a model for formatting not found responses (e.g. 404 Not Found).')
+                                // Entity: Deleted
+                                ->scalarNode('deleted')
+                                    ->info('Path to the response template file used as a model for formatting entity deletion responses.')
                                     ->defaultNull()
                                 ->end()
 
@@ -4089,28 +4119,40 @@ return static function($definition): void
                                         ->info('Paths to the response template files used as models for formatting the API output for lists and single items.')
                                         ->addDefaultsIfNotSet()->children()
 
+                    
+                                            // Entity: Empty
+                                            ->scalarNode('empty')
+                                                ->info('Path to the response template file used as a model for formatting empty entity responses.')
+                                                ->defaultNull()
+                                            ->end()
+
+                                            // Entity: List
                                             ->scalarNode('list')
-                                                ->info('Path to the response template file used as a model for formatting the API output for lists.')
+                                                ->info('Path to the response template file used as a model for formatting entity list responses.')
                                                 ->defaultNull()
                                             ->end()
-
+                                            
+                                            // Entity: Single
                                             ->scalarNode('single')
-                                                ->info('Path to the response template file used as a model for formatting the API output for single items.')
+                                                ->info('Path to the response template file used as a model for formatting single entity responses.')
                                                 ->defaultNull()
                                             ->end()
 
-                                            ->scalarNode('delete')
-                                                ->info('Path to the response template file used as a model for formatting delete responses.')
+                                            // Entity: Created
+                                            ->scalarNode('created')
+                                                ->info('Path to the response template file used as a model for formatting entity creation responses.')
                                                 ->defaultNull()
                                             ->end()
 
-                                            ->scalarNode('error')
-                                                ->info('Path to the response template file used as a model for formatting error responses.')
+                                            // Entity: Updated
+                                            ->scalarNode('updated')
+                                                ->info('Path to the response template file used as a model for formatting entity update responses.')
                                                 ->defaultNull()
                                             ->end()
 
-                                            ->scalarNode('not_found')
-                                                ->info('Path to the response template file used as a model for formatting not found responses (e.g. 404 Not Found).')
+                                            // Entity: Deleted
+                                            ->scalarNode('deleted')
+                                                ->info('Path to the response template file used as a model for formatting entity deletion responses.')
                                                 ->defaultNull()
                                             ->end()
 
@@ -4366,7 +4408,7 @@ return static function($definition): void
             // -> Provider level
             // -> Collections level
             // -> Endpoint level
-            // TemplatesResolver::execute($config);
+            TemplatesResolver::execute($config);
 
             // Response
 

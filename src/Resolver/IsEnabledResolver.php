@@ -5,7 +5,6 @@ use OSW3\Api\Service\ContextService;
 
 final class IsEnabledResolver
 {
-    // Segments to treat
     const SEGMENTS = [
         ContextService::SEGMENT_AUTHENTICATION,
         ContextService::SEGMENT_COLLECTION,
