@@ -690,7 +690,7 @@
 #     ## Compression Format
 #     ##
 #     ## @var string
-#     compression_format: "{response.compression_format}"
+#     compressionformat: "{response.compressionformat}"
 
 #     ## Compression Level
 #     ##

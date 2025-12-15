@@ -1,6 +1,10 @@
 <?php 
 namespace OSW3\Api\Resolver;
 
+use OSW3\Api\Enum\Version\Location;
+use OSW3\Api\Enum\Version\Mode;
+use PhpParser\Node\Expr\AssignOp\Mod;
+
 final class ApiResolver
 {
     public static function execute(array &$config): array
@@ -8,6 +12,14 @@ final class ApiResolver
         $usedNumbers  = [];
         $vendor       = static::getAppVendor();
         $vendor       = $vendor ?: 'app';
+
+
+        $globalMode     = $config['versioning']['mode'] ?? Mode::AUTO->value;
+        $globalPrefix   = $config['versioning']['prefix'] ?? '';
+        $globalLocation = $config['versioning']['location'] ?? Location::PATH->value;
+
+
+
 
         // Collect all previously defined versions
         foreach ($config['providers'] as $name => $provider) {
@@ -18,21 +30,43 @@ final class ApiResolver
             }
         }
 
-        // Step 2: Automatically assign the missing ones with the first available number
-        foreach ($config['providers'] as $name => &$provider) {
-            if (
-                empty($provider['version']) ||
-                !is_array($provider['version'])
-            ) {
-                $provider['version'] = [
-                    'number'  => null,
-                    'prefix'  => '',
-                    'pattern' => '',
-                ];
+
+
+        foreach ($config['providers'] as &$provider) {
+
+            // Version prefix
+
+            if (empty($provider['version']['prefix'])) {
+                $provider['version']['prefix'] = $globalPrefix;
             }
 
-            // Hash the version info
-            $number = $provider['version']['number'] ?? null;
+
+            // Version location
+
+            if (empty($provider['version']['location'])) {
+                $provider['version']['location'] = $globalLocation;
+            }
+
+        }
+
+        
+        // Step 2: Automatically assign the missing ones with the first available number
+        foreach ($config['providers'] as $name => &$provider) {
+
+            $prefix   = $provider['version']['prefix'] ?? '';
+            $pattern  = $provider['version']['pattern'] ?? '';
+            $number   = $provider['version']['number'] ?? null;
+
+
+            if ($globalMode !== Mode::AUTO->value) {
+                
+                if (empty($number)) {
+                    throw new \RuntimeException("API version number is required for provider '{$name}' in manual mode.");
+                }
+
+                continue;
+            }
+
 
             // Auto assign the version number if not defined
             if ($number === null || $number === '') {
@@ -46,9 +80,7 @@ final class ApiResolver
             }
 
             // Pattern
-            $prefix       = $provider['version']['prefix']  ?? '';
-            $pattern      = $provider['version']['pattern'] ?? '';
-            $fullVersion  = $prefix . $number;
+            $fullVersion  = "{$prefix}{$number}";
 
             // Replacements
             if (is_string($pattern) && $pattern !== '') {

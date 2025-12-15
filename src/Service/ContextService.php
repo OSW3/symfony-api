@@ -2,8 +2,9 @@
 namespace OSW3\Api\Service;
 
 use OSW3\Api\ApiBundle;
-use OSW3\Api\Service\ConfigurationService;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\KernelInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 final class ContextService
 {
@@ -18,11 +19,16 @@ final class ContextService
     private ?bool $debugCache = null;
     private ?string $bundleDirCache = null;
     private ?string $projectDirCache = null;
+
+    private array $context = [];
+    private readonly ?Request $request;
     
     public function __construct(
         private readonly KernelInterface $kernel,
-        private readonly ConfigurationService $configurationService,
-    ){}
+        private readonly RequestStack $requestStack,
+    ){
+        $this->request = $requestStack->getCurrentRequest();
+    }
 
     /**
      * Get the current context part or full context array
@@ -30,16 +36,25 @@ final class ContextService
      * @param string|null $part 'provider'|'collection'|'endpoint'
      * @return array|string|null
      */
-    public function getContext(?string $part = null): array|string|null
+    private function get(?string $part = null): array|string|null
     {
-        $context = [
-            'provider'   => $this->configurationService->getContext('provider'),
-            'segment'    => $this->configurationService->getContext('segment'),
-            'collection' => $this->configurationService->getContext('collection'),
-            'endpoint'   => $this->configurationService->getContext('endpoint'),
-        ];
+        if (empty($this->context))
+        {
+            if (! $this->request || ! $this->request->attributes->get('_route')) {
+                return null;
+            }
 
-        return $part ? $context[$part] ?? [] : $context;
+            $context = $this->request->attributes->get('_context', []);
+
+            $this->context = [
+                'provider'   => $context['provider']   ?? null,
+                'segment'    => $context['segment']    ?? null,
+                'collection' => $context['collection'] ?? null,
+                'endpoint'   => $context['endpoint']   ?? null,
+            ];
+        }
+
+        return $part ? $this->context[$part] ?? [] : $this->context;
     }
 
     /**
@@ -53,7 +68,7 @@ final class ContextService
             return $this->providerCache;
         }
         
-        $this->providerCache = $this->configurationService->getContext('provider') ?? null;
+        $this->providerCache = $this->get('provider') ?? null;
         
         return $this->providerCache;
     }
@@ -69,7 +84,7 @@ final class ContextService
             return $this->segmentCache;
         }
         
-        $this->segmentCache = $this->configurationService->getContext('segment') ?? null;
+        $this->segmentCache = $this->get('segment') ?? null;
         
         return $this->segmentCache;
     }
@@ -85,7 +100,7 @@ final class ContextService
             return $this->collectionCache;
         }
         
-        $this->collectionCache = $this->configurationService->getContext('collection') ?? null;
+        $this->collectionCache = $this->get('collection') ?? null;
         
         return $this->collectionCache;
     }
@@ -101,7 +116,7 @@ final class ContextService
             return $this->endpointCache;
         }
         
-        $this->endpointCache = $this->configurationService->getContext('endpoint') ?? null;
+        $this->endpointCache = $this->get('endpoint') ?? null;
         
         return $this->endpointCache;
     }

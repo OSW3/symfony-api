@@ -1,12 +1,32 @@
 <?php 
 namespace OSW3\Api\Service;
 
+use OSW3\Api\Service\ProviderService;
+
 final class CacheControlService
 {
     public function __construct(
         private readonly ContextService $contextService,
-        private readonly ConfigurationService $configuration,
+        private readonly ProviderService $providerService,
+        // private readonly ConfigurationService $configuration,
     ){}
+
+    /**
+     * Get the response options for a specific provider
+     * 
+     * @param string|null $provider
+     * @return array
+     */
+    private function options(?string $provider): array 
+    {
+        if (! $this->providerService->exists($provider)) {
+            return [];
+        }
+
+        $providerOptions = $this->providerService->get($provider);
+        return $providerOptions['response'] ?? [];
+    }
+
 
     // Cache Control Configuration
 
@@ -17,9 +37,9 @@ final class CacheControlService
      */
     public function isEnabled(): bool
     {
-        return $this->configuration->isCacheControlEnabled(
-            provider: $this->contextService->getProvider()
-        );
+        $provider = $this->contextService->getProvider();
+
+        return $this->options($provider)['cache_control']['enabled'] ?? false;
     }
 
     /**
@@ -29,9 +49,9 @@ final class CacheControlService
      */
     public function isPublic(): bool
     {
-        return $this->configuration->isCacheControlPublic(
-            provider: $this->contextService->getProvider()
-        );
+        $provider = $this->contextService->getProvider();
+
+        return $this->options($provider)['cache_control']['public'] ?? false;
     }
 
     /**
@@ -41,9 +61,9 @@ final class CacheControlService
      */
     public function isNoStore(): bool
     {
-        return $this->configuration->isCacheControlNoStore(
-            provider: $this->contextService->getProvider()
-        );
+        $provider = $this->contextService->getProvider();
+
+        return $this->options($provider)['cache_control']['no_store'] ?? false;
     }
 
     /**
@@ -53,9 +73,9 @@ final class CacheControlService
      */
     public function isMustRevalidate(): bool
     {
-        return $this->configuration->isCacheControlMustRevalidate(
-            provider: $this->contextService->getProvider()
-        );
+        $provider = $this->contextService->getProvider();
+
+        return $this->options($provider)['cache_control']['must_revalidate'] ?? false;
     }
 
     /**
@@ -65,9 +85,9 @@ final class CacheControlService
      */
     public function getMaxAge(): ?int
     {
-        return $this->configuration->getCacheControlMaxAge(
-            provider: $this->contextService->getProvider()
-        );
+        $provider = $this->contextService->getProvider();
+
+        return $this->options($provider)['cache_control']['max_age'] ?? null;
     }
 
     // Computed Cache Control Values

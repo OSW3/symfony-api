@@ -21,7 +21,7 @@ final class DeleteController extends AbstractController
         private readonly TemplateService $templateService,
     ){
         $this->em          = $doctrine->getManager();
-        $this->collection  = $contextService->getContext('collection');
+        $this->collection  = $contextService->getCollection();
         $this->entityClass = $this->collection;
         $this->repository  = $doctrine->getRepository($this->entityClass);
     }

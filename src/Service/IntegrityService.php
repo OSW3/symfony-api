@@ -2,18 +2,41 @@
 namespace OSW3\Api\Service;
 
 use OSW3\Api\Service\ContextService;
+use OSW3\Api\Service\ProviderService;
 use OSW3\Api\Service\ConfigurationService;
 
 final class IntegrityService 
 {
     private array $hashCache = [];
-    private ?bool $enabledCache = null;
-    private ?string $algorithmCache = null;
 
     public function __construct(
         private readonly ContextService $contextService,
-        private readonly ConfigurationService $configurationService,
+        private readonly ProviderService $providerService,
+        // private readonly ConfigurationService $configurationService,
     ){}
+
+    /**
+     * Get the response options for a specific provider
+     * 
+     * @param string|null $provider
+     * @return array
+     */
+    private function options(?string $provider): array 
+    {
+        if (! $this->providerService->exists($provider)) {
+            return [];
+        }
+
+        $providerOptions = $this->providerService->get($provider);
+        return $providerOptions['response'] ?? [];
+    }
+
+
+    // -- CONFIG OPTIONS GETTERS
+
+
+
+    // -- COMPUTED GETTERS
 
     /**
      * Is integrity check enabled?
@@ -22,15 +45,9 @@ final class IntegrityService
      */
     public function isEnabled(): bool 
     {
-        if ($this->enabledCache !== null) {
-            return $this->enabledCache;
-        }
+        $provider = $this->contextService->getProvider();
 
-        $this->enabledCache = $this->configurationService->isSecurityChecksumEnabled(
-            provider: $this->contextService->getProvider()
-        );
-
-        return $this->enabledCache;
+        return $this->options($provider)['security']['checksum']['enabled'] ?? false;
     }
 
     /**
@@ -40,15 +57,9 @@ final class IntegrityService
      */
     public function getAlgorithm(): string 
     {
-        if ($this->algorithmCache !== null) {
-            return $this->algorithmCache;
-        }
-
-        $this->algorithmCache = $this->configurationService->getSecurityChecksumAlgorithm(
-            provider: $this->contextService->getProvider()
-        );
-
-        return $this->algorithmCache;
+        $provider = $this->contextService->getProvider();
+        
+        return $this->options($provider)['security']['checksum']['algorithm'] ?? 'md5';
     }
 
     /**

@@ -36,7 +36,7 @@ final class RateLimitResolver
 
                     // Is Enabled
 
-                    if ($collection['rate_limit']['enabled'] === null) {
+                    if (!isset($collection['rate_limit']['enabled']) || $collection['rate_limit']['enabled'] === null) {
                         $collection['rate_limit']['enabled'] = $providerEnabled;
                     }
 

@@ -4,7 +4,7 @@ namespace OSW3\Api\Service;
 use OSW3\Api\Enum\MimeType;
 use OSW3\Api\Service\ContextService;
 use OSW3\Api\Service\RequestService;
-use OSW3\Api\Service\ConfigurationService;
+use OSW3\Api\Service\ProviderService;
 
 final class ResponseService 
 {
@@ -14,8 +14,31 @@ final class ResponseService
     public function __construct(
         private readonly ContextService $contextService,
         private readonly RequestService $requestService,
-        private readonly ConfigurationService $configuration,
+        private readonly ProviderService $providerService,
     ){}
+
+    /**
+     * Get the response options for a specific provider
+     * 
+     * @param string|null $provider
+     * @return array
+     */
+    private function options(?string $provider): array 
+    {
+        if (! $this->providerService->exists($provider)) {
+            return [];
+        }
+
+        $providerOptions = $this->providerService->get($provider);
+        return $providerOptions['response'] ?? [];
+    }
+
+
+    // -- CONFIG OPTIONS GETTERS
+
+
+
+    // -- COMPUTED GETTERS
 
     /**
      * Get the response format
@@ -29,16 +52,16 @@ final class ResponseService
         $provider = $this->contextService->getProvider();
 
         // Get the format from configuration
-        $format = $this->configuration->getResponseType($provider);
+        $format = $this->options($provider)['format']['type'] ?? 'json';
 
         // Check if format override is allowed
-        if ($this->configuration->isResponseContentNegotiationEnabled($provider)) 
+        if ($this->options($provider)['content_negotiation']['enabled'] ?? false) 
         {
             // Get the current request
             $request = $this->requestService->getCurrentRequest();
 
             // Get the parameter name for format override
-            $param = $this->configuration->getResponseContentNegotiationParameter($provider);
+            $param = $this->options($provider)['content_negotiation']['parameter'] ?? 'format';
 
             // Retrieve the custom format from query parameters
             $custom = $request->query->get($param);
@@ -61,9 +84,11 @@ final class ResponseService
     {
         $provider = $this->contextService->getProvider();
 
-        $configuredMimeType = $this->configuration->getResponseMimeType($provider);
-        if ($configuredMimeType !== null) {
-            return $configuredMimeType;
+        // Get the MIME type from configuration
+        $mimetype = $this->options($provider)['format']['mime_type'] ?? null;
+
+        if ($mimetype !== null) {
+            return $mimetype;
         }
 
         $format = $this->getFormat();
@@ -116,5 +141,13 @@ final class ResponseService
     public function getCount(): int 
     {
         return $this->count;
+    }
+
+    public function isPrettyPrint(): bool 
+    {
+        $provider = $this->contextService->getProvider();
+
+        // Get the pretty print option from configuration
+        return $this->options($provider)['pretty_print']['enabled'] ?? false;
     }
 }

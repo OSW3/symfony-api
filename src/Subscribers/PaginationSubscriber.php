@@ -58,27 +58,27 @@ final class PaginationSubscriber implements EventSubscriberInterface
 
             $response->headers->set(
                 Headers::NEXT_PAGE->value,
-                $this->paginationService->getNext()
+                $this->paginationService->getNextUrl()
             );
 
             $response->headers->set(
                 Headers::PREVIOUS_PAGE->value,
-                $this->paginationService->getPrevious()
+                $this->paginationService->getPreviousUrl()
             );
 
             $response->headers->set(
                 Headers::SELF_PAGE->value,
-                $this->paginationService->getSelf()
+                $this->paginationService->getCurrentUrl()
             );
 
             $response->headers->set(
                 Headers::FIRST_PAGE->value,
-                $this->paginationService->getFirst()
+                $this->paginationService->getFirstUrl()
             );
 
             $response->headers->set(
                 Headers::LAST_PAGE->value,
-                $this->paginationService->getLast()
+                $this->paginationService->getLastUrl()
             );
         }
     }

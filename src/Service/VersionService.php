@@ -2,162 +2,160 @@
 namespace OSW3\Api\Service;
 
 use OSW3\Api\Service\ContextService;
+use OSW3\Api\Service\DeprecationService;
+use OSW3\Api\DependencyInjection\Configuration;
+use OSW3\Api\Enum\Version\Location;
+use OSW3\Api\Enum\Version\Mode;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 final class VersionService 
 {
-    private ?int $numberCache = null;
-    private ?string $prefixCache = null;
-    private ?string $locationCache = null;
-    private ?string $headerDirectiveCache = null;
-    private ?string $headerPatternCache = null;
-    private ?string $labelCache = null;
-    private ?bool $betaCache = null;
-    private ?bool $deprecatedCache = null;
-    private ?array $allVersionsCache = null;
-    private ?array $supportedVersionsCache = null;
-    private ?array $deprecatedVersionsCache = null;
+    private readonly array $configuration;
+    private ?array $allVersions = null;
+    private ?array $supportedVersions = null;
+    private ?array $deprecatedVersions = null;
     
     public function __construct(
+        #[Autowire(service: 'service_container')] 
+        private readonly ContainerInterface $container,
         private readonly ContextService $contextService,
-        private readonly ConfigurationService $configurationService,
-    ){}
-
-    // Version data from ConfigurationService
-
-    /**
-     * Get the version number of the API from configuration
-     * 
-     * @return int
-     */
-    public function getNumber(): int
-    {
-        if ($this->numberCache !== null) {
-            return $this->numberCache;
-        }
-
-        $this->numberCache = $this->configurationService->getVersionNumber(
-            provider: $this->contextService->getProvider(),
-        );
-
-        return $this->numberCache;
+        private readonly ProviderService $providerService,
+        private readonly DeprecationService $deprecationService,
+    ){
+        $this->configuration = $container->getParameter(Configuration::NAME);
     }
 
+
+    // -- CONFIG OPTIONS GETTERS
+
     /**
-     * Get the version prefix of the API from configuration
+     * Get the versioning mode
      * 
      * @return string
      */
-    public function getPrefix(): string
+    public function getMode(): string
     {
-        if ($this->prefixCache !== null) {
-            return $this->prefixCache;
-        }
+        return $this->configuration['versioning']['mode'] ?? Mode::AUTO->value;
+    }
 
-        $this->prefixCache = $this->configurationService->getVersionPrefix(
-            provider: $this->contextService->getProvider()
-        );
+    /**
+     * Get the version number for a specific API provider
+     * 
+     * @param string|null $provider
+     * @return int|null
+     */
+    public function getNumber(?string $provider = null): ?int
+    {
+        // Get current provider if $provider is not defined
+        $provider ??= $this->contextService->getProvider();
+
+        // Return null if provider does not exist
+        return $this->providerService->get($provider)['version']['number'] ?? null;
+    }
+
+    /**
+     * Get the version prefix for a specific API provider
+     * 
+     * @param string|null $provider
+     * @return string|null
+     */
+    public function getPrefix(?string $provider = null): ?string
+    {
+        // Get current provider if $provider is not defined
+        $provider ??= $this->contextService->getProvider();
         
-        return $this->prefixCache;
+        // Return null if provider does not exist
+        // -> provider version prefix
+        // -> global version prefix
+        // -> null
+        return $this->providerService->get($provider)['version']['prefix'] 
+            ?? $this->configuration['versioning']['prefix']
+            ?? null
+        ;
     }
 
     /**
-     * Get the version location header value
+     * Get the version location for a specific API provider
      * 
-     * @return string
+     * @param string|null $provider
+     * @return string|null
      */
-    public function getLocation(): string 
+    public function getLocation(?string $provider = null): string 
     {
-        if ($this->locationCache !== null) {
-            return $this->locationCache;
-        }
+        // Get current provider if $provider is not defined
+        $provider ??= $this->contextService->getProvider();
 
-        $this->locationCache = $this->configurationService->getVersionLocation(
-            provider: $this->contextService->getProvider()
-        );
-
-        return $this->locationCache;
+        // Return null if provider does not exist
+        // -> provider version location
+        // -> global version location
+        // -> Location::PATH
+        return $this->providerService->get($provider)['version']['location'] 
+            ?? $this->configuration['versioning']['location']
+            ?? Location::PATH->value
+        ;
     }
 
     /**
-     * Get the version header directive
+     * Get the version directive header for a specific API provider
      * 
-     * @return string
+     * @param string|null $provider
+     * @return string|null
      */
-    public function getHeaderDirective(): string 
+    public function getDirective(?string $provider = null): string 
     {
-        if ($this->headerDirectiveCache !== null) {
-            return $this->headerDirectiveCache;
-        }
+        // Get current provider if $provider is not defined
+        $provider ??= $this->contextService->getProvider();
 
-        $this->headerDirectiveCache = $this->configurationService->getVersionHeaderDirective(
-            provider: $this->contextService->getProvider()
-        );
-
-        return $this->headerDirectiveCache;
+        // Return "Accept" if provider does not exist
+        // -> provider version directive
+        // -> "Accept" (default)
+        return $this->providerService->get($provider)['version']['directive'] 
+            ?? 'Accept'
+        ;
     }
 
     /**
-     * Get the version header pattern
+     * Get the version directive pattern for a specific API provider
      * 
-     * @return string
+     * @param string|null $provider
+     * @return string|null
      */
-    public function getHeaderPattern(): string 
+    public function getPattern(?string $provider = null): ?string 
     {
-        if ($this->headerPatternCache !== null) {
-            return $this->headerPatternCache;
-        }
-        $this->headerPatternCache = $this->configurationService->getVersionHeaderPattern(
-            provider: $this->contextService->getProvider()
-        );
+        // Get current provider if $provider is not defined
+        $provider ??= $this->contextService->getProvider();
 
-        return $this->headerPatternCache;
+        // Return null if provider does not exist
+        // FIX: Prevent the null coalescing operator from returning an error
+        // -> provider version pattern
+        // -> null
+        return $this->providerService->get($provider)['version']['pattern'] 
+            ?? null
+        ;
     }
 
     /**
-     * Check if the API provider is beta
+     * Check if a specific API provider is in beta
      * 
+     * @param string|null $provider
      * @return bool
      */
     public function isBeta(?string $provider = null): bool
     {
-        if ($this->betaCache !== null && !$provider) {
-            return $this->betaCache;
-        }
+        // Get current provider if $provider is not defined
+        $provider ??= $this->contextService->getProvider();
 
-        if (!$provider || !$this->configurationService->hasProvider($provider)) {
-            $provider = $this->contextService->getProvider();
-        }
-
-        $this->betaCache = $this->configurationService->isVersionBeta($provider);
-
-        return $this->betaCache;
-    }
-
-    /**
-     * Check if the API provider is deprecated
-     * e.g.: $this->isDeprecated('my_custom_api_v1', 'collections');
-     * 
-     * @param string|null $provider
-     * @param string|null $segment
-     * @return bool
-     */
-    public function isDeprecated(?string $provider = null, string $segment = ContextService::SEGMENT_COLLECTION): bool
-    {
-        if ($this->deprecatedCache !== null && !$provider) {
-            return $this->deprecatedCache;
-        }
-
-        if (!$provider || !$this->configurationService->hasProvider($provider)) {
-            $provider = $this->contextService->getProvider();
-        }
-
-        $this->deprecatedCache = $this->configurationService->isDeprecationEnabled($provider, $segment);
-
-        return $this->deprecatedCache;
+        // Return false if provider does not exist
+        // -> provider version beta
+        // -> false
+        return $this->providerService->get($provider)['version']['beta'] 
+            ?? false
+        ;
     }
 
 
-    // Computed Version Information
+    // -- COMPUTED GETTERS
 
     /**
      * Get the full version string for a specific API provider
@@ -167,25 +165,37 @@ final class VersionService
      */
     public function getLabel(?string $provider = null): string 
     {
-        if ($this->labelCache !== null && !$provider) {
-            return $this->labelCache;
-        }
-
-        if (!$provider || !$this->configurationService->hasProvider($provider)) {
-            $provider = $this->contextService->getProvider();
-        }
-
-        $prefix   = $this->getPrefix();
-        $number   = $this->getNumber();
-        $beta     = $this->isBeta($provider);
+        $provider ??= $this->contextService->getProvider();
+        $prefix     = $this->getPrefix();
+        $number     = $this->getNumber($provider);
+        $beta       = $this->isBeta($provider);
+        $label      = $prefix;
+        $label     .= $number;
+        $label     .= $beta ? '-beta' : '';
         
-        $label = $prefix;
-        $label .= $number;
-        $label .= $beta ? '-beta' : '';
+        return $label;
+    }
 
-        $this->labelCache = $label;
+    /**
+     * Check if a specific API provider is deprecated
+     * 
+     * @param string|null $provider
+     * @param string $segment
+     * @return bool
+     */
+    public function isDeprecated(?string $provider = null, string $segment = ContextService::SEGMENT_COLLECTION): bool
+    {
+        // Get current provider if $provider is not defined
+        $provider ??= $this->contextService->getProvider();
 
-        return $this->labelCache;
+        if (!$this->providerService->exists($provider)) {
+            return false;
+        }
+
+        return $this->deprecationService->isEnabled(
+            provider: $provider, 
+            segment: $segment
+        );
     }
 
     /**
@@ -195,20 +205,21 @@ final class VersionService
      */
     public function getAllVersions(): array 
     {
-        if ($this->allVersionsCache !== null) {
-            return $this->allVersionsCache;
+        if ($this->allVersions !== null) {
+            return $this->allVersions;
         }
 
         $versions = [];
-        $providers = $this->configurationService->getProviderNames();
+        $providers = $this->providerService->names();
 
         foreach($providers as $provider) {
             array_push($versions, $this->getLabel($provider));
+
         }
 
-        $this->allVersionsCache = $versions;
+        $this->allVersions = $versions;
 
-        return $this->allVersionsCache;
+        return $this->allVersions;
     }
 
     /**
@@ -218,12 +229,12 @@ final class VersionService
      */
     public function getSupportedVersions(): array 
     {
-        if ($this->supportedVersionsCache !== null) {
-            return $this->supportedVersionsCache;
+        if ($this->supportedVersions !== null) {
+            return $this->supportedVersions;
         }
 
         $versions = [];
-        $providers = $this->configurationService->getProviderNames();
+        $providers = $this->providerService->names();
 
         foreach($providers as $provider) {
             if ($this->isDeprecated($provider)) {
@@ -232,9 +243,9 @@ final class VersionService
 
             array_push($versions, $this->getLabel($provider));
         }
-        $this->supportedVersionsCache = $versions;
+        $this->supportedVersions = $versions;
 
-        return $this->supportedVersionsCache;
+        return $this->supportedVersions;
     }
 
     /**
@@ -244,12 +255,12 @@ final class VersionService
      */
     public function getDeprecatedVersions(): array 
     {
-        if ($this->deprecatedVersionsCache !== null) {
-            return $this->deprecatedVersionsCache;
+        if ($this->deprecatedVersions !== null) {
+            return $this->deprecatedVersions;
         }
 
         $versions = [];
-        $providers = $this->configurationService->getProviderNames();
+        $providers = $this->providerService->names();
 
         foreach($providers as $provider) {
             if ($this->isDeprecated($provider)) {
@@ -258,8 +269,8 @@ final class VersionService
 
         }
 
-        $this->deprecatedVersionsCache = $versions;
+        $this->deprecatedVersions = $versions;
 
-        return $this->deprecatedVersionsCache;
+        return $this->deprecatedVersions;
     }
 }

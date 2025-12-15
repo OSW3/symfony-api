@@ -24,6 +24,8 @@ class RouteLoader extends Loader
         // Retrieve exposed routes
         $exposedRoutes = $this->routeService->getExposedRoutes();
 
+        // dd($exposedRoutes);
+
         // Create a new RouteCollection
         $routes = new RouteCollection();
 

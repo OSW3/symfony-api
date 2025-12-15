@@ -1,6 +1,7 @@
 <?php 
 namespace OSW3\Api\Service;
 
+use OSW3\Api\Service\EndpointService;
 use OSW3\Api\Service\UrlSupportService;
 use OSW3\Api\Service\AccessControlService;
 use OSW3\Api\Service\ConfigurationService;
@@ -20,6 +21,8 @@ final class SerializeService
         private readonly UrlSupportService $urlSupportService,
         private readonly ConfigurationService $configurationService,
         private readonly AccessControlService $accessControlService,
+        private readonly EndpointService $endpointService,
+        private readonly RouteService $routeService,
     ){}
 
     // Serializer data Configuration
@@ -162,7 +165,7 @@ final class SerializeService
 
         $serialized = $serializer->serialize( $entity, $encoder, [ 
             'groups'             => $groups,
-            'datetime_format'    => $datetimeFormat,
+            'datetimeformat'    => $datetimeFormat,
             'datetime_timezone'  => $timezone,
             'ignored_attributes' => $ignore,
             'skip_null_values'   => $skipNull,
@@ -186,7 +189,7 @@ final class SerializeService
         $collection = $this->contextService->getCollection();
         $isAbsolute = $this->urlSupportService->isAbsolute();
         $property   = $this->urlSupportService->getProperty();
-        $endpoints  = array_keys($this->configurationService->getEndpoints($provider, $segment, $collection) ?? []);
+        $endpoints  = array_keys($this->endpointService->all($provider, $segment, $collection) ?? []);
 
         foreach ($endpoints as $endpoint) 
         {
@@ -196,13 +199,17 @@ final class SerializeService
                 continue;
             }
 
-            $routeName    = $this->configurationService->getRouteName($provider, $segment, $collection, $endpoint);
-            $routeOptions = $this->configurationService->getRouteOptions($provider, $segment, $collection, $endpoint);
-            $routeMethods = $this->configurationService->getRouteMethods($provider, $segment, $collection, $endpoint);
+            $routeName    = $this->routeService->getName($provider, $segment, $collection, $endpoint);
+            $routeOptions = $this->routeService->getOptions($provider, $segment, $collection, $endpoint);
+            $routeMethods = $this->routeService->getMethods($provider, $segment, $collection, $endpoint);
             $routeParams  = [];
 
             if (!in_array(Request::METHOD_GET, $routeMethods)) {
                 continue;
+            }
+
+            if (isset($routeOptions['context'])) {
+                unset($routeOptions['context']);
             }
 
             if (empty($routeOptions)) {

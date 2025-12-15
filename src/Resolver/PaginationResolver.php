@@ -31,7 +31,7 @@ final class PaginationResolver
 
                 // Is Enabled
 
-                if ($collection['pagination']['enabled'] === null) {
+                if (!isset($collection['pagination']['enabled']) || $collection['pagination']['enabled'] === null) {
                     $collection['pagination']['enabled'] = $providerEnabled;
                 }
 
@@ -60,7 +60,7 @@ final class PaginationResolver
 
                 // Allow Override Limit
 
-                if ($collection['pagination']['allow_limit_override'] === null) 
+                if (!isset($collection['pagination']['allow_limit_override']) || $collection['pagination']['allow_limit_override'] === null) 
                 {
                     $collection['pagination']['allow_limit_override'] = $providerAllowLimitOverride;
                 }

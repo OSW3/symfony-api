@@ -13,17 +13,22 @@ final class TemplatesResolver
     public static function execute(array &$config): array 
     {
         foreach ($config['providers'] as &$provider) {
-            foreach (static::SEGMENTS as $segment) {
+            foreach ($provider['templates'] as $template => &$value) {
+                if (!isset($value) || $value === null) {
+                    $value = $config['templates'][$template] ?? $value;
+                }
+            }
 
+            foreach (static::SEGMENTS as $segment) {
+                
                 if (empty($provider[$segment]) || !is_array($provider[$segment])) {
                     continue;
                 }
-
+                
                 foreach ($provider[$segment] as &$collection) {
-                    
                     foreach ($collection['templates'] as $template => &$value) {
                         if (!isset($value) || $value === null) {
-                            $value = $provider['templates'][$template];
+                            $value = $provider['templates'][$template] ?? $value;
                         }
                     }
 
@@ -41,7 +46,7 @@ final class TemplatesResolver
 
                         foreach ($endpoint['templates'] as $template => &$value) {
                             if (!isset($value) || $value === null) {
-                                $value = $collection['templates'][$template];
+                                $value = $collection['templates'][$template] ?? $value;
                             }
                         }
                     }

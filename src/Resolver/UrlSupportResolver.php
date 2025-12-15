@@ -13,9 +13,9 @@ final class UrlSupportResolver
     public static function execute(array &$config): array 
     {   
         foreach ($config['providers'] as &$provider) {
-            $providerSupport = $provider['url']['support'] ?? true;
-            $providerAbsolute = $provider['url']['absolute'] ?? true;
-            $providerProperty = $provider['url']['property'] ?? 'url';
+            $providerSupport = $provider['url_support']['support'] ?? true;
+            $providerAbsolute = $provider['url_support']['absolute'] ?? true;
+            $providerProperty = $provider['url_support']['property'] ?? 'url';
 
             foreach (static::SEGMENTS as $segment) {
 
@@ -37,8 +37,8 @@ final class UrlSupportResolver
                     
                     // Has support
 
-                    if ($collection['url']['support'] === null) {
-                        $collection['url']['support'] = $providerSupport;
+                    if ($collection['url_support']['support'] === null) {
+                        $collection['url_support']['support'] = $providerSupport;
                     }
 
 

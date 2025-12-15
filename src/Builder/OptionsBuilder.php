@@ -314,11 +314,11 @@ final class OptionsBuilder
                     'pagination.total'    => $this->paginationService->getTotal(),
                     'pagination.limit'    => $this->paginationService->getLimit(),
                     'pagination.offset'   => $this->paginationService->getOffset(),
-                    'pagination.prev'     => $this->paginationService->getPrevious(),
-                    'pagination.next'     => $this->paginationService->getNext(),
-                    'pagination.self'     => $this->paginationService->getSelf(),
-                    'pagination.first'    => $this->paginationService->getFirst(),
-                    'pagination.last'     => $this->paginationService->getLast(),
+                    'pagination.prev'     => $this->paginationService->getPreviousUrl(),
+                    'pagination.next'     => $this->paginationService->getNextUrl(),
+                    'pagination.self'     => $this->paginationService->getCurrentUrl(),
+                    'pagination.first'    => $this->paginationService->getFirstUrl(),
+                    'pagination.last'     => $this->paginationService->getLastUrl(),
                     'pagination.is.first' => (function(): bool|string { 
                         $isFirstPage = $this->paginationService->isFirstPage();
                         

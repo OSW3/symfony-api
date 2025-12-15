@@ -1,7 +1,9 @@
 <?php 
 namespace OSW3\Api\Service;
 
-use OSW3\Api\Service\ConfigurationService;
+use OSW3\Api\Service\EndpointService;
+use OSW3\Api\Service\ProviderService;
+use OSW3\Api\Service\CollectionService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 
@@ -11,41 +13,105 @@ final class RouteService
     
     public function __construct(
         private readonly RequestStack $requestStack,
-        private readonly ConfigurationService $configuration,
+        private readonly ContextService $contextService,
+        private readonly EndpointService $endpointService,
+        private readonly ProviderService $providerService,
+        private readonly CollectionService $collectionService,
     ){
         $this->request = $requestStack->getCurrentRequest();
     }
 
-
-    // Route Information from ConfigurationService
-
-    public function getPattern(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string|null
+    /**
+     * Get the route options for a provider, segment, collection or endpoint
+     * 
+     * @param string|null $provider
+     * @param string|null $segment
+     * @param string|null $collection
+     * @param string|null $endpoint
+     * @return array
+     */
+    private function options(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): array
     {
-        $pattern = $this->configuration->getRouteNamePattern(
-            provider   : $provider,
-            segment    : $segment,
-            collection : $collection,
-            endpoint   : $endpoint,
-        );
+        if (! $this->providerService->exists($provider)) {
+            return [];
+        }
 
-        return $pattern;
+        // 1. Endpoint-specific route
+        if ($collection && $endpoint) {
+            $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+            if ($endpointOptions && isset($endpointOptions['route'])) {
+                return $endpointOptions['route'];
+            }
+        }
+
+        // 2. Collection-level route
+        if ($collection) {
+            $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+            if ($collectionOptions && isset($collectionOptions['route'])) {
+                return $collectionOptions['route'];
+            }
+        }
+
+        // 3. Global default route
+        $providerOptions = $this->providerService->get($provider);
+        return $providerOptions['routes'] ?? [];
     }
 
-    public function getPrefix(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string|null
+
+    // -- CONFIG OPTIONS GETTERS
+
+    /**
+     * Get the route pattern for a given provider, collection, and endpoint
+     * 
+     * @param string|null $provider
+     * @param string|null $segment
+     * @param string|null $collection
+     * @param string|null $endpoint
+     * @return string|null
+     */
+    public function getPattern(?string $provider = null, ?string $segment = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): ?string
     {
-        $pattern = $this->configuration->getRoutePrefix(
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
+        }
+
+        return $this->options(
             provider   : $provider,
             segment    : $segment,
             collection : $collection,
             endpoint   : $endpoint,
-        );
+        )['pattern'] ?? null;
+    }
 
-        return $pattern;
+    /**
+     * Get the route prefix for a given provider, collection, and endpoint
+     * 
+     * @param string|null $provider
+     * @param string|null $segment
+     * @param string|null $collection
+     * @param string|null $endpoint
+     * @return string|null
+     */
+    public function getPrefix(?string $provider = null, ?string $segment = null, ?string $collection = null, bool $fallbackOnCurrentContext = true): ?string
+    {
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+        }
+
+        return $this->options(
+            provider   : $provider,
+            segment    : $segment,
+            collection : $collection,
+        )['prefix'] ?? null;
     }
 
     /**
      * Get the route name for a given provider, collection, and endpoint
-     * e.g.: $this->getName('my_custom_api_v1', 'collections', 'App\Entity\Book', 'index');
      * 
      * @param string|null $provider
      * @param string|null $segment
@@ -53,38 +119,49 @@ final class RouteService
      * @param string|null $endpoint
      * @return string|null
      */
-    public function getName(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): string|null
+    public function getName(?string $provider = null, ?string $segment = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): ?string
     {
-        $name = $this->configuration->getRouteName(
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
+        }
+
+        $name = $this->options(
             provider   : $provider,
             segment    : $segment,
             collection : $collection,
             endpoint   : $endpoint,
-        );
+        )['name'] ?? null;
 
-        $name = preg_replace('/-/', '_', $name);
-
-        return $name;
+        return preg_replace('/-/', '_', $name);
     }
 
     /**
-     * Get the route path for a given provider, collection, and endpoint
-     * e.g.: $this->getPath('my_custom_api_v1', 'collections', 'App\Entity\Book', 'index');
+     * Get the route requirements for a given provider, collection, and endpoint
      * 
      * @param string|null $provider
      * @param string|null $segment
      * @param string|null $collection
      * @param string|null $endpoint
-     * @return string|null
+     * @return array
      */
-    public function getPath(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): string|null
+    public function getPath(?string $provider = null, ?string $segment = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): ?string
     {
-        $path =$this->configuration->getRoutePath(
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
+        }
+
+        $path =$this->options(
             provider   : $provider,
             segment    : $segment,
             collection : $collection,
             endpoint   : $endpoint,
-        );
+        )['path'] ?? '';
 
         $options = $this->getOptions(
             provider   : $provider,
@@ -104,42 +181,54 @@ final class RouteService
 
     /**
      * Get the route requirements for a given provider, collection, and endpoint
-     * e.g.: $this->getRequirements('my_custom_api_v1', 'collections', 'App\Entity\Book', 'index');
-     *
+     * 
      * @param string|null $provider
      * @param string|null $segment
      * @param string|null $collection
      * @param string|null $endpoint
      * @return array
      */
-    public function getRequirements(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): array
+    public function getRequirements(?string $provider = null, ?string $segment = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): array
     {
-        return $this->configuration->getRouteRequirements(
-                provider   : $provider,
-                segment    : $segment,
-                collection : $collection,
-                endpoint   : $endpoint, 
-            ) ?? [];
-    }
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
+        }
 
-    /**
-     * Get the route options for a given provider, collection, and endpoint
-     * e.g.: $this->getOptions('my_custom_api_v1', 'collections', 'App\Entity\Book', 'index');
-     *
-     * @param string|null $provider
-     * @param string|null $segment
-     * @param string|null $collection
-     * @param string|null $endpoint
-     * @return array
-     */
-    public function getOptions(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): array
-    {
-        $options = $this->configuration->getRouteOptions(
+        return $this->options(
             provider   : $provider,
             segment    : $segment,
             collection : $collection,
             endpoint   : $endpoint,
-        ) ?? [];
+        )['requirements'] ?? [];
+    }
+
+    /**
+     * Get the route options for a given provider, collection, and endpoint
+     * 
+     * @param string|null $provider
+     * @param string|null $segment
+     * @param string|null $collection
+     * @param string|null $endpoint
+     * @return array
+     */
+    public function getOptions(?string $provider = null, ?string $segment = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): array
+    {
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
+        }
+
+        $options = $this->options(
+            provider   : $provider,
+            segment    : $segment,
+            collection : $collection,
+            endpoint   : $endpoint,
+        )['options'] ?? [];
 
         $options['context'] = [
             'provider'   => $provider,
@@ -153,28 +242,39 @@ final class RouteService
 
     /**
      * Get the route hosts for a given provider, collection, and endpoint
-     * e.g.: $this->getHosts('my_custom_api_v1', 'collections', 'App\Entity\Book', 'index');
-     *
+     * 
      * @param string|null $provider
      * @param string|null $segment
      * @param string|null $collection
      * @param string|null $endpoint
-     * @return string|null
+     * @return array
      */
-    public function getHosts(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): array
+    public function getHosts(?string $provider = null, ?string $segment = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): array
     {
-        $hosts = $this->configuration->getRouteHosts(
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
+        }
+
+        return $this->options(
             provider   : $provider,
             segment    : $segment,
             collection : $collection,
-            endpoint   : $endpoint, 
-        ) ?? [];
-
-        return $hosts;
+            endpoint   : $endpoint,
+        )['options'] ?? [];
     }
 
-    public function getHost(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): string|null
+    public function getHost(?string $provider = null, ?string $segment = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): ?string
     {
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
+        }
+
         $hosts = $this->getHosts(
             provider   : $provider,
             segment    : $segment,
@@ -187,70 +287,6 @@ final class RouteService
 
     /**
      * Get the route schemes for a given provider, collection, and endpoint
-     * e.g.: $this->getSchemes('my_custom_api_v1', 'collections', 'App\Entity\Book', 'index');
-     *
-     * @param string|null $provider
-     * @param string|null $segment
-     * @param string|null $collection
-     * @param string|null $endpoint
-     * @return array
-     */
-    public function getSchemes(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): array
-    {
-        return $this->configuration->getRouteSchemes(
-            provider   : $provider,
-            segment    : $segment,
-            collection : $collection,
-            endpoint   : $endpoint, 
-        ) ?? [];
-    }
-
-    /**
-     * Get the route methods for a given provider, collection, and endpoint
-     * e.g.: $this->getMethods('my_custom_api_v1', 'collections', 'App\Entity\Book', 'index');
-     *
-     * @param string|null $provider
-     * @param string|null $segment
-     * @param string|null $collection
-     * @param string|null $endpoint
-     * @return array|null
-     */
-    public function getMethods(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): array|null
-    {
-        return $this->configuration->getRouteMethods(
-                provider   : $provider,
-                segment    : $segment,
-                collection : $collection,
-                endpoint   : $endpoint,
-            ) ?? null;
-    }
-
-    /**
-     * Get the route condition for a given provider, collection, and endpoint
-     * e.g.: $this->getCondition('my_custom_api_v1', 'collections', 'App\Entity\Book', 'index');
-     *
-     * @param string|null $provider
-     * @param string|null $segment
-     * @param string|null $collection
-     * @param string|null $endpoint
-     * @return string|null
-     */
-    public function getCondition(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): string
-    {
-        return $this->configuration->getRouteCondition(
-                provider   : $provider,
-                segment    : $segment,
-                collection : $collection,
-                endpoint   : $endpoint, 
-            ) ?? '';
-    }
-
-
-    // Computed Route Information
-
-    /**
-     * Get the route defaults for a given provider, collection, and endpoint
-     * e.g.: $this->getDefaults('my_custom_api_v1', 'collections', 'App\Entity\Book', 'index');
      * 
      * @param string|null $provider
      * @param string|null $segment
@@ -258,14 +294,102 @@ final class RouteService
      * @param string|null $endpoint
      * @return array
      */
-    public function getDefaults(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): array
+    public function getSchemes(?string $provider = null, ?string $segment = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): array
     {
-        $controller = $this->configuration->getRouteController(
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
+        }
+
+        return $this->options(
+            provider   : $provider,
+            segment    : $segment,
+            collection : $collection,
+            endpoint   : $endpoint,
+        )['schemes'] ?? [];
+    }
+
+    /**
+     * Get the route methods for a given provider, collection, and endpoint
+     * 
+     * @param string|null $provider
+     * @param string|null $segment
+     * @param string|null $collection
+     * @param string|null $endpoint
+     * @return array|null
+     */
+    public function getMethods(?string $provider = null, ?string $segment = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): ?array
+    {
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
+        }
+
+        return $this->options(
+            provider   : $provider,
+            segment    : $segment,
+            collection : $collection,
+            endpoint   : $endpoint,
+        )['methods'] ?? null;
+    }
+
+    /**
+     * Get the route condition for a given provider, collection, and endpoint
+     * 
+     * @param string|null $provider
+     * @param string|null $segment
+     * @param string|null $collection
+     * @param string|null $endpoint
+     * @return string
+     */
+    public function getCondition(?string $provider = null, ?string $segment = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): string
+    {
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
+        }
+
+        return $this->options(
+            provider   : $provider,
+            segment    : $segment,
+            collection : $collection,
+            endpoint   : $endpoint,
+        )['condition'] ?? '';
+    }
+
+
+    // -- COMPUTED GETTERS
+
+    /**
+     * Get the route defaults for a given provider, collection, and endpoint
+     * 
+     * @param string|null $provider
+     * @param string|null $segment
+     * @param string|null $collection
+     * @param string|null $endpoint
+     * @return array
+     */
+    public function getDefaults(?string $provider = null, ?string $segment = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): array
+    {
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
+        }
+
+        $controller = $this->options(
             provider   : $provider,
             segment    : $segment,
             collection : $collection,
             endpoint   : $endpoint, 
-        );
+        )['controller'] ?? '';
 
         $defaults = [];
         $defaults['_controller'] = $controller;
@@ -280,7 +404,7 @@ final class RouteService
     }
 
     /**
-     * Get all exposed routes from configuration
+     * Get all exposed routes from all providers, segments, collections, and endpoints
      * 
      * @return array
      */
@@ -290,16 +414,16 @@ final class RouteService
         $routes = [];
 
         // Get all providers
-        $providers = $this->configuration->getProviders();
+        $providers = $this->providerService->all();
 
         foreach ($providers as $provider => $options) {
 
             // Continue if provider is not enabled
-            if (!$this->configuration->isProviderEnabled($provider)) continue;
+            if (!$this->providerService->isEnabled($provider)) continue;
 
             // Merge authentication and collection routes
-            $c1 = $this->configuration->getCollections($provider, ContextService::SEGMENT_AUTHENTICATION);
-            $c2 = $this->configuration->getCollections($provider, ContextService::SEGMENT_COLLECTION);
+            $c1 = $this->collectionService->all($provider, ContextService::SEGMENT_AUTHENTICATION);
+            $c2 = $this->collectionService->all($provider, ContextService::SEGMENT_COLLECTION);
             $collections = array_merge($c1, $c2);
 
             // Iterate over each collection
@@ -312,7 +436,7 @@ final class RouteService
                 // Iterate over each endpoint
                 foreach ($endpoints as $endpoint => $options) {
 
-                    if (!$this->configuration->isEndpointEnabled(
+                    if (!$this->endpointService->isEnabled(
                         provider  : $provider,
                         segment   : $segment,
                         collection: $collection,
@@ -401,7 +525,7 @@ final class RouteService
     }
 
     /**
-     * Get the current route information
+     * Get the current route information based on the request
      * 
      * @return array|null
      */
@@ -419,8 +543,8 @@ final class RouteService
     }
 
     /**
-     * Check if a given route is registered in the API configuration
-     *
+     * Check if a route is registered in the exposed routes
+     * 
      * @param string $route
      * @return bool
      */
@@ -435,7 +559,7 @@ final class RouteService
 
     /**
      * Check if the current request method is supported by the given route
-     *
+     * 
      * @param string $route
      * @return bool
      */
@@ -454,8 +578,8 @@ final class RouteService
 
     /**
      * Add a route to the collection if it does not already exist
-     *
-     * @param array $route
+     * 
+     * @param array &$route
      * @param array $options
      * @return void
      */

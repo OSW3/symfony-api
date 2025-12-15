@@ -29,10 +29,10 @@ final class IndexController extends AbstractController
         private readonly PaginationService $paginationService,
         private readonly ConfigurationService $configurationService,
     ){
-        $this->provider    = $contextService->getContext('provider');
-        $this->segment     = $contextService->getContext('segment');
-        $this->collection  = $contextService->getContext('collection');
-        $this->endpoint    = $contextService->getContext('endpoint');
+        $this->provider    = $contextService->getProvider();
+        $this->segment     = $contextService->getSegment();
+        $this->collection  = $contextService->getCollection();
+        $this->endpoint    = $contextService->getEndpoint();
         $this->entityClass = $this->collection;
         $this->repository  = $doctrine->getRepository($this->entityClass);
         $this->method      = $configurationService->getRepositoryMethod($this->provider, $this->segment, $this->collection, $this->endpoint)['method'] ?? null;

@@ -1,40 +1,79 @@
 <?php
 namespace OSW3\Api\Service;
 
-use OSW3\Api\Enum\Route\DefaultEndpoint;
 use OSW3\Api\Service\RequestService;
-use OSW3\Api\Service\ConfigurationService;
+use OSW3\Api\Service\EndpointService;
+use OSW3\Api\Service\ProviderService;
+use OSW3\Api\Service\CollectionService;
+use OSW3\Api\Enum\Route\DefaultEndpoint;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 final class PaginationService
 {
-    private ?bool $enabledCache = null;
-    private ?string $parameterPageCache = null;
-    private ?string $parameterLimitCache = null;
     private int $total = 0;
 
     public function __construct(
-        private readonly RequestService $requestService,
         private readonly ContextService $contextService,
-        private readonly ConfigurationService $configurationService,
+        private readonly RequestService $requestService,
+        private readonly ProviderService $providerService,
+        private readonly EndpointService $endpointService,
         private readonly UrlGeneratorInterface $urlGenerator,
+        private readonly CollectionService $collectionService,
     ){}
-    
-    
-    /** 
-     * Check if pagination is enabled for the current context
+
+    /**
+     * Get the pagination configuration for the given context
      * 
-     * @return bool
+     * @param string|null $provider
+     * @param string|null $collection
+     * @param string|null $endpoint
+     * @return array
      */
-    public function isEnabled(): bool 
+    private function options(?string $provider, ?string $collection = null, ?string $endpoint = null): array
     {
-        if ($this->enabledCache !== null) {
-            return $this->enabledCache;
+        if (! $this->providerService->exists($provider)) {
+            return [];
         }
 
-        $provider   = $this->contextService->getProvider();
-        $collection = $this->contextService->getCollection();
-        $endpoint   = $this->contextService->getEndpoint();
+        // 1. Endpoint-specific route
+        if ($collection && $endpoint) {
+            $endpointOptions = $this->endpointService->get($provider, ContextService::SEGMENT_COLLECTION, $collection, $endpoint);
+            if ($endpointOptions && isset($endpointOptions['pagination'])) {
+                return $endpointOptions['pagination'];
+            }
+        }
+
+        // 2. Collection-level route
+        if ($collection) {
+            $collectionOptions = $this->collectionService->get($provider, ContextService::SEGMENT_COLLECTION, $collection);
+            if ($collectionOptions && isset($collectionOptions['pagination'])) {
+                return $collectionOptions['pagination'];
+            }
+        }
+
+        // 3. Global default route
+        $providerOptions = $this->providerService->get($provider);
+        return $providerOptions['pagination'] ?? [];
+    }
+
+
+    // -- CONFIG OPTIONS GETTERS
+    
+    /**
+     * Check if pagination is enabled for the given context
+     * 
+     * @param string|null $provider
+     * @param string|null $collection
+     * @param string|null $endpoint
+     * @return bool
+     */
+    public function isEnabled(?string $provider = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): bool 
+    {
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
+        }
 
         if (in_array(strtolower($endpoint), [
             DefaultEndpoint::EDIT->value,
@@ -48,49 +87,51 @@ final class PaginationService
             return false;
         }
 
-        $this->enabledCache = $this->configurationService->isPaginationEnabled(
+        return $this->options(
             provider  : $provider,
             collection: $collection,
             endpoint  : $endpoint,
-        );
-
-        return $this->enabledCache;
+        )['enabled'] ?? true;
     }
 
     /**
-     * Get the query parameter name for the page number
+     * Get the "page" parameter name for the given context
      * 
+     * @param string|null $provider
+     * @param string|null $collection
      * @return string
      */
-    public function getParameterPage(): string
+    public function getParameterPage(?string $provider = null, ?string $collection = null, bool $fallbackOnCurrentContext = true): string
     {
-        if ($this->parameterPageCache !== null) {
-            return $this->parameterPageCache;
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $collection ??= $this->contextService->getCollection();
         }
-
-        $this->parameterPageCache = $this->configurationService->getParameterPage(
-            provider: $this->contextService->getProvider(),
-        );
         
-        return $this->parameterPageCache;
+        return $this->options(
+            provider  : $provider,
+            collection: $collection,
+        )['parameters']['page'] ?? 'page';
     }
 
     /**
-     * Get the query parameter name for the limit
+     * Get the "limit" parameter name for the given context
      * 
+     * @param string|null $provider
+     * @param string|null $collection
      * @return string
      */
-    public function getParameterLimit(): string
+    public function getParameterLimit(?string $provider = null, ?string $collection = null, bool $fallbackOnCurrentContext = true): string
     {
-        if ($this->parameterLimitCache !== null) {
-            return $this->parameterLimitCache;
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $collection ??= $this->contextService->getCollection();
         }
-
-        $this->parameterLimitCache = $this->configurationService->getParameterLimit(
-            provider: $this->contextService->getProvider(),
-        );
         
-        return $this->parameterLimitCache;
+        return $this->options(
+            provider  : $provider,
+            collection: $collection,
+        )['parameters']['limit'] ?? 'limit';
     }
 
 
@@ -148,6 +189,32 @@ final class PaginationService
         return $this->getPage();
     }
 
+    public function getPreviousPage(): int 
+    {
+        if (!$this->isEnabled()) {
+            return 1;
+        }
+
+        $prev = $this->getPage() - 1;
+        $prev = $prev <= 1 ? 1 : $prev;
+        $prev = $prev >= $this->getTotalPages() ? $this->getTotalPages() : $prev;
+
+        return $prev;
+    }
+
+    public function getNextPage(): int 
+    {
+        if (!$this->isEnabled()) {
+            return 1;
+        }
+
+        $next = $this->getPage() + 1;
+        $next = $next >= $this->getTotalPages() ? $this->getTotalPages() : $next;
+        $next = $next < 1 ? 1 : $next;
+
+        return $next;
+    }
+
 
     // ──────────────────────────────
     // Items
@@ -199,6 +266,44 @@ final class PaginationService
     // Limit & Offset
     // ──────────────────────────────
 
+    public function getDefaultLimit(?string $provider = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): ?int 
+    {
+        if (!$this->isEnabled()) {
+            return -1;
+        }
+
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
+        }
+        
+        return $this->options(
+            provider  : $provider,
+            collection: $collection,
+            endpoint  : $endpoint,
+        )['limit'] ?? 10;
+    }
+
+    public function getMaxLimit(?string $provider = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): ?int 
+    {
+        if (!$this->isEnabled()) {
+            return -1;
+        }
+
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
+        }
+        
+        return $this->options(
+            provider  : $provider,
+            collection: $collection,
+            endpoint  : $endpoint,
+        )['max_limit'] ?? 100;
+    }
+
     /**
      * Get the number of items per page
      * 
@@ -210,17 +315,40 @@ final class PaginationService
             return -1;
         }
 
-        $provider = $this->configurationService->getContext('provider');
-        $default  = $this->configurationService->getPaginationLimit($provider);
+        $provider   = $this->contextService->getProvider();
+        $collection = $this->contextService->getCollection();
+        $endpoint   = $this->contextService->getEndpoint();
+        
+        $limit  = $this->getDefaultLimit(
+            provider  : $provider,
+            collection: $collection,
+            endpoint  : $endpoint,
+        );
 
-        if ($this->configurationService->isPaginationLimitOverrideAllowed($provider)) {
+        $max  = $this->getMaxLimit(
+            provider  : $provider,
+            collection: $collection,
+            endpoint  : $endpoint,
+        );
+
+        $override  = $this->options(
+            provider  : $provider,
+            collection: $collection,
+            endpoint  : $endpoint,
+        )['allow_limit_override'] ?? false;
+
+        if ($override) {
             $params = $this->requestService->getQueryParameters();
             $key    = $this->getParameterLimit();
-            $limit = (int) ($params[$key] ?? $default);
-            return max(1, $limit);
+            $limit = (int) ($params[$key] ?? $limit);
+            // return max(1, $limit);
         }
 
-        return max(1, $default);
+        if ($max !== null && $limit > $max) {
+            $limit = $max;
+        }
+        
+        return max(1, $limit);
     }
     
     /**
@@ -247,17 +375,11 @@ final class PaginationService
      * 
      * @return string
      */
-    public function getPrevious(): string
+    public function getPreviousUrl(): string
     {
-        if (!$this->isEnabled()) {
-            return '';
-        }
-
-        $prev = $this->getPage() - 1;
-        $prev = $prev <= 1 ? 1 : $prev;
-        $prev = $prev >= $this->getTotalPages() ? $this->getTotalPages() : $prev;
-
-        return $this->replacePageInUrl($prev);
+        return $this->isEnabled() 
+            ? $this->replacePageInUrl($this->getPreviousPage()) 
+            : '';
     }
 
     /**
@@ -265,17 +387,11 @@ final class PaginationService
      * 
      * @return string
      */
-    public function getNext(): string
+    public function getNextUrl(): string
     {
-        if (!$this->isEnabled()) {
-            return '';
-        }
-
-        $next = $this->getPage() + 1;
-        $next = $next >= $this->getTotalPages() ? $this->getTotalPages() : $next;
-        $next = $next < 1 ? 1 : $next;
-
-        return $this->replacePageInUrl($next);
+        return $this->isEnabled() 
+            ? $this->replacePageInUrl($this->getNextPage()) 
+            : '';
     }
 
     /**
@@ -283,7 +399,7 @@ final class PaginationService
      * 
      * @return string
      */
-    public function getSelf(): string
+    public function getCurrentUrl(): string
     {
         if (!$this->isEnabled()) {
             return '';
@@ -297,7 +413,7 @@ final class PaginationService
      * 
      * @return string
      */
-    public function getFirst(): string
+    public function getFirstUrl(): string
     {
         if (!$this->isEnabled()) {
             return '';
@@ -311,7 +427,7 @@ final class PaginationService
      * 
      * @return string
      */
-    public function getLast(): string
+    public function getLastUrl(): string
     {
         if (!$this->isEnabled()) {
             return '';

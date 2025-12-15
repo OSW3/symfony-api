@@ -18,6 +18,15 @@ final class RouteResolver
 
     public static function execute(array &$config): array
     {
+        // TODO: Move to VersionResolver
+        foreach ($config['providers'] as &$provider) {
+            if (empty($provider['version']['prefix'])) {
+                $provider['version']['prefix'] = $config['versioning']['prefix'] ?? '';
+            }
+        }
+
+
+
         foreach ($config['providers'] as &$provider) {
             $version = static::version($provider);
 

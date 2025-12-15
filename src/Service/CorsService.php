@@ -5,8 +5,25 @@ final class CorsService
 {
     public function __construct(
         private readonly ContextService $contextService,
-        private readonly ConfigurationService $configuration,
+        private readonly ProviderService $providerService,
+        // private readonly ConfigurationService $configuration,
     ){}
+
+    /**
+     * Get the response options for a specific provider
+     * 
+     * @param string|null $provider
+     * @return array
+     */
+    private function options(?string $provider): array 
+    {
+        if (! $this->providerService->exists($provider)) {
+            return [];
+        }
+
+        $providerOptions = $this->providerService->get($provider);
+        return $providerOptions['response'] ?? [];
+    }
 
     // CORS Configuration
 
@@ -17,9 +34,8 @@ final class CorsService
      */
     public function isEnabled(): bool
     {
-        return $this->configuration->isCorsEnabled(
-            provider: $this->contextService->getProvider()
-        );
+        $provider = $this->contextService->getProvider();
+        return $this->options($provider)['cors']['enabled'] ?? false;
     }
 
     /**
@@ -29,9 +45,8 @@ final class CorsService
      */
     public function getOrigins(): array
     {
-        return $this->configuration->getCorsAllowedOrigins(
-            provider: $this->contextService->getProvider()
-        );
+        $provider = $this->contextService->getProvider();
+        return $this->options($provider)['cors']['origins'] ?? ['*'];
     }
 
     /**
@@ -41,9 +56,8 @@ final class CorsService
      */
     public function getMethods(): array
     {
-        return $this->configuration->getCorsAllowedMethods(
-            provider: $this->contextService->getProvider()
-        );
+        $provider = $this->contextService->getProvider();
+        return $this->options($provider)['cors']['methods'] ?? ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'];
     }
 
     /**
@@ -53,9 +67,8 @@ final class CorsService
      */
     public function getHeaders(): array
     {
-        return $this->configuration->getCorsHeaders(
-            provider: $this->contextService->getProvider()
-        );
+        $provider = $this->contextService->getProvider();
+        return $this->options($provider)['cors']['headers'] ?? [];
     }
 
     /**
@@ -65,9 +78,8 @@ final class CorsService
      */
     public function getExposedHeaders(): array
     {
-        return $this->configuration->getCorsExposedHeaders(
-            provider: $this->contextService->getProvider()
-        );
+        $provider = $this->contextService->getProvider();
+        return $this->options($provider)['cors']['expose'] ?? [];
     }
 
     /**
@@ -77,9 +89,8 @@ final class CorsService
      */
     public function exposeCredentials(): bool
     {
-        return $this->configuration->getCorsCredentials(
-            provider: $this->contextService->getProvider()
-        );
+        $provider = $this->contextService->getProvider();
+        return $this->options($provider)['cors']['credentials'] ?? false;
     }
 
     /**
@@ -89,8 +100,7 @@ final class CorsService
      */
     public function getMaxAge(): int
     {
-        return $this->configuration->getCorsMaxAge(
-            provider: $this->contextService->getProvider()
-        );
+        $provider = $this->contextService->getProvider();
+        return $this->options($provider)['cors']['max_age'] ?? 3600;
     }
 }

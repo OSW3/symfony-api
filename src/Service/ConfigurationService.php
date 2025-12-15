@@ -3,9 +3,12 @@ namespace OSW3\Api\Service;
 
 use OSW3\Api\Enum\Hash\Algorithm;
 use OSW3\Api\Service\ContextService;
-use Symfony\Component\HttpFoundation\Request;
+// use OSW3\Api\Service\SegmentService;
+use OSW3\Api\Service\EndpointService;
+// use Symfony\Component\HttpFoundation\Request;
+use OSW3\Api\Service\ProviderService;
+// use Symfony\Component\HttpFoundation\RequestStack;
 use OSW3\Api\DependencyInjection\Configuration;
-use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
@@ -13,15 +16,20 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 class ConfigurationService
 {
     private readonly array $configuration;
-    private readonly ?Request $request;
+    // private readonly ?Request $request;
 
     public function __construct(
         #[Autowire(service: 'service_container')] 
         private readonly ContainerInterface $container,
-        private readonly RequestStack $requestStack,
+        private readonly ProviderService $providerService,
+        private readonly CollectionService $collectionService,
+        private readonly EndpointService $endpointService,
+        private readonly PaginationService $paginationService,
+        // private readonly SegmentService $segmentService,
+        // private readonly RequestStack $requestStack,
         private readonly UrlGeneratorInterface $urlGenerator,
     ){
-        $this->request = $requestStack->getCurrentRequest();
+        // $this->request = $requestStack->getCurrentRequest();
         $this->configuration = $container->getParameter(Configuration::NAME);
     }
 
@@ -37,35 +45,35 @@ class ConfigurationService
      * @param string|null $part Specific part of the context to retrieve ('provider', 'collection', 'endpoint')
      * @return array|string|null Full context array or specific part value, or null if not found
      */
-    public function getContext(?string $part = null): array|string|null
-    {
-        if (! $this->request || ! $this->request->attributes->get('_route')) {
-            return null;
-        }
+    // public function getContext(?string $part = null): array|string|null
+    // {
+    //     if (! $this->request || ! $this->request->attributes->get('_route')) {
+    //         return null;
+    //     }
 
-        $context = $this->request->attributes->get('_context', []);
+    //     $context = $this->request->attributes->get('_context', []);
 
-        return match ($part) {
-            'provider'   => $context['provider'] ?? null,
-            'segment'    => $context['segment'] ?? null,
-            'collection' => $context['collection'] ?? null,
-            'endpoint'   => $context['endpoint'] ?? null,
-            default      => $context,
-        };
-    }
+    //     return match ($part) {
+    //         'provider'   => $context['provider'] ?? null,
+    //         'segment'    => $context['segment'] ?? null,
+    //         'collection' => $context['collection'] ?? null,
+    //         'endpoint'   => $context['endpoint'] ?? null,
+    //         default      => $context,
+    //     };
+    // }
 
     public function isEnabled(?string $provider, ?string $segment = null, ?string $collection = null, ?string $endpoint = null): bool
     {
         
-        if (! $this->hasProvider($provider)) {
+        if (! $this->providerService->exists($provider)) {
             return false;
         }
 
         // 1. Endpoint-level
         if (
             $endpoint !== null &&
-            $this->hasEndpoint($provider, $segment, $collection, $endpoint) &&
-            $this->isEndpointEnabled($provider, $segment, $collection, $endpoint)
+            $this->endpointService->exists($provider, $segment, $collection, $endpoint) &&
+            $this->endpointService->isEnabled($provider, $segment, $collection, $endpoint)
         ) {
             return true;
         }
@@ -73,14 +81,14 @@ class ConfigurationService
         // 2. Collection-level
         if (
             $collection !== null &&
-            $this->hasCollection($provider, $segment, $collection) &&
-            $this->isCollectionEnabled($provider, $segment, $collection)
+            $this->collectionService->exists($provider, $segment, $collection) &&
+            $this->collectionService->isEnabled($provider, $segment, $collection)
         ) {
             return true;
         }
 
         // 3. Provider/Segment-level
-        if ($this->isProviderEnabled($provider, $segment)) {
+        if ($this->providerService->isEnabled($provider, $segment)) {
             return true;
         }
 
@@ -99,15 +107,30 @@ class ConfigurationService
      * 
      * @return array Associative array of all API providers and their configurations
      */
-    public function getProviders(): array
-    {
-        return $this->configuration['providers'];
-    }
+    // public function getProviders(): array
+    // {
+    //     return $this->configuration['providers'];
+    // }
 
-    public function getProviderNames(): array
-    {
-        return array_keys($this->getProviders());
-    }
+    /**
+     * Returns the names of all API providers defined in the configuration.
+     * 
+     * @return array List of API provider names
+     */
+    // public function getProviderNames(): array
+    // {
+    //     return array_keys($this->providerService->all());
+    // }
+
+    /**
+     * Count the number of API providers defined in the configuration.
+     * 
+     * @return int Number of API providers
+     */
+    // public function countProviders(): int
+    // {
+    //     return count($this->providerService->all());
+    // }
 
     /**
      * Returns the configuration array for a specific API provider.
@@ -116,10 +139,10 @@ class ConfigurationService
      * @param string $provider Name of the API provider
      * @return array|null Configuration array for the specified provider, or null if not found
      */
-    public function getProvider(?string $provider): ?array
-    {
-        return $this->getProviders()[$provider] ?? null;
-    }
+    // public function getProvider(?string $provider): ?array
+    // {
+    //     return $this->providerService->gets()[$provider] ?? null;
+    // }
 
     /**
      * Check if a specific API provider exists in the configuration.
@@ -128,10 +151,10 @@ class ConfigurationService
      * @param string $provider Name of the API provider
      * @return bool True if the provider exists, false otherwise
      */
-    public function hasProvider(?string $provider): bool
-    {
-        return array_key_exists($provider, $this->getProviders());
-    }
+    // public function hasProvider(?string $provider): bool
+    // {
+    //     return array_key_exists($provider, $this->providerService->gets());
+    // }
     
     /**
      * Check if a specific API provider is enabled.
@@ -140,133 +163,135 @@ class ConfigurationService
      * @param string $provider Name of the API provider
      * @return bool True if the provider is enabled, false otherwise
      */
-    public function isProviderEnabled(?string $provider): bool
-    {
-        if (! $this->hasProvider($provider)) {
-            return false;
-        }
+    // public function isProviderEnabled(?string $provider): bool
+    // {
+    //     // if (! $this->providerService->exists($provider)) {
+    //     //     return false;
+    //     // }
 
-        return $this->getProvider($provider)['enabled'] ?? false;
-    }
+    //     // return $this->providerService->get($provider)['enabled'] ?? false;
+
+    //     return $this->providerService->isEnabled($provider);
+    // }
 
 
     // ──────────────────────────────
     // SEGMENT
     // ──────────────────────────────
 
-    public function isSegment(?string $segment): bool
-    {
-        return in_array($segment, [
-            ContextService::SEGMENT_COLLECTION, 
-            ContextService::SEGMENT_AUTHENTICATION
-        ]);
-    }
+    // public function isSegment(?string $segment): bool
+    // {
+    //     return in_array($segment, [
+    //         ContextService::SEGMENT_COLLECTION, 
+    //         ContextService::SEGMENT_AUTHENTICATION
+    //     ]);
+    // }
 
-    public function hasSegment(?string $provider, ?string $segment): bool
-    {
-        if (! $this->hasProvider($provider)) {
-            return false;
-        }
+    // public function hasSegment(?string $provider, ?string $segment): bool
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return false;
+    //     }
 
-        return array_key_exists($segment, $this->getProvider($provider));
-    }
+    //     return array_key_exists($segment, $this->providerService->get($provider));
+    // }
 
 
     // ──────────────────────────────
     // COLLECTIONS
     // ──────────────────────────────
 
-    /**
-     * Returns all collections defined for a specific provider.
-     * e.g. $this->configuration->getCollections('my_custom_api_v1', 'collections');
-     *
-     * @param string $providerName
-     * @param string $segment Type of collections to retrieve ('collections' or 'authentication')
-     * @return array|null Returns an array of collections if the provider exists, null otherwise.
-     */
-    public function getCollections(?string $provider, ?string $segment): array
-    {
-        if (
-            ! $this->hasProvider($provider) || 
-            ! $this->isProviderEnabled($provider) ||
-            ! $this->hasSegment($provider, $segment)
-        ) return [];
+    // /**
+    //  * Returns all collections defined for a specific provider.
+    //  * e.g. $this->configuration->collectionService->gets('my_custom_api_v1', 'collections');
+    //  *
+    //  * @param string $providerName
+    //  * @param string $segment Type of collections to retrieve ('collections' or 'authentication')
+    //  * @return array|null Returns an array of collections if the provider exists, null otherwise.
+    //  */
+    // public function collectionService->gets(?string $provider, ?string $segment): array
+    // {
+    //     if (
+    //         ! $this->providerService->exists($provider) || 
+    //         ! $this->providerService->isEnabled($provider) ||
+    //         ! $this->providerService->existsSegment($provider, $segment)
+    //     ) return [];
 
-        return $this->getProviders()[$provider][$segment] ?? [];
-    }
+    //     return $this->providerService->get($provider)[$segment] ?? [];
+    // }
 
-    /**
-     * Returns a specific collection configuration.
-     * e.g. $this->configuration->getCollection('my_custom_api_v1', 'collections', 'App\Entity\Book');
-     *
-     * @param string $provider Name of the API provider
-     * @param string $segment Type of collections to retrieve ('collections' or 'authentication')
-     * @param string $collection Fully qualified class name of the entity (e.g., 'App\Entity\Book')
-     * @return array|null Collection configuration array or null if not found.
-     */
-    public function getCollection(?string $provider, ?string $segment, ?string $collection): array
-    {
-        if (
-            ! $this->hasProvider($provider) ||
-            ! $this->isProviderEnabled($provider)
-        ) return [];
+    // /**
+    //  * Returns a specific collection configuration.
+    //  * e.g. $this->configuration->collectionService->get('my_custom_api_v1', 'collections', 'App\Entity\Book');
+    //  *
+    //  * @param string $provider Name of the API provider
+    //  * @param string $segment Type of collections to retrieve ('collections' or 'authentication')
+    //  * @param string $collection Fully qualified class name of the entity (e.g., 'App\Entity\Book')
+    //  * @return array|null Collection configuration array or null if not found.
+    //  */
+    // public function collectionService->get(?string $provider, ?string $segment, ?string $collection): array
+    // {
+    //     if (
+    //         ! $this->providerService->exists($provider) ||
+    //         ! $this->providerService->isEnabled($provider)
+    //     ) return [];
 
-        return $this->getCollections($provider, $segment)[$collection] ?? [];
-    }
+    //     return $this->collectionService->gets($provider, $segment)[$collection] ?? [];
+    // }
     
-    /**
-     * Check if a specific collection exists for a given provider.
-     * e.g. $this->configuration->hasCollection('my_custom_api_v1', 'collections', 'App\Entity\Book');
-     * 
-     * @param string $provider Name of the API provider
-     * @param string $segment Type of collections to retrieve ('collections' or 'authentication')
-     * @param string $collection Fully qualified class name of the entity (e.g., 'App\Entity\Book')
-     * @return bool True if the collection exists, false otherwise
-     */
-    public function hasCollection(?string $provider, ?string $segment, ?string $collection): bool
-    {
-        if (! $this->hasProvider($provider)) {
-            return false;
-        }
+    // /**
+    //  * Check if a specific collection exists for a given provider.
+    //  * e.g. $this->configuration->collectionService->exists('my_custom_api_v1', 'collections', 'App\Entity\Book');
+    //  * 
+    //  * @param string $provider Name of the API provider
+    //  * @param string $segment Type of collections to retrieve ('collections' or 'authentication')
+    //  * @param string $collection Fully qualified class name of the entity (e.g., 'App\Entity\Book')
+    //  * @return bool True if the collection exists, false otherwise
+    //  */
+    // public function collectionService->exists(?string $provider, ?string $segment, ?string $collection): bool
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return false;
+    //     }
 
-        return array_key_exists($collection, $this->getCollections($provider, $segment));
-    }
+    //     return array_key_exists($collection, $this->collectionService->gets($provider, $segment));
+    // }
 
-    /**
-     * Get the collection name for a specific collection within a provider.
-     * e.g.: $this->configuration->getCollectionName('my_custom_api_v1', 'collections', 'App\Entity\Book');
-     *
-     * @param string $provider Name of the API provider
-     * @param string $segment Type of collections to retrieve ('collections' or 'authentication')
-     * @param string $collection Fully qualified class name of the entity (e.g., 'App\Entity\Book')
-     * @return string|null Collection name or null if not found.
-     */
-    public function getCollectionName(?string $provider, ?string $segment, ?string $collection): string|null
-    {
-        return $this->getCollection($provider, $segment, $collection)['name'] ?? null;
-    }
+    // /**
+    //  * Get the collection name for a specific collection within a provider.
+    //  * e.g.: $this->configuration->collectionService->getName('my_custom_api_v1', 'collections', 'App\Entity\Book');
+    //  *
+    //  * @param string $provider Name of the API provider
+    //  * @param string $segment Type of collections to retrieve ('collections' or 'authentication')
+    //  * @param string $collection Fully qualified class name of the entity (e.g., 'App\Entity\Book')
+    //  * @return string|null Collection name or null if not found.
+    //  */
+    // public function collectionService->getName(?string $provider, ?string $segment, ?string $collection): string|null
+    // {
+    //     return $this->collectionService->get($provider, $segment, $collection)['name'] ?? null;
+    // }
 
-    /**
-     * Check if a specific collection is enabled.
-     * e.g.: $this->configuration->isCollectionEnabled('my_custom_api_v1', 'collections', 'App\Entity\Book');
-     * 
-     * @param string $provider Name of the API provider
-     * @param string $segment Type of collections to retrieve ('collections' or 'authentication')
-     * @param string $collection Fully qualified class name of the entity (e.g., 'App\Entity\Book')
-     * @return bool True if the collection is enabled, false otherwise
-     */
-    public function isCollectionEnabled(?string $provider, ?string $segment, ?string $collection): bool
-    {
-        if (! $this->hasProvider($provider)) {
-            return false;
-        }
+    // /**
+    //  * Check if a specific collection is enabled.
+    //  * e.g.: $this->configuration->isCollectionEnabled('my_custom_api_v1', 'collections', 'App\Entity\Book');
+    //  * 
+    //  * @param string $provider Name of the API provider
+    //  * @param string $segment Type of collections to retrieve ('collections' or 'authentication')
+    //  * @param string $collection Fully qualified class name of the entity (e.g., 'App\Entity\Book')
+    //  * @return bool True if the collection is enabled, false otherwise
+    //  */
+    // public function isCollectionEnabled(?string $provider, ?string $segment, ?string $collection): bool
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return false;
+    //     }
 
-        if (! $this->hasCollection($provider, $segment, $collection)) {
-            return false;
-        }
+    //     if (! $this->collectionService->exists($provider, $segment, $collection)) {
+    //         return false;
+    //     }
 
-        return $this->getCollection($provider, $segment, $collection)['enabled'] ?? $this->isProviderEnabled($provider);
-    }
+    //     return $this->collectionService->get($provider, $segment, $collection)['enabled'] ?? $this->providerService->isEnabled($provider);
+    // }
 
 
     // ──────────────────────────────
@@ -282,14 +307,14 @@ class ConfigurationService
      * @param string $collection Fully qualified class name of the entity (e.g., 'App\Entity\Book')
      * @return array|null Returns an array of endpoints if the collection exists, null otherwise.
      */
-    public function getEndpoints(?string $provider, ?string $segment, ?string $collection): array
-    {
-        if (
-            ! $this->isCollectionEnabled($provider, $segment, $collection)
-        ) return [];
+    // public function getEndpoints(?string $provider, ?string $segment, ?string $collection): array
+    // {
+    //     if (!$this->collectionService->isEnabled($provider, $segment, $collection)) {
+    //         return [];
+    //     }
 
-        return $this->getCollection($provider, $segment, $collection)['endpoints'] ?? [];
-    }
+    //     return $this->collectionService->get($provider, $segment, $collection)['endpoints'] ?? [];
+    // }
 
     /**
      * Returns a specific endpoint configuration.
@@ -301,10 +326,10 @@ class ConfigurationService
      * @param string $endpoint Name of the endpoint (e.g., 'index', 'show')
      * @return array|null Endpoint configuration array or null if not found.
      */
-    public function getEndpoint(string $provider, string $segment, string $collection, string $endpoint): ?array
-    {
-        return $this->getEndpoints($provider, $segment, $collection)[$endpoint] ?? null;
-    }
+    // public function getEndpoint(string $provider, string $segment, string $collection, string $endpoint): ?array
+    // {
+    //     return $this->endpointService->gets($provider, $segment, $collection)[$endpoint] ?? null;
+    // }
 
     /**
      * Check if a specific endpoint exists for a given collection within a provider.
@@ -316,15 +341,15 @@ class ConfigurationService
      * @param string $endpoint Name of the endpoint (e.g., 'index', 'show')
      * @return bool True if the endpoint exists, false otherwise
      */
-    public function hasEndpoint(string $provider, string $segment, string $collection, string $endpoint): bool
-    {
-        if (
-            ! $this->hasProvider($provider) || 
-            ! $this->hasCollection($provider, $segment, $collection)
-        ) return false;
+    // public function hasEndpoint(string $provider, string $segment, string $collection, string $endpoint): bool
+    // {
+    //     if (
+    //         ! $this->providerService->exists($provider) || 
+    //         ! $this->collectionService->exists($provider, $segment, $collection)
+    //     ) return false;
 
-        return array_key_exists($endpoint, $this->getEndpoints($provider, $segment, $collection));
-    }
+    //     return array_key_exists($endpoint, $this->endpointService->all($provider, $segment, $collection));
+    // }
 
     /**
      * Check if a specific endpoint is enabled.
@@ -336,17 +361,17 @@ class ConfigurationService
      * @param string $endpoint Name of the endpoint (e.g., 'index', 'show')
      * @return bool True if the endpoint is enabled, false otherwise
      */
-    public function isEndpointEnabled(string $provider, string $segment, string $collection, string $endpoint): bool
-    {
-        if (
-            ! $this->hasProvider($provider) ||
-            ! $this->hasCollection($provider, $segment, $collection) ||
-            ! $this->hasEndpoint($provider, $segment, $collection, $endpoint)
-        ) return false;
+    // public function isEndpointEnabled(string $provider, string $segment, string $collection, string $endpoint): bool
+    // {
+    //     if (
+    //         ! $this->providerService->exists($provider) ||
+    //         ! $this->collectionService->exists($provider, $segment, $collection) ||
+    //         ! $this->endpointService->exists($provider, $segment, $collection, $endpoint)
+    //     ) return false;
 
-        return $this->getEndpoint($provider, $segment, $collection, $endpoint)['enabled']
-            ?? $this->isCollectionEnabled($provider, $segment, $collection);
-    }
+    //     return $this->endpointService->get($provider, $segment, $collection, $endpoint)['enabled']
+    //         ?? $this->collectionService->isEnabled($provider, $segment, $collection);
+    // }
 
 
     // ──────────────────────────────
@@ -363,37 +388,37 @@ class ConfigurationService
      * @param string|null $endpoint Name of the endpoint (optional)
      * @return bool True if the specified component is deprecated, false otherwise
      */
-    public function isDeprecationEnabled(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): bool
-    {
-        if (! $this->hasProvider($provider)) {
-            return false;
-        }
+    // public function isDeprecationEnabled(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): bool
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return false;
+    //     }
 
-        // 1. Provider-level deprecation
-        $providerOptions = $this->getProvider($provider);
-        if (isset($providerOptions['deprecation']['enabled']) && $providerOptions['deprecation']['enabled'] === true) {
-            return true;
-        }
+    //     // 1. Provider-level deprecation
+    //     $providerOptions = $this->providerService->get($provider);
+    //     if (isset($providerOptions['deprecation']['enabled']) && $providerOptions['deprecation']['enabled'] === true) {
+    //         return true;
+    //     }
 
-        // 2. Collection-level deprecation
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if (isset($collectionOptions['deprecation']['enabled']) && $collectionOptions['deprecation']['enabled'] === true) {
-                return true;
-            }
-        }
+    //     // 2. Collection-level deprecation
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if (isset($collectionOptions['deprecation']['enabled']) && $collectionOptions['deprecation']['enabled'] === true) {
+    //             return true;
+    //         }
+    //     }
 
-        // 3. Endpoint-level deprecation
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
-            if (isset($endpointOptions['deprecation']['enabled']) && $endpointOptions['deprecation']['enabled'] === true) {
-                return true;
-            }
-        }
+    //     // 3. Endpoint-level deprecation
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+    //         if (isset($endpointOptions['deprecation']['enabled']) && $endpointOptions['deprecation']['enabled'] === true) {
+    //             return true;
+    //         }
+    //     }
 
-        // 4. Default
-        return false;
-    }
+    //     // 4. Default
+    //     return false;
+    // }
 
     /**
      * Get the deprecation start date for a specific API component (provider, collection, endpoint).
@@ -405,41 +430,41 @@ class ConfigurationService
      * @param string|null $endpoint Name of the endpoint (optional)
      * @return string|null Deprecation start date in 'YYYY-MM-DD' format, or null if not set 
      */
-    public function getDeprecationStartAt(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): ?string
-    {
-        if (! $this->hasProvider($provider)) {
-            return null;
-        }
+    // public function getDeprecationStartAt(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): ?string
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return null;
+    //     }
 
-        if (!$this->isDeprecationEnabled($provider, $collection, $endpoint)) {
-            return null;
-        }
+    //     if (!$this->isDeprecationEnabled($provider, $collection, $endpoint)) {
+    //         return null;
+    //     }
 
-        // 1. Endpoint-level deprecation since date
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
-            if (isset($endpointOptions['deprecation']['start_at'])) {
-                return $endpointOptions['deprecation']['start_at'];
-            }
-        }
+    //     // 1. Endpoint-level deprecation since date
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+    //         if (isset($endpointOptions['deprecation']['start_at'])) {
+    //             return $endpointOptions['deprecation']['start_at'];
+    //         }
+    //     }
 
-        // 2. Collection-level deprecation since date
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if (isset($collectionOptions['deprecation']['start_at'])) {
-                return $collectionOptions['deprecation']['start_at'];
-            }
-        }
+    //     // 2. Collection-level deprecation since date
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if (isset($collectionOptions['deprecation']['start_at'])) {
+    //             return $collectionOptions['deprecation']['start_at'];
+    //         }
+    //     }
 
-        // 3. Provider-level deprecation since date
-        $providerOptions = $this->getProvider($provider);
-        if (isset($providerOptions['deprecation']['start_at'])) {
-            return $providerOptions['deprecation']['start_at'];
-        }
+    //     // 3. Provider-level deprecation since date
+    //     $providerOptions = $this->providerService->get($provider);
+    //     if (isset($providerOptions['deprecation']['start_at'])) {
+    //         return $providerOptions['deprecation']['start_at'];
+    //     }
 
-        // 4. Default
-        return null;
-    }
+    //     // 4. Default
+    //     return null;
+    // }
 
     /**
      * Get the deprecation removal date for a specific API component (provider, collection, endpoint).
@@ -451,41 +476,41 @@ class ConfigurationService
      * @param string|null $endpoint Name of the endpoint (optional)
      * @return string|null Deprecation removal date in 'YYYY-MM-DD' format, or null if not set
      */
-    public function getDeprecationSunsetAt(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): ?string
-    {
-        if (! $this->hasProvider($provider)) {
-            return null;
-        }
+    // public function getDeprecationSunsetAt(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): ?string
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return null;
+    //     }
 
-        if (!$this->isDeprecationEnabled($provider, $collection, $endpoint)) {
-            return null;
-        }
+    //     if (!$this->isDeprecationEnabled($provider, $collection, $endpoint)) {
+    //         return null;
+    //     }
 
-        // 1. Endpoint-level deprecation removal date
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
-            if (isset($endpointOptions['deprecation']['sunset_at'])) {
-                return $endpointOptions['deprecation']['sunset_at'];
-            }
-        }
+    //     // 1. Endpoint-level deprecation removal date
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+    //         if (isset($endpointOptions['deprecation']['sunset_at'])) {
+    //             return $endpointOptions['deprecation']['sunset_at'];
+    //         }
+    //     }
 
-        // 2. Collection-level deprecation removal date
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if (isset($collectionOptions['deprecation']['sunset_at'])) {
-                return $collectionOptions['deprecation']['sunset_at'];
-            }
-        }
+    //     // 2. Collection-level deprecation removal date
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if (isset($collectionOptions['deprecation']['sunset_at'])) {
+    //             return $collectionOptions['deprecation']['sunset_at'];
+    //         }
+    //     }
 
-        // 3. Provider-level deprecation removal date
-        $providerOptions = $this->getProvider($provider);
-        if (isset($providerOptions['deprecation']['sunset_at'])) {
-            return $providerOptions['deprecation']['sunset_at'];
-        }
+    //     // 3. Provider-level deprecation removal date
+    //     $providerOptions = $this->providerService->get($provider);
+    //     if (isset($providerOptions['deprecation']['sunset_at'])) {
+    //         return $providerOptions['deprecation']['sunset_at'];
+    //     }
 
-        // 4. Default
-        return null;
-    }
+    //     // 4. Default
+    //     return null;
+    // }
 
     /**
      * Get the deprecation link for a specific API component (provider, collection, endpoint).
@@ -497,41 +522,41 @@ class ConfigurationService
      * @param string|null $endpoint Name of the endpoint (optional)
      * @return string|null Deprecation link URL or route name, or null if not set
      */
-    public function getDeprecationLink(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): ?string
-    {
-        if (! $this->hasProvider($provider)) {
-            return null;
-        }
+    // public function getDeprecationLink(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): ?string
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return null;
+    //     }
 
-        if (!$this->isDeprecationEnabled($provider, $collection, $endpoint)) {
-            return null;
-        }
+    //     if (!$this->isDeprecationEnabled($provider, $collection, $endpoint)) {
+    //         return null;
+    //     }
 
-        // 1. Endpoint-level deprecation link
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
-            if (isset($endpointOptions['deprecation']['link'])) {
-                return $this->resolveDeprecationLink($endpointOptions['deprecation']['link']);
-            }
-        }
+    //     // 1. Endpoint-level deprecation link
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+    //         if (isset($endpointOptions['deprecation']['link'])) {
+    //             return $this->resolveDeprecationLink($endpointOptions['deprecation']['link']);
+    //         }
+    //     }
 
-        // 2. Collection-level deprecation link
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if (isset($collectionOptions['deprecation']['link'])) {
-                return $this->resolveDeprecationLink($collectionOptions['deprecation']['link']);
-            }
-        }
+    //     // 2. Collection-level deprecation link
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if (isset($collectionOptions['deprecation']['link'])) {
+    //             return $this->resolveDeprecationLink($collectionOptions['deprecation']['link']);
+    //         }
+    //     }
 
-        // 3. Provider-level deprecation link
-        $providerOptions = $this->getProvider($provider);
-        if (isset($providerOptions['deprecation']['link'])) {
-            return $this->resolveDeprecationLink($providerOptions['deprecation']['link']);
-        }
+    //     // 3. Provider-level deprecation link
+    //     $providerOptions = $this->providerService->get($provider);
+    //     if (isset($providerOptions['deprecation']['link'])) {
+    //         return $this->resolveDeprecationLink($providerOptions['deprecation']['link']);
+    //     }
 
-        // 4. Default
-        return null;
-    }
+    //     // 4. Default
+    //     return null;
+    // }
 
     /**
      * Get the deprecation successor link for a specific API component (provider, segment, collection, endpoint).
@@ -543,41 +568,41 @@ class ConfigurationService
      * @param string|null $endpoint Name of the endpoint (optional)
      * @return string|null Deprecation successor link URL or route name, or null if not set
      */
-    public function getDeprecationSuccessor(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): ?string
-    {
-        if (! $this->hasProvider($provider)) {
-            return null;
-        }
+    // public function getDeprecationSuccessor(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): ?string
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return null;
+    //     }
 
-        if (!$this->isDeprecationEnabled($provider, $collection, $endpoint)) {
-            return null;
-        }
+    //     if (!$this->isDeprecationEnabled($provider, $collection, $endpoint)) {
+    //         return null;
+    //     }
 
-        // 1. Endpoint-level deprecation successor link
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
-            if (isset($endpointOptions['deprecation']['successor'])) {
-                return $this->resolveDeprecationLink($endpointOptions['deprecation']['successor']);
-            }
-        }
+    //     // 1. Endpoint-level deprecation successor link
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+    //         if (isset($endpointOptions['deprecation']['successor'])) {
+    //             return $this->resolveDeprecationLink($endpointOptions['deprecation']['successor']);
+    //         }
+    //     }
 
-        // 2. Collection-level deprecation successor link
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if (isset($collectionOptions['deprecation']['successor'])) {
-                return $this->resolveDeprecationLink($collectionOptions['deprecation']['successor']);
-            }
-        }
+    //     // 2. Collection-level deprecation successor link
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if (isset($collectionOptions['deprecation']['successor'])) {
+    //             return $this->resolveDeprecationLink($collectionOptions['deprecation']['successor']);
+    //         }
+    //     }
 
-        // 3. Provider-level deprecation successor link
-        $providerOptions = $this->getProvider($provider);
-        if (isset($providerOptions['deprecation']['successor'])) {
-            return $this->resolveDeprecationLink($providerOptions['deprecation']['successor']);
-        }
+    //     // 3. Provider-level deprecation successor link
+    //     $providerOptions = $this->providerService->get($provider);
+    //     if (isset($providerOptions['deprecation']['successor'])) {
+    //         return $this->resolveDeprecationLink($providerOptions['deprecation']['successor']);
+    //     }
 
-        // 4. Default
-        return null;
-    }
+    //     // 4. Default
+    //     return null;
+    // }
 
     /**
      * Get the deprecation message for a specific API component (provider, segment, collection, endpoint).
@@ -589,41 +614,41 @@ class ConfigurationService
      * @param string|null $endpoint Name of the endpoint (optional)
      * @return string|null Deprecation message, or null if not set
      */
-    public function getDeprecationMessage(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): ?string
-    {
-        if (! $this->hasProvider($provider)) {
-            return null;
-        }
+    // public function getDeprecationMessage(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): ?string
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return null;
+    //     }
 
-        if (!$this->isDeprecationEnabled($provider, $collection, $endpoint)) {
-            return null;
-        }
+    //     if (!$this->isDeprecationEnabled($provider, $collection, $endpoint)) {
+    //         return null;
+    //     }
 
-        // 1. Endpoint-level deprecation message
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
-            if (isset($endpointOptions['deprecation']['message'])) {
-                return $endpointOptions['deprecation']['message'];
-            }
-        }
+    //     // 1. Endpoint-level deprecation message
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+    //         if (isset($endpointOptions['deprecation']['message'])) {
+    //             return $endpointOptions['deprecation']['message'];
+    //         }
+    //     }
 
-        // 2. Collection-level deprecation message
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if (isset($collectionOptions['deprecation']['message'])) {
-                return $collectionOptions['deprecation']['message'];
-            }
-        }
+    //     // 2. Collection-level deprecation message
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if (isset($collectionOptions['deprecation']['message'])) {
+    //             return $collectionOptions['deprecation']['message'];
+    //         }
+    //     }
 
-        // 3. Provider-level deprecation message
-        $providerOptions = $this->getProvider($provider);
-        if (isset($providerOptions['deprecation']['message'])) {
-            return $providerOptions['deprecation']['message'];
-        }
+    //     // 3. Provider-level deprecation message
+    //     $providerOptions = $this->providerService->get($provider);
+    //     if (isset($providerOptions['deprecation']['message'])) {
+    //         return $providerOptions['deprecation']['message'];
+    //     }
 
-        // 4. Default
-        return null;
-    }
+    //     // 4. Default
+    //     return null;
+    // }
 
     /**
      * Resolve a deprecation link which can be either a full URL or a route name.
@@ -631,24 +656,24 @@ class ConfigurationService
      * @param string $input Deprecation link input (URL or route name)
      * @return string|null Resolved URL or null if not resolvable
      */
-    private function resolveDeprecationLink(string $input): ?string
-    {
-        if (preg_match('#^https?://#i', $input)) {
-            return $input;
-        }
+    // private function resolveDeprecationLink(string $input): ?string
+    // {
+    //     if (preg_match('#^https?://#i', $input)) {
+    //         return $input;
+    //     }
 
-        try {
-            return $this->urlGenerator->generate(
-                $input,
-                [],
-                UrlGeneratorInterface::ABSOLUTE_URL
-            );
-        } catch (\Throwable $e) {
-            // Route does not exist or requires parameters; return null
-        }
+    //     try {
+    //         return $this->urlGenerator->generate(
+    //             $input,
+    //             [],
+    //             UrlGeneratorInterface::ABSOLUTE_URL
+    //         );
+    //     } catch (\Throwable $e) {
+    //         // Route does not exist or requires parameters; return null
+    //     }
         
-        return null;
-    }
+    //     return null;
+    // }
 
 
     // ──────────────────────────────
@@ -661,15 +686,55 @@ class ConfigurationService
      * @param string $provider Name of the API provider
      * @return array Version information array or empty array if provider not found
      */
-    public function getVersion(?string $provider): array
-    {
-        if (!$this->hasProvider($provider)) {
-            return [];
-        }
+    // public function getVersion(?string $provider = null): array
+    // {
+    //     $config = [
+    //         "mode"      => null,
+    //         "prefix"    => null,
+    //         "location"  => null,
+    //         "number"    => null,
+    //         "prefix"    => null,
+    //         "location"  => null,
+    //         "beta"      => null,
+    //         "directive" => null,
+    //         "pattern"   => null,
+    //     ];
+        
+    //     $config = array_merge(
+    //         $config, 
+    //         $this->configuration['versioning'] ?? []
+    //     );
 
-        $options = $this->getProvider($provider);
-        return $options['version'];
-    }
+    //     if ($this->providerService->exists($provider)) {
+    //         $options = $this->providerService->get($provider);
+    //         $version = $options['version'] ?? [];
+
+    //         $config = array_merge(
+    //             $config,
+    //             $version
+    //         );
+    //     }
+
+
+    //     return $config;
+    // }
+
+    /**
+     * Get version mode for a specific API provider.
+     * 
+     * @param string $providerName Name of the API provider
+     * @return string Version mode (e.g., 'url', 'header')
+     */
+    // public function getVersionMode(?string $provider): string|null
+    // {
+    //     if (!$this->providerService->exists($provider)) {
+    //         return null;
+    //     }
+
+    //     $options = $this->getVersion($provider);
+
+    //     return $options['mode'] ?? null;
+    // }
 
     /**
      * Get version number for a specific API provider.
@@ -677,107 +742,107 @@ class ConfigurationService
      * @param string $providerName Name of the API provider
      * @return int Version number
      */
-    public function getVersionNumber(?string $provider): int|null
-    {
-        if (!$this->hasProvider($provider)) {
-            return null;
-        }
+    // public function getVersionNumber(?string $provider): int|null
+    // {
+    //     if (!$this->providerService->exists($provider)) {
+    //         return null;
+    //     }
 
-        $options = $this->getProvider($provider);
-        $version = $options['version'] ?? null;
+    //     $options = $this->providerService->get($provider);
+    //     $version = $options['version'] ?? null;
 
-        return $version['number'] ?? null;
-    }
+    //     return $version['number'] ?? null;
+    // }
 
-    /**
-     * Get version prefix for a specific API provider.
-     * 
-     * @param string $providerName Name of the API provider
-     * @return string Version prefix (e.g., 'v')
-     */
-    public function getVersionPrefix(?string $provider): string|null
-    {
-        if (!$this->hasProvider($provider)) {
-            return null;
-        }
+    // /**
+    //  * Get version prefix for a specific API provider.
+    //  * 
+    //  * @param string $providerName Name of the API provider
+    //  * @return string Version prefix (e.g., 'v')
+    //  */
+    // public function getVersionPrefix(?string $provider): string|null
+    // {
+    //     if (!$this->providerService->exists($provider)) {
+    //         return null;
+    //     }
 
-        $options = $this->getProvider($provider);
-        $version = $options['version'] ?? null;
+    //     $options = $this->providerService->get($provider);
+    //     $version = $options['version'] ?? null;
 
-        return $version['prefix'] ?? null;
-    }
+    //     return $version['prefix'] ?? null;
+    // }
 
-    /**
-     * Get version location for a specific API provider.
-     * 
-     * @param string $providerName Name of the API provider
-     * @return string Version location (e.g., 'header', 'url')
-     */
-    public function getVersionLocation(?string $provider): string|null
-    {
-        if (!$this->hasProvider($provider)) {
-            return null;
-        }
+    // /**
+    //  * Get version location for a specific API provider.
+    //  * 
+    //  * @param string $providerName Name of the API provider
+    //  * @return string Version location (e.g., 'header', 'url')
+    //  */
+    // public function getVersionLocation(?string $provider): string|null
+    // {
+    //     if (!$this->providerService->exists($provider)) {
+    //         return null;
+    //     }
 
-        $options = $this->getProvider($provider);
-        $version = $options['version'] ?? null;
+    //     $options = $this->providerService->get($provider);
+    //     $version = $options['version'] ?? null;
 
-        return $version['location'] ?? null;
-    }
+    //     return $version['location'] ?? null;
+    // }
 
-    /**
-     * Get version header directive for a specific API provider.
-     * 
-     * @param string $providerName Name of the API provider
-     * @return string Version header directive (e.g., 'Accept')
-     */
-    public function getVersionHeaderDirective(?string $provider): string|null
-    {
-        if (!$this->hasProvider($provider)) {
-            return null;
-        }
+    // /**
+    //  * Get version header directive for a specific API provider.
+    //  * 
+    //  * @param string $providerName Name of the API provider
+    //  * @return string Version header directive (e.g., 'Accept')
+    //  */
+    // public function getVersionHeaderDirective(?string $provider): string|null
+    // {
+    //     if (!$this->providerService->exists($provider)) {
+    //         return null;
+    //     }
 
-        $options = $this->getProvider($provider);
-        $version = $options['version'] ?? null;
+    //     $options = $this->providerService->get($provider);
+    //     $version = $options['version'] ?? null;
 
-        return $version['directive'] ?? null;
-    }
+    //     return $version['directive'] ?? null;
+    // }
 
-    /**
-     * Get version header format for a specific API provider.
-     * 
-     * @param string $providerName Name of the API provider
-     * @return string Version header format (e.g., 'application/vnd.{vendor}.v{version}+json')
-     */
-    public function getVersionHeaderPattern(?string $provider): string|null
-    {
-        if (!$this->hasProvider($provider)) {
-            return null;
-        }
+    // /**
+    //  * Get version header format for a specific API provider.
+    //  * 
+    //  * @param string $providerName Name of the API provider
+    //  * @return string Version header format (e.g., 'application/vnd.{vendor}.v{version}+json')
+    //  */
+    // public function getVersionHeaderPattern(?string $provider): string|null
+    // {
+    //     if (!$this->providerService->exists($provider)) {
+    //         return null;
+    //     }
 
-        $options = $this->getProvider($provider);
-        $version = $options['version'] ?? null;
+    //     $options = $this->providerService->get($provider);
+    //     $version = $options['version'] ?? null;
 
-        return $version['pattern'] ?? null;
-    }
+    //     return $version['pattern'] ?? null;
+    // }
 
-    /**
-     * Check if a specific API provider is marked as beta.
-     * 
-     * @param string $providerName Name of the API provider
-     * @return bool True if the provider is beta, false otherwise
-     */
-    public function isVersionBeta(?string $provider): bool
-    {
-        if (!$this->hasProvider($provider)) {
-            return false;
-        }
+    // /**
+    //  * Check if a specific API provider is marked as beta.
+    //  * 
+    //  * @param string $providerName Name of the API provider
+    //  * @return bool True if the provider is beta, false otherwise
+    //  */
+    // public function isVersionBeta(?string $provider): bool
+    // {
+    //     if (!$this->providerService->exists($provider)) {
+    //         return false;
+    //     }
 
-        $options = $this->getProvider($provider);
-        $version = $options['version'] ?? null;
+    //     $options = $this->providerService->get($provider);
+    //     $version = $options['version'] ?? null;
 
-        return $version['beta'] ?? false;
-    }
+    //     return $version['beta'] ?? false;
+    // }
 
 
     // ──────────────────────────────
@@ -796,32 +861,32 @@ class ConfigurationService
      * @param string|null $endpoint Name of the endpoint (optional)
      * @return array Route configuration array
      */
-    public function getRoute(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): array
-    {
-        if (! $this->hasProvider($provider)) {
-            return [];
-        }
+    // public function getRoute(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): array
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return [];
+    //     }
 
-        // 1. Endpoint-specific route
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
-            if ($endpointOptions && isset($endpointOptions['route'])) {
-                return $endpointOptions['route'];
-            }
-        }
+    //     // 1. Endpoint-specific route
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+    //         if ($endpointOptions && isset($endpointOptions['route'])) {
+    //             return $endpointOptions['route'];
+    //         }
+    //     }
 
-        // 2. Collection-level route
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if ($collectionOptions && isset($collectionOptions['route'])) {
-                return $collectionOptions['route'];
-            }
-        }
+    //     // 2. Collection-level route
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['route'])) {
+    //             return $collectionOptions['route'];
+    //         }
+    //     }
 
-        // 3. Global default route
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['routes'] ?? [];
-    }
+    //     // 3. Global default route
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['routes'] ?? [];
+    // }
 
     /**
      * Get the route name pattern with optional fallback at endpoint, collection or provider level.
@@ -833,32 +898,32 @@ class ConfigurationService
      * @param string|null $endpoint Name of the endpoint (optional)
      * @return string Route name pattern
      */
-    public function getRouteNamePattern(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string
-    {
-        if (! $this->hasProvider($provider)) {
-            return '';
-        }
+    // public function getRouteNamePattern(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return '';
+    //     }
 
-        // 1. Endpoint-specific pattern
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
-            if ($endpointOptions && isset($endpointOptions['route']['pattern'])) {
-                return $endpointOptions['route']['pattern'];
-            }
-        }
+    //     // 1. Endpoint-specific pattern
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+    //         if ($endpointOptions && isset($endpointOptions['route']['pattern'])) {
+    //             return $endpointOptions['route']['pattern'];
+    //         }
+    //     }
 
-        // 2. Collection-level pattern
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if ($collectionOptions && isset($collectionOptions['route']['pattern'])) {
-                return $collectionOptions['route']['pattern'];
-            }
-        }
+    //     // 2. Collection-level pattern
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['route']['pattern'])) {
+    //             return $collectionOptions['route']['pattern'];
+    //         }
+    //     }
 
-        // 3. Global default pattern
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['routes']['pattern'] ?? '';
-    }
+    //     // 3. Global default pattern
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['routes']['pattern'] ?? '';
+    // }
 
     /**
      * Get the route prefix with optional fallback at endpoint, collection or provider level.
@@ -868,32 +933,32 @@ class ConfigurationService
      * @param string|null $endpoint Name of the endpoint (optional)
      * @return string Route prefix
      */
-    public function getRoutePrefix(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string
-    {
-        if (! $this->hasProvider($provider)) {
-            return '';
-        }
+    // public function getRoutePrefix(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return '';
+    //     }
 
-        // 1. Endpoint-specific prefix
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
-            if ($endpointOptions && isset($endpointOptions['route']['prefix'])) {
-                return $endpointOptions['route']['prefix'];
-            }
-        }
+    //     // 1. Endpoint-specific prefix
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+    //         if ($endpointOptions && isset($endpointOptions['route']['prefix'])) {
+    //             return $endpointOptions['route']['prefix'];
+    //         }
+    //     }
 
-        // 2. Collection-level prefix
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if ($collectionOptions && isset($collectionOptions['route']['prefix'])) {
-                return $collectionOptions['route']['prefix'];
-            }
-        }
+    //     // 2. Collection-level prefix
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['route']['prefix'])) {
+    //             return $collectionOptions['route']['prefix'];
+    //         }
+    //     }
 
-        // 3. Global default prefix
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['routes']['prefix'] ?? '';
-    }
+    //     // 3. Global default prefix
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['routes']['prefix'] ?? '';
+    // }
 
     /**
      * Get the route hosts with optional fallback at endpoint, collection or provider level.
@@ -905,32 +970,32 @@ class ConfigurationService
      * @param string|null $endpoint Name of the endpoint (optional)
      * @return array Route hosts
      */
-    public function getRouteHosts(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): array
-    {
-        if (! $this->hasProvider($provider)) {
-            return [];
-        }
+    // public function getRouteHosts(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): array
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return [];
+    //     }
 
-        // 1. Endpoint-specific hosts
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
-            if ($endpointOptions && isset($endpointOptions['route']['hosts'])) {
-                return $endpointOptions['route']['hosts'];
-            }
-        }
+    //     // 1. Endpoint-specific hosts
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+    //         if ($endpointOptions && isset($endpointOptions['route']['hosts'])) {
+    //             return $endpointOptions['route']['hosts'];
+    //         }
+    //     }
 
-        // 2. Collection-level hosts
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if ($collectionOptions && isset($collectionOptions['route']['hosts'])) {
-                return $collectionOptions['route']['hosts'];
-            }
-        }
+    //     // 2. Collection-level hosts
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['route']['hosts'])) {
+    //             return $collectionOptions['route']['hosts'];
+    //         }
+    //     }
 
-        // 3. Global default hosts
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['routes']['hosts'] ?? [];
-    }
+    //     // 3. Global default hosts
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['routes']['hosts'] ?? [];
+    // }
 
     /**
      * Get the route schemes with optional fallback at endpoint, collection or provider level.
@@ -942,32 +1007,32 @@ class ConfigurationService
      * @param string|null $endpoint Name of the endpoint (optional)
      * @return array Route schemes
      */
-    public function getRouteSchemes(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): array
-    {
-        if (! $this->hasProvider($provider)) {
-            return [];
-        }
+    // public function getRouteSchemes(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): array
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return [];
+    //     }
 
-        // 1. Endpoint-specific schemes
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
-            if ($endpointOptions && isset($endpointOptions['route']['schemes'])) {
-                return $endpointOptions['route']['schemes'];
-            }
-        }
+    //     // 1. Endpoint-specific schemes
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+    //         if ($endpointOptions && isset($endpointOptions['route']['schemes'])) {
+    //             return $endpointOptions['route']['schemes'];
+    //         }
+    //     }
 
-        // 2. Collection-level schemes
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if ($collectionOptions && isset($collectionOptions['route']['schemes'])) {
-                return $collectionOptions['route']['schemes'];
-            }
-        }
+    //     // 2. Collection-level schemes
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['route']['schemes'])) {
+    //             return $collectionOptions['route']['schemes'];
+    //         }
+    //     }
 
-        // 3. Global default schemes
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['routes']['schemes'] ?? [];
-    }
+    //     // 3. Global default schemes
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['routes']['schemes'] ?? [];
+    // }
 
     /**
      * Get the route name of a specific endpoint.
@@ -979,10 +1044,10 @@ class ConfigurationService
      * @param string $endpoint Name of the endpoint
      * @return string|null Route name or null if not found
      */
-    public function getRouteName(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): string|null
-    {
-        return $this->getRoute($provider, $segment, $collection, $endpoint)['name'] ?? null;
-    }
+    // public function getRouteName(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): string|null
+    // {
+    //     return $this->getRoute($provider, $segment, $collection, $endpoint)['name'] ?? null;
+    // }
 
     /**
      * Get the route path of a specific endpoint.
@@ -994,10 +1059,10 @@ class ConfigurationService
      * @param string $endpoint Name of the endpoint
      * @return string|null Route path or null if not found
      */
-    public function getRoutePath(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): string|null
-    {
-        return $this->getRoute($provider, $segment, $collection, $endpoint)['path'] ?? null;
-    }
+    // public function getRoutePath(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): string|null
+    // {
+    //     return $this->getRoute($provider, $segment, $collection, $endpoint)['path'] ?? null;
+    // }
 
     /**
      * Get the route methods of a specific endpoint.
@@ -1009,10 +1074,10 @@ class ConfigurationService
      * @param string $endpoint Name of the endpoint
      * @return array List of HTTP methods (GET, POST, etc.) or an empty array if not found
      */
-    public function getRouteMethods(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): array
-    {
-        return $this->getRoute($provider, $segment, $collection, $endpoint)['methods'] ?? [];
-    }
+    // public function getRouteMethods(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): array
+    // {
+    //     return $this->getRoute($provider, $segment, $collection, $endpoint)['methods'] ?? [];
+    // }
 
     /**
      * Get the route controller of a specific endpoint.
@@ -1024,10 +1089,10 @@ class ConfigurationService
      * @param string $endpoint Name of the endpoint
      * @return string Route controller or an empty string if not found
      */
-    public function getRouteController(?string $provider,  ?string $segment, ?string $collection, ?string $endpoint): string
-    {
-        return $this->getRoute($provider, $segment, $collection, $endpoint)['controller'] ?? '';
-    }
+    // public function getRouteController(?string $provider,  ?string $segment, ?string $collection, ?string $endpoint): string
+    // {
+    //     return $this->getRoute($provider, $segment, $collection, $endpoint)['controller'] ?? '';
+    // }
 
     /**
      * Get the route options of a specific endpoint.
@@ -1039,10 +1104,10 @@ class ConfigurationService
      * @param string $endpoint Name of the endpoint
      * @return array Route options or an empty array if not found
      */
-    public function getRouteOptions(?string $provider,  ?string $segment, ?string $collection, ?string $endpoint): array
-    {
-        return $this->getRoute($provider, $segment, $collection, $endpoint)['options'] ?? [];
-    }
+    // public function getRouteOptions(?string $provider,  ?string $segment, ?string $collection, ?string $endpoint): array
+    // {
+    //     return $this->getRoute($provider, $segment, $collection, $endpoint)['options'] ?? [];
+    // }
 
     /**
      * Get the route requirements of a specific endpoint.
@@ -1054,10 +1119,10 @@ class ConfigurationService
      * @param string $endpoint Name of the endpoint
      * @return array Route requirements or an empty array if not found
      */
-    public function getRouteRequirements(?string $provider,  ?string $segment, ?string $collection, ?string $endpoint): array
-    {
-        return $this->getRoute($provider, $segment, $collection, $endpoint)['requirements'] ?? [];
-    }
+    // public function getRouteRequirements(?string $provider,  ?string $segment, ?string $collection, ?string $endpoint): array
+    // {
+    //     return $this->getRoute($provider, $segment, $collection, $endpoint)['requirements'] ?? [];
+    // }
 
     /**
      * Get the route condition of a specific endpoint.
@@ -1069,10 +1134,10 @@ class ConfigurationService
      * @param string $endpoint Name of the endpoint
      * @return string Route condition or an empty string if not found
      */
-    public function getRouteCondition(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): string
-    {
-        return $this->getRoute($provider, $segment, $collection, $endpoint)['condition'] ?? '';
-    }
+    // public function getRouteCondition(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): string
+    // {
+    //     return $this->getRoute($provider, $segment, $collection, $endpoint)['condition'] ?? '';
+    // }
 
 
     // ──────────────────────────────
@@ -1081,206 +1146,221 @@ class ConfigurationService
 
     /**
      * Get the pagination configuration with optional fallback at endpoint, collection or provider level.
+     * e.g.: $this->configuration->getPagination('my_custom_api_v1', 'collections', 'App\Entity\Book', 'index');
      * 
      * @param string $provider Name of the API provider
      * @param string|null $collection Name of the collection (optional)
      * @param string|null $endpoint Name of the endpoint (optional)
      * @return array Pagination configuration array
      */
-    public function getPagination(?string $provider, ?string $collection = null, ?string $endpoint = null): array
-    {
-        if (! $this->hasProvider($provider)) {
-            return [];
-        }
+    // public function getPagination(?string $provider, ?string $collection = null, ?string $endpoint = null): array
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return [];
+    //     }
 
-        // 1. Endpoint-specific route
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, ContextService::SEGMENT_COLLECTION, $collection, $endpoint);
-            if ($endpointOptions && isset($endpointOptions['pagination'])) {
-                return $endpointOptions['pagination'];
-            }
-        }
+    //     // 1. Endpoint-specific route
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, ContextService::SEGMENT_COLLECTION, $collection, $endpoint);
+    //         if ($endpointOptions && isset($endpointOptions['pagination'])) {
+    //             return $endpointOptions['pagination'];
+    //         }
+    //     }
 
-        // 2. Collection-level route
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, ContextService::SEGMENT_COLLECTION, $collection);
-            if ($collectionOptions && isset($collectionOptions['pagination'])) {
-                return $collectionOptions['pagination'];
-            }
-        }
+    //     // 2. Collection-level route
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, ContextService::SEGMENT_COLLECTION, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['pagination'])) {
+    //             return $collectionOptions['pagination'];
+    //         }
+    //     }
 
-        // 3. Global default route
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['pagination'] ?? [];
-    }
+    //     // 3. Global default route
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['pagination'] ?? [];
+    // }
 
     /**
      * Check if pagination is enabled with optional fallback at endpoint, collection or provider level.
      * 
-     * @param string $provider Name of the API provider
+     * @param string|null $provider Name of the API provider
      * @param string|null $collection Name of the collection (optional)
      * @param string|null $endpoint Name of the endpoint (optional)
      * @return bool True if pagination is enabled, false otherwise
      */
-    public function isPaginationEnabled(?string $provider, ?string $collection = null, ?string $endpoint = null): bool
-    {
-        if (! $this->hasProvider($provider)) {
-            return true;
-        }
+    // public function isPaginationEnabled(?string $provider = null, ?string $collection = null, ?string $endpoint = null): bool
+    // {
+    //     $fallbackValue = true;
 
-        return $this->getPaginationFlag($this->getEndpoint($provider, ContextService::SEGMENT_COLLECTION, $collection, $endpoint) ?? [])
-            ?? $this->getPaginationFlag($this->getCollection($provider, ContextService::SEGMENT_COLLECTION, $collection) ?? [])
-            ?? $this->getPaginationFlag($this->getProvider($provider) ?? [])
-            ?? true;
-    }
+    //     if (!$this->providerService->exists($provider)) {
+    //         return $this->configuration['pagination']['enabled'] ?? $fallbackValue;
+    //     }
+
+    //     // 1. Endpoint-specific pagination enabled flag
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, ContextService::SEGMENT_COLLECTION, $collection, $endpoint);
+    //         if ($endpointOptions && isset($endpointOptions['pagination']['enabled'])) {
+    //             return $endpointOptions['pagination']['enabled'];
+    //         }
+    //     }
+
+    //     // 2. Collection-level pagination enabled flag
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, ContextService::SEGMENT_COLLECTION, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['pagination']['enabled'])) {
+    //             return $collectionOptions['pagination']['enabled'];
+    //         }
+    //     }
+
+    //     // 3. Global default pagination enabled flag
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['pagination']['enabled'] ?? $fallbackValue;
+    // }
 
     /**
-     * Get the number of items per page for pagination with optional fallback at endpoint, collection or provider level.
+     * Get the pagination limit with optional fallback at endpoint, collection or provider level.
      * 
-     * @param string $provider Name of the API provider
+     * @param string|null $provider Name of the API provider
      * @param string|null $collection Name of the collection (optional)
      * @param string|null $endpoint Name of the endpoint (optional)
-     * @return int Number of items per page
+     * @return int Pagination limit
      */
-    public function getPaginationLimit(?string $provider, ?string $collection = null, ?string $endpoint = null): int
-    {
-        if (! $this->hasProvider($provider)) {
-            return 10;
-        }
+    // public function getPaginationLimit(?string $provider = null, ?string $collection = null, ?string $endpoint = null): int
+    // {
+    //     $fallbackValue = 10;
 
-        // 1. Endpoint-specific pagination limit
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, ContextService::SEGMENT_COLLECTION, $collection, $endpoint);
-            if ($endpointOptions && isset($endpointOptions['pagination']['limit'])) {
-                return $endpointOptions['pagination']['limit'];
-            }
-        }
+    //     if (! $this->providerService->exists($provider)) {
+    //         return $this->configuration['pagination']['default_limit'] ?? $fallbackValue;
+    //     }
 
-        // 2. Collection-level pagination limit
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, ContextService::SEGMENT_COLLECTION, $collection);
-            if ($collectionOptions && isset($collectionOptions['pagination']['limit'])) {
-                return $collectionOptions['pagination']['limit'];
-            }
-        }
+    //     // 1. Endpoint-specific pagination limit
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, ContextService::SEGMENT_COLLECTION, $collection, $endpoint);
+    //         if ($endpointOptions && isset($endpointOptions['pagination']['limit'])) {
+    //             return $endpointOptions['pagination']['limit'];
+    //         }
+    //     }
 
-        // 3. Global default pagination limit
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['pagination']['limit'] ?? 10;
-    }
+    //     // 2. Collection-level pagination limit
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, ContextService::SEGMENT_COLLECTION, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['pagination']['limit'])) {
+    //             return $collectionOptions['pagination']['limit'];
+    //         }
+    //     }
+
+    //     // 3. Global default pagination limit
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['pagination']['limit'] ?? $fallbackValue;
+    // }
 
     /**
-     * Get the maximum allowed limit for pagination with optional fallback at endpoint, collection or provider level.
+     * Get the maximum pagination limit with optional fallback at endpoint, collection or provider level.
      * 
-     * @param string $provider Name of the API provider
+     * @param string|null $provider Name of the API provider
      * @param string|null $collection Name of the collection (optional)
      * @param string|null $endpoint Name of the endpoint (optional)
-     * @return int Maximum allowed limit for pagination
+     * @return int Maximum pagination limit
      */
-    public function getPaginationMaxLimit(?string $provider, ?string $collection = null, ?string $endpoint = null): int
-    {
-        if (! $this->hasProvider($provider)) {
-            return 100;
-        }
+    // public function getPaginationMaxLimit(?string $provider = null, ?string $collection = null, ?string $endpoint = null): int
+    // {
+    //     $fallbackValue = 100;
 
-        // 1. Endpoint-specific pagination max limit
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, ContextService::SEGMENT_COLLECTION, $collection, $endpoint);
-            if ($endpointOptions && isset($endpointOptions['pagination']['max_limit'])) {
-                return $endpointOptions['pagination']['max_limit'];
-            }
-        }
+    //     if (! $this->providerService->exists($provider)) {
+    //         return $this->configuration['pagination']['max_limit'] ?? $fallbackValue;
+    //     }
 
-        // 2. Collection-level pagination max limit
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, ContextService::SEGMENT_COLLECTION, $collection);
-            if ($collectionOptions && isset($collectionOptions['pagination']['max_limit'])) {
-                return $collectionOptions['pagination']['max_limit'];
-            }
-        }
+    //     // 1. Endpoint-specific pagination max limit
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, ContextService::SEGMENT_COLLECTION, $collection, $endpoint);
+    //         if ($endpointOptions && isset($endpointOptions['pagination']['max_limit'])) {
+    //             return $endpointOptions['pagination']['max_limit'];
+    //         }
+    //     }
 
-        // 3. Global default pagination max limit
-        return $this->getProvider($provider)['pagination']['max_limit'] ?? 100;
-    }
+    //     // 2. Collection-level pagination max limit
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, ContextService::SEGMENT_COLLECTION, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['pagination']['max_limit'])) {
+    //             return $collectionOptions['pagination']['max_limit'];
+    //         }
+    //     }
+
+    //     // 3. Global default pagination max limit
+    //     return $this->providerService->get($provider)['pagination']['max_limit'] ?? $fallbackValue;
+    // }
 
     /**
-     * Check if overriding the pagination limit via request parameters is allowed,
-     * with optional fallback at endpoint, collection or provider level.
-     * e.g., ?limit=50
+     * Check if pagination limit override is allowed with optional fallback at endpoint, collection or provider level.
      * 
-     * @param string $provider Name of the API provider
+     * @param string|null $provider Name of the API provider
      * @param string|null $collection Name of the collection (optional)
      * @param string|null $endpoint Name of the endpoint (optional)
-     * @return bool True if overriding is allowed, false otherwise
+     * @return bool True if pagination limit override is allowed, false otherwise
      */
-    public function isPaginationLimitOverrideAllowed(?string $provider, ?string $collection = null, ?string $endpoint = null): bool
-    {
-        if (! $this->hasProvider($provider)) {
-            return true;
-        }
+    // public function isPaginationLimitOverrideAllowed(?string $provider = null, ?string $collection = null, ?string $endpoint = null): bool
+    // {
+    //     $fallbackValue = true;
 
-        // 1. Endpoint-specific pagination allow_limit_override
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, ContextService::SEGMENT_COLLECTION, $collection, $endpoint);
-            if ($endpointOptions && isset($endpointOptions['pagination']['allow_limit_override'])) {
-                return $endpointOptions['pagination']['allow_limit_override'];
-            }
-        }
+    //     if (! $this->providerService->exists($provider)) {
+    //         return $this->configuration['pagination']['allow_limit_override'] ?? $fallbackValue;
+    //     }
 
-        // 2. Collection-level pagination allow_limit_override
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, ContextService::SEGMENT_COLLECTION, $collection);
-            if ($collectionOptions && isset($collectionOptions['pagination']['allow_limit_override'])) {
-                return $collectionOptions['pagination']['allow_limit_override'];
-            }
-        }
+    //     // 1. Endpoint-specific pagination allow_limit_override
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, ContextService::SEGMENT_COLLECTION, $collection, $endpoint);
+    //         if ($endpointOptions && isset($endpointOptions['pagination']['allow_limit_override'])) {
+    //             return $endpointOptions['pagination']['allow_limit_override'];
+    //         }
+    //     }
 
-        // 3. Global default pagination allow_limit_override
-        return $this->getProvider($provider)['pagination']['allow_limit_override'] ?? true;
-    }
+    //     // 2. Collection-level pagination allow_limit_override
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, ContextService::SEGMENT_COLLECTION, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['pagination']['allow_limit_override'])) {
+    //             return $collectionOptions['pagination']['allow_limit_override'];
+    //         }
+    //     }
+
+    //     // 3. Global default pagination allow_limit_override
+    //     return $this->providerService->get($provider)['pagination']['allow_limit_override'] ?? $fallbackValue;
+    // }
 
     /**
-     * Get the query parameter name for the page number in pagination.
+     * Get the query parameter name for the page in pagination.
      * 
-     * @param string $provider Name of the API provider
-     * @return string Query parameter name for page number
+     * @param string|null $provider Name of the API provider
+     * @return string Query parameter name for page
      */
-    public function getParameterPage(?string $provider): string
-    {
-        if (! $this->hasProvider($provider)) {
-            return 'page';
-        }
+    // public function getParameterPage(?string $provider = null): string
+    // {
+    //     $fallbackValue = 'page';
 
-        $options = $this->getPagination($provider);
-        return $options['parameters']['page'] ?? 'page';
-    }
+    //     if (! $this->providerService->exists($provider)) {
+    //         return $this->configuration['pagination']['parameters']['page'] ?? $fallbackValue;
+    //     }
 
-    /**
-     * Get the query parameter name for the limit in pagination.
-     * 
-     * @param string $provider Name of the API provider
-     * @return string Query parameter name for limit
-     */
-    public function getParameterLimit(?string $provider): string
-    {
-        if (! $this->hasProvider($provider)) {
-            return 'limit';
-        }
+    //     $options = $this->getPagination($provider);
+    //     return $options['parameters']['page'] ?? $fallbackValue;
+    // }
 
-        $options = $this->getPagination($provider);
-        return $options['parameters']['limit'] ?? 'limit';
-    }
+    // /**
+    //  * Get the query parameter name for the limit in pagination.
+    //  * 
+    //  * @param string|null $provider Name of the API provider
+    //  * @return string Query parameter name for limit
+    //  */
+    // public function getParameterLimit(?string $provider = null): string
+    // {
+    //     $fallbackValue = 'limit';
 
-    /**
-     * Helper method to extract the pagination enabled flag from a configuration array.
-     * 
-     * @param array $config Configuration array
-     * @return bool|null Pagination enabled flag or null if not set
-     */
-    private function getPaginationFlag(array $config): ?bool
-    {
-        return $config['pagination']['enabled'] ?? null;
-    }
+    //     if (! $this->providerService->exists($provider)) {
+    //         return $this->configuration['pagination']['parameters']['limit'] ?? $fallbackValue;
+    //     }
+
+    //     $options = $this->getPagination($provider);
+    //     return $options['parameters']['limit'] ?? $fallbackValue;
+    // }
 
 
     // ──────────────────────────────
@@ -1296,100 +1376,108 @@ class ConfigurationService
      * @param string|null $collection Name of the collection (optional)
      * @return array URL support configuration array
      */
-    public function getUrlSupport(?string $provider, ?string $segment, ?string $collection = null): array
-    {
-        if (! $this->hasProvider($provider)) {
-            return [];
-        }
+    // public function getUrlSupport(?string $provider, ?string $segment, ?string $collection = null): array
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return [];
+    //     }
 
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if ($collectionOptions && isset($collectionOptions['url'])) {
-                return $collectionOptions['url'];
-            }
-        }
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['url'])) {
+    //             return $collectionOptions['url'];
+    //         }
+    //     }
 
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['url'] ?? [];
-    }
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['url'] ?? [];
+    // }
 
-    /**
-     * Check if URL support is enabled with optional fallback at collection or provider level.
-     * e.g.: $this->configuration->hasUrlSupport('my_custom_api_v1', 'collections', 'App\Entity\Book');
-     * 
-     * @param string $provider Name of the API provider
-     * @param string|null $segment Name of the segment (optional)
-     * @param string|null $collection Name of the collection (optional)
-     * @return bool True if URL support is enabled, false otherwise
-     */
-    public function hasUrlSupport(?string $provider, ?string $segment, ?string $collection = null): bool
-    {
-        if (! $this->hasProvider($provider)) {
-            return false;
-        }
+    // /**
+    //  * Check if URL support is enabled with optional fallback at collection or provider level.
+    //  * e.g.: $this->configuration->hasUrlSupport('my_custom_api_v1', 'collections', 'App\Entity\Book');
+    //  * 
+    //  * @param string $provider Name of the API provider
+    //  * @param string|null $segment Name of the segment (optional)
+    //  * @param string|null $collection Name of the collection (optional)
+    //  * @return bool True if URL support is enabled, false otherwise
+    //  */
+    // public function hasUrlSupport(?string $provider = null, ?string $segment = null, ?string $collection = null): bool
+    // {
+    //     // dump($provider, $segment);
 
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if ($collectionOptions && isset($collectionOptions['url']['support'])) {
-                return true;
-            }
-        }
+    //     if ($provider === null && $segment === null && !$this->providerService->exists($provider)) {
+    //         return $this->configuration['url_support']['enabled'] ?? false;
+    //     }
 
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['url']['support'] ?? false;
-    }
+
+
+    //     // if (!$this->providerService->exists($provider)) {
+    //     //     return $this->configuration['url']['support_url'] ?? false;
+    //     // }
+
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['url_support']['support'])) {
+    //             return true;
+    //         }
+    //     }
+
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['url_support']['support'] ?? false;
+    // }
     
-    /**
-     * Check if URLs are absolute with optional fallback at collection or provider level.
-     * e.g.: $this->configuration->isUrlAbsolute('my_custom_api_v1', 'collections', 'App\Entity\Book');
-     * 
-     * @param string $provider Name of the API provider
-     * @param string|null $segment Name of the segment (optional)
-     * @param string|null $collection Name of the collection (optional)
-     * @return bool True if URLs are absolute, false otherwise
-     */
-    public function isUrlAbsolute(?string $provider, ?string $segment, ?string $collection = null): bool
-    {
-        if (! $this->hasProvider($provider)) {
-            return false;
-        }
+    // /**
+    //  * Check if URLs are absolute with optional fallback at collection or provider level.
+    //  * e.g.: $this->configuration->isUrlAbsolute('my_custom_api_v1', 'collections', 'App\Entity\Book');
+    //  * 
+    //  * @param string $provider Name of the API provider
+    //  * @param string|null $segment Name of the segment (optional)
+    //  * @param string|null $collection Name of the collection (optional)
+    //  * @return bool True if URLs are absolute, false otherwise
+    //  */
+    // public function isUrlAbsolute(?string $provider = null, ?string $segment = null, ?string $collection = null): bool
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return false;
+    //     }
 
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if ($collectionOptions && isset($collectionOptions['url']['absolute'])) {
-                return $collectionOptions['url']['absolute'];
-            }
-        }
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['url']['absolute'])) {
+    //             return $collectionOptions['url']['absolute'];
+    //         }
+    //     }
 
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['url']['absolute'] ?? false;
-    }
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['url']['absolute'] ?? false;
+    // }
 
-    /**
-     * Get the URL property name with optional fallback at collection or provider level.
-     * e.g.: $this->configuration->getUrlProperty('my_custom_api_v1', 'collections', 'App\Entity\Book');
-     * 
-     * @param string $provider Name of the API provider
-     * @param string|null $segment Name of the segment (optional)
-     * @param string|null $collection Name of the collection (optional)
-     * @return string URL property name
-     */
-    public function getUrlProperty(?string $provider, ?string $segment, ?string $collection = null): string
-    {
-        if (! $this->hasProvider($provider)) {
-            return '';
-        }
+    // /**
+    //  * Get the URL property name with optional fallback at collection or provider level.
+    //  * e.g.: $this->configuration->getUrlProperty('my_custom_api_v1', 'collections', 'App\Entity\Book');
+    //  * 
+    //  * @param string $provider Name of the API provider
+    //  * @param string|null $segment Name of the segment (optional)
+    //  * @param string|null $collection Name of the collection (optional)
+    //  * @return string URL property name
+    //  */
+    // public function getUrlProperty(?string $provider = null, ?string $segment = null, ?string $collection = null): string
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return '';
+    //     }
 
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if ($collectionOptions && isset($collectionOptions['url']['property'])) {
-                return $collectionOptions['url']['property'];
-            }
-        }
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['url']['property'])) {
+    //             return $collectionOptions['url']['property'];
+    //         }
+    //     }
 
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['url']['property'] ?? '';
-    }
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['url']['property'] ?? '';
+    // }
 
 
     // ──────────────────────────────
@@ -1406,32 +1494,32 @@ class ConfigurationService
      * @param string|null $endpoint Name of the endpoint (optional)
      * @return array Rate limit configuration array
      */
-    public function getRateLimit(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): array
-    {
-        if (! $this->hasProvider($provider)) {
-            return [];
-        }
+    // public function getRateLimit(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): array
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return [];
+    //     }
 
-        // 1. Endpoint-specific rate limit
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
-            if ($endpointOptions && isset($endpointOptions['rate_limit'])) {
-                return $endpointOptions['rate_limit'];
-            }
-        }
+    //     // 1. Endpoint-specific rate limit
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+    //         if ($endpointOptions && isset($endpointOptions['rate_limit'])) {
+    //             return $endpointOptions['rate_limit'];
+    //         }
+    //     }
 
-        // 2. Collection-level rate limit
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if ($collectionOptions && isset($collectionOptions['rate_limit'])) {
-                return $collectionOptions['rate_limit'];
-            }
-        }
+    //     // 2. Collection-level rate limit
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['rate_limit'])) {
+    //             return $collectionOptions['rate_limit'];
+    //         }
+    //     }
 
-        // 3. Global default rate limit
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['rate_limit'] ?? [];
-    }
+    //     // 3. Global default rate limit
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['rate_limit'] ?? [];
+    // }
 
     /**
      * Check if rate limiting is enabled with optional fallback at endpoint, collection or provider level.
@@ -1443,32 +1531,32 @@ class ConfigurationService
      * @param string|null $endpoint Name of the endpoint (optional)
      * @return bool True if rate limiting is enabled, false otherwise
      */
-    public function isRateLimitEnabled(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): bool
-    {
-        if (! $this->hasProvider($provider)) {
-            return false;
-        }
+    // public function isRateLimitEnabled(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): bool
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return false;
+    //     }
 
-        // 1. Endpoint-specific rate limit enable
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
-            if ($endpointOptions && isset($endpointOptions['rate_limit']['enabled'])) {
-                return $endpointOptions['rate_limit']['enabled'];
-            }
-        }
+    //     // 1. Endpoint-specific rate limit enable
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+    //         if ($endpointOptions && isset($endpointOptions['rate_limit']['enabled'])) {
+    //             return $endpointOptions['rate_limit']['enabled'];
+    //         }
+    //     }
 
-        // 2. Collection-level rate limit enable
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if ($collectionOptions && isset($collectionOptions['rate_limit']['enabled'])) {
-                return $collectionOptions['rate_limit']['enabled'];
-            }
-        }
+    //     // 2. Collection-level rate limit enable
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['rate_limit']['enabled'])) {
+    //             return $collectionOptions['rate_limit']['enabled'];
+    //         }
+    //     }
 
-        // 3. Global default rate limit enable
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['rate_limit']['enabled'] ?? false;
-    }
+    //     // 3. Global default rate limit enable
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['rate_limit']['enabled'] ?? false;
+    // }
 
     /**
      * Get the rate limit value with optional fallback at endpoint, collection or provider level.
@@ -1480,180 +1568,180 @@ class ConfigurationService
      * @param string|null $endpoint Name of the endpoint (optional)
      * @return string Rate limit value (e.g., '100/hour')
      */
-    public function getRateLimitValue(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string
-    {
-        if (! $this->hasProvider($provider)) {
-            return '100/hour';
-        }
+    // public function getRateLimitValue(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return '100/hour';
+    //     }
 
-        // 1. Endpoint-specific rate limit
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
-            if ($endpointOptions && isset($endpointOptions['rate_limit']['limit'])) {
-                return $endpointOptions['rate_limit']['limit'];
-            }
-        }
+    //     // 1. Endpoint-specific rate limit
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+    //         if ($endpointOptions && isset($endpointOptions['rate_limit']['limit'])) {
+    //             return $endpointOptions['rate_limit']['limit'];
+    //         }
+    //     }
 
-        // 2. Collection-level rate limit
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if ($collectionOptions && isset($collectionOptions['rate_limit']['limit'])) {
-                return $collectionOptions['rate_limit']['limit'];
-            }
-        }
+    //     // 2. Collection-level rate limit
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['rate_limit']['limit'])) {
+    //             return $collectionOptions['rate_limit']['limit'];
+    //         }
+    //     }
 
-        // 3. Global default rate limit
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['rate_limit']['limit'] ?? '100/hour';
-    }
+    //     // 3. Global default rate limit
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['rate_limit']['limit'] ?? '100/hour';
+    // }
 
-    /**
-     * Get the rate limit configuration by role with optional fallback at endpoint, collection or provider level.
-     * e.g.: $this->configuration->getRateLimitByRole('my_custom_api_v1', 'collections', 'App\Entity\Book', 'index');
-     * 
-     * @param string $provider Name of the API provider
-     * @param string|null $segment Name of the segment (optional)
-     * @param string|null $collection Name of the collection (optional)
-     * @param string|null $endpoint Name of the endpoint (optional)
-     * @return array Rate limit configuration by role
-     */
-    public function getRateLimitByRole(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): array
-    {
-        if (! $this->hasProvider($provider)) {
-            return [];
-        }
+    // /**
+    //  * Get the rate limit configuration by role with optional fallback at endpoint, collection or provider level.
+    //  * e.g.: $this->configuration->getRateLimitByRole('my_custom_api_v1', 'collections', 'App\Entity\Book', 'index');
+    //  * 
+    //  * @param string $provider Name of the API provider
+    //  * @param string|null $segment Name of the segment (optional)
+    //  * @param string|null $collection Name of the collection (optional)
+    //  * @param string|null $endpoint Name of the endpoint (optional)
+    //  * @return array Rate limit configuration by role
+    //  */
+    // public function getRateLimitByRole(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): array
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return [];
+    //     }
 
-        // 1. Endpoint-specific rate limit by_role
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
-            if ($endpointOptions && isset($endpointOptions['rate_limit']['by_role'])) {
-                return $endpointOptions['rate_limit']['by_role'];
-            }
-        }
+    //     // 1. Endpoint-specific rate limit by_role
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+    //         if ($endpointOptions && isset($endpointOptions['rate_limit']['by_role'])) {
+    //             return $endpointOptions['rate_limit']['by_role'];
+    //         }
+    //     }
 
-        // 2. Collection-level rate limit by_role
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if ($collectionOptions && isset($collectionOptions['rate_limit']['by_role'])) {
-                return $collectionOptions['rate_limit']['by_role'];
-            }
-        }
+    //     // 2. Collection-level rate limit by_role
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['rate_limit']['by_role'])) {
+    //             return $collectionOptions['rate_limit']['by_role'];
+    //         }
+    //     }
 
-        // 3. Global default rate limit by_role
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['rate_limit']['by_role'] ?? [];
-    }
+    //     // 3. Global default rate limit by_role
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['rate_limit']['by_role'] ?? [];
+    // }
 
-    /**
-     * Get the rate limit configuration by role with optional fallback at endpoint, collection or provider level.
-     * e.g.: $this->getRateLimitByUser('my_custom_api_v1', 'collections', 'App\Entity\Book', 'index');
-     * 
-     * @param string $provider Name of the API provider
-     * @param string|null $segment Name of the segment (optional)
-     * @param string|null $collection Name of the collection (optional)
-     * @param string|null $endpoint Name of the endpoint (optional)
-     * @return array Rate limit configuration by role
-     */
-    public function getRateLimitByUser(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): array
-    {
-        if (! $this->hasProvider($provider)) {
-            return [];
-        }
+    // /**
+    //  * Get the rate limit configuration by role with optional fallback at endpoint, collection or provider level.
+    //  * e.g.: $this->getRateLimitByUser('my_custom_api_v1', 'collections', 'App\Entity\Book', 'index');
+    //  * 
+    //  * @param string $provider Name of the API provider
+    //  * @param string|null $segment Name of the segment (optional)
+    //  * @param string|null $collection Name of the collection (optional)
+    //  * @param string|null $endpoint Name of the endpoint (optional)
+    //  * @return array Rate limit configuration by role
+    //  */
+    // public function getRateLimitByUser(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): array
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return [];
+    //     }
 
-        // 1. Endpoint-specific rate limit by_user
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
-            if ($endpointOptions && isset($endpointOptions['rate_limit']['by_user'])) {
-                return $endpointOptions['rate_limit']['by_user'];
-            }
-        }
+    //     // 1. Endpoint-specific rate limit by_user
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+    //         if ($endpointOptions && isset($endpointOptions['rate_limit']['by_user'])) {
+    //             return $endpointOptions['rate_limit']['by_user'];
+    //         }
+    //     }
 
-        // 2. Collection-level rate limit by_user
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if ($collectionOptions && isset($collectionOptions['rate_limit']['by_user'])) {
-                return $collectionOptions['rate_limit']['by_user'];
-            }
-        }
+    //     // 2. Collection-level rate limit by_user
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['rate_limit']['by_user'])) {
+    //             return $collectionOptions['rate_limit']['by_user'];
+    //         }
+    //     }
 
-        // 3. Global default rate limit by_user
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['rate_limit']['by_user'] ?? [];
-    }
+    //     // 3. Global default rate limit by_user
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['rate_limit']['by_user'] ?? [];
+    // }
 
-    /**
-     * Get the rate limit configuration by user with optional fallback at endpoint, collection or provider level.
-     * e.g.: $this->getDeleteTemplate('my_custom_api_v1', 'collections', 'App\Entity\Book', 'delete');
-     * 
-     * @param string $provider Name of the API provider
-     * @param string|null $segment Name of the segment (optional)
-     * @param string|null $collection Name of the collection (optional)
-     * @param string|null $endpoint Name of the endpoint (optional)
-     * @return array Rate limit configuration by user
-     */
-    public function getRateLimitByIp(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): array
-    {
-        if (! $this->hasProvider($provider)) {
-            return [];
-        }
+    // /**
+    //  * Get the rate limit configuration by user with optional fallback at endpoint, collection or provider level.
+    //  * e.g.: $this->getDeleteTemplate('my_custom_api_v1', 'collections', 'App\Entity\Book', 'delete');
+    //  * 
+    //  * @param string $provider Name of the API provider
+    //  * @param string|null $segment Name of the segment (optional)
+    //  * @param string|null $collection Name of the collection (optional)
+    //  * @param string|null $endpoint Name of the endpoint (optional)
+    //  * @return array Rate limit configuration by user
+    //  */
+    // public function getRateLimitByIp(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): array
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return [];
+    //     }
 
-        // 1. Endpoint-specific rate limit by_ip
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
-            if ($endpointOptions && isset($endpointOptions['rate_limit']['by_ip'])) {
-                return $endpointOptions['rate_limit']['by_ip'];
-            }
-        }
+    //     // 1. Endpoint-specific rate limit by_ip
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+    //         if ($endpointOptions && isset($endpointOptions['rate_limit']['by_ip'])) {
+    //             return $endpointOptions['rate_limit']['by_ip'];
+    //         }
+    //     }
 
-        // 2. Collection-level rate limit by_ip
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if ($collectionOptions && isset($collectionOptions['rate_limit']['by_ip'])) {
-                return $collectionOptions['rate_limit']['by_ip'];
-            }
-        }
+    //     // 2. Collection-level rate limit by_ip
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['rate_limit']['by_ip'])) {
+    //             return $collectionOptions['rate_limit']['by_ip'];
+    //         }
+    //     }
 
-        // 3. Global default rate limit by_ip
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['rate_limit']['by_ip'] ?? [];
-    }
+    //     // 3. Global default rate limit by_ip
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['rate_limit']['by_ip'] ?? [];
+    // }
 
-    /**
-     * Get the rate limit configuration by application with optional fallback at endpoint, collection or provider level.
-     * e.g.: $this->getRateLimitByApplication('my_custom_api_v1', 'collections', 'App\Entity\Book', 'index');
-     * 
-     * @param string $provider Name of the API provider
-     * @param string|null $segment Name of the segment (optional)
-     * @param string|null $collection Name of the collection (optional)
-     * @param string|null $endpoint Name of the endpoint (optional)
-     * @return array Rate limit configuration by application
-     */
-    public function getRateLimitByApplication(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): array
-    {
-        if (! $this->hasProvider($provider)) {
-            return [];
-        }
+    // /**
+    //  * Get the rate limit configuration by application with optional fallback at endpoint, collection or provider level.
+    //  * e.g.: $this->getRateLimitByApplication('my_custom_api_v1', 'collections', 'App\Entity\Book', 'index');
+    //  * 
+    //  * @param string $provider Name of the API provider
+    //  * @param string|null $segment Name of the segment (optional)
+    //  * @param string|null $collection Name of the collection (optional)
+    //  * @param string|null $endpoint Name of the endpoint (optional)
+    //  * @return array Rate limit configuration by application
+    //  */
+    // public function getRateLimitByApplication(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): array
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return [];
+    //     }
 
-        // 1. Endpoint-specific rate limit by_application
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
-            if ($endpointOptions && isset($endpointOptions['rate_limit']['by_application'])) {
-                return $endpointOptions['rate_limit']['by_application'];
-            }
-        }
+    //     // 1. Endpoint-specific rate limit by_application
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+    //         if ($endpointOptions && isset($endpointOptions['rate_limit']['by_application'])) {
+    //             return $endpointOptions['rate_limit']['by_application'];
+    //         }
+    //     }
 
-        // 2. Collection-level rate limit by_application
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if ($collectionOptions && isset($collectionOptions['rate_limit']['by_application'])) {
-                return $collectionOptions['rate_limit']['by_application'];
-            }
-        }
+    //     // 2. Collection-level rate limit by_application
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['rate_limit']['by_application'])) {
+    //             return $collectionOptions['rate_limit']['by_application'];
+    //         }
+    //     }
 
-        // 3. Global default rate limit by_application
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['rate_limit']['by_application'] ?? [];
-    }
+    //     // 3. Global default rate limit by_application
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['rate_limit']['by_application'] ?? [];
+    // }
 
 
     // ──────────────────────────────
@@ -1672,32 +1760,32 @@ class ConfigurationService
      * @param string|null $endpoint Name of the endpoint (optional)
      * @return array Templates configuration array
      */
-    public function getTemplate(string $type, string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string
-    {
-        if (! $this->hasProvider($provider)) {
-            return '';
-        }
+    // public function getTemplate(string $type, string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return '';
+    //     }
 
-        // 1. Endpoint-specific templates
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
-            if ($endpointOptions && isset($endpointOptions['templates'][$type])) {
-                return $endpointOptions['templates'][$type] ?? '';
-            }
-        }
+    //     // 1. Endpoint-specific templates
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+    //         if ($endpointOptions && isset($endpointOptions['templates'][$type])) {
+    //             return $endpointOptions['templates'][$type] ?? '';
+    //         }
+    //     }
 
-        // 2. Collection-level templates
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if ($collectionOptions && isset($collectionOptions['templates'][$type])) {
-                return $collectionOptions['templates'][$type] ?? '';
-            }
-        }
+    //     // 2. Collection-level templates
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['templates'][$type])) {
+    //             return $collectionOptions['templates'][$type] ?? '';
+    //         }
+    //     }
 
-        // 3. Global default templates
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['templates'][$type] ?? '';
-    }
+    //     // 3. Global default templates
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['templates'][$type] ?? '';
+    // }
 
     /**
      * Get the list template for a specific provider, collection, and endpoint.
@@ -1710,188 +1798,36 @@ class ConfigurationService
      * @param string|null $endpoint Name of the endpoint (optional)
      * @return string List template
      */
-    public function getListTemplate(string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string
-    {
-        if (! $this->hasProvider($provider)) {
-            return '';
-        }
+    // public function getListTemplate(string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return '';
+    //     }
 
-        // 1. Endpoint-specific templates
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
-            if ($endpointOptions && isset($endpointOptions['templates']['list'])) {
-                return $endpointOptions['templates']['list'];
-            }
-        }
+    //     // 1. Endpoint-specific templates
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+    //         if ($endpointOptions && isset($endpointOptions['templates']['list'])) {
+    //             return $endpointOptions['templates']['list'];
+    //         }
+    //     }
 
-        // 2. Collection-level templates
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if ($collectionOptions && isset($collectionOptions['templates']['list'])) {
-                return $collectionOptions['templates']['list'];
-            }
-        }
+    //     // 2. Collection-level templates
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['templates']['list'])) {
+    //             return $collectionOptions['templates']['list'];
+    //         }
+    //     }
 
-        // 3. Global default templates
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['templates']['list'] ?? '';
-    }
-
-    /**
-     * Get the not found template for a specific provider, collection, and endpoint.
-     * Falls back to collection-level or provider-level templates if not found.
-     * e.g.: $this->getNotFoundTemplate('my_custom_api_v1', 'collections', 'App\Entity\Book', 'show');
-     * 
-     * @param string $provider Name of the API provider
-     * @param string|null $segment Name of the segment (optional)
-     * @param string|null $collection Name of the collection (optional)
-     * @param string|null $endpoint Name of the endpoint (optional)
-     * @return string Not found template
-     */
-    public function getSingleTemplate(string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string
-    {
-        if (! $this->hasProvider($provider)) {
-            return '';
-        }
-
-        // 1. Endpoint-specific templates
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
-            if ($endpointOptions && isset($endpointOptions['templates']['single'])) {
-                return $endpointOptions['templates']['single'];
-            }
-        }
-
-        // 2. Collection-level templates
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if ($collectionOptions && isset($collectionOptions['templates']['single'])) {
-                return $collectionOptions['templates']['single'];
-            }
-        }
-
-        // 3. Global default templates
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['templates']['single'] ?? '';
-    }
-
-    /**
-     * Get the delete template for a specific provider, collection, and endpoint.
-     * Falls back to collection-level or provider-level templates if not found.
-     * * e.g.: $this->getDeleteTemplate('my_custom_api_v1', 'collections', 'App\Entity\Book', 'delete');
-     * 
-     * @param string $provider Name of the API provider
-     * @param string|null $segment Name of the segment (optional)
-     * @param string|null $collection Name of the collection (optional)
-     * @param string|null $endpoint Name of the endpoint (optional)
-     * @return string Delete template
-     */
-    public function getDeleteTemplate(string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string
-    {
-        if (! $this->hasProvider($provider)) {
-            return '';
-        }
-
-        // 1. Endpoint-specific templates
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
-            if ($endpointOptions && isset($endpointOptions['templates']['delete'])) {
-                return $endpointOptions['templates']['delete'];
-            }
-        }
-
-        // 2. Collection-level templates
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if ($collectionOptions && isset($collectionOptions['templates']['delete'])) {
-                return $collectionOptions['templates']['delete'];
-            }
-        }
-
-        // 3. Global default templates
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['templates']['delete'] ?? '';
-    }
-
-    /**
-     * Get the account template for a specific provider, collection, and endpoint.
-     * Falls back to collection-level or provider-level templates if not found.
-     * e.g.: $this->getAccountTemplate('my_custom_api_v1', 'collections', 'App\Entity\Book', 'index');
-     * 
-     * @param string $provider Name of the API provider
-     * @param string|null $segment Name of the segment (optional)
-     * @param string|null $collection Name of the collection (optional)
-     * @param string|null $endpoint Name of the endpoint (optional)
-     * @return string Account template
-     */
-    public function getAccountTemplate(string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string
-    {
-        if (! $this->hasProvider($provider)) {
-            return '';
-        }
-
-        // 1. Endpoint-specific templates
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
-            if ($endpointOptions && isset($endpointOptions['templates']['account'])) {
-                return $endpointOptions['templates']['account'];
-            }
-        }
-
-        // 2. Collection-level templates
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if ($collectionOptions && isset($collectionOptions['templates']['account'])) {
-                return $collectionOptions['templates']['account'];
-            }
-        }
-
-        // 3. Global default templates
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['templates']['account'] ?? '';
-    }
+    //     // 3. Global default templates
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['templates']['list'] ?? '';
+    // }
 
     /**
      * Get the not found template for a specific provider, collection, and endpoint.
      * Falls back to collection-level or provider-level templates if not found.
-     * e.g.: $this->getErrorTemplate('my_custom_api_v1', 'collections', 'App\Entity\Book', 'show');
-     * 
-     * @param string $provider Name of the API provider
-     * @param string|null $segment Name of the segment (optional)
-     * @param string|null $collection Name of the collection (optional)
-     * @param string|null $endpoint Name of the endpoint (optional)
-     * @return string Not found template
-     */
-    public function getErrorTemplate(string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string
-    {
-        if (! $this->hasProvider($provider)) {
-            return '';
-        }
-
-        // 1. Endpoint-specific templates
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
-            if ($endpointOptions && isset($endpointOptions['templates']['error'])) {
-                return $endpointOptions['templates']['error'];
-            }
-        }
-
-        // 2. Collection-level templates
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if ($collectionOptions && isset($collectionOptions['templates']['error'])) {
-                return $collectionOptions['templates']['error'];
-            }
-        }
-
-        // 3. Global default templates
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['templates']['error'] ?? '';
-    }
-
-    /**
-     * Get the not found template for a specific API provider, collection, and endpoint.
-     * Falls back to collection-level or provider-level templates if not defined at lower levels.
      * e.g.: $this->getNotFoundTemplate('my_custom_api_v1', 'collections', 'App\Entity\Book', 'show');
      * 
      * @param string $provider Name of the API provider
@@ -1900,70 +1836,222 @@ class ConfigurationService
      * @param string|null $endpoint Name of the endpoint (optional)
      * @return string Not found template
      */
-    public function getNotFoundTemplate(string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string
-    {
-        if (! $this->hasProvider($provider)) {
-            return '';
-        }
+    // public function getSingleTemplate(string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return '';
+    //     }
 
-        // 1. Endpoint-specific templates
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
-            if ($endpointOptions && isset($endpointOptions['templates']['not_found'])) {
-                return $endpointOptions['templates']['not_found'];
-            }
-        }
+    //     // 1. Endpoint-specific templates
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+    //         if ($endpointOptions && isset($endpointOptions['templates']['single'])) {
+    //             return $endpointOptions['templates']['single'];
+    //         }
+    //     }
 
-        // 2. Collection-level templates
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if ($collectionOptions && isset($collectionOptions['templates']['not_found'])) {
-                return $collectionOptions['templates']['not_found'];
-            }
-        }
+    //     // 2. Collection-level templates
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['templates']['single'])) {
+    //             return $collectionOptions['templates']['single'];
+    //         }
+    //     }
 
-        // 3. Global default templates
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['templates']['not_found'] ?? '';
-    }
+    //     // 3. Global default templates
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['templates']['single'] ?? '';
+    // }
 
-    /**
-     * Get the not found template for a specific API provider, collection, and endpoint.
-     * Falls back to collection-level or provider-level templates if not defined at lower levels.
-     * e.g.: $this->getNotFoundTemplate('my_custom_api_v1', 'collections', 'App\Entity\Book', 'show');
-     * 
-     * @param string $provider Name of the API provider
-     * @param string|null $segment Name of the segment (optional)
-     * @param string|null $collection Name of the collection (optional)
-     * @param string|null $endpoint Name of the endpoint (optional)
-     * @return string Not found template
-     */
-    public function getLoginTemplate(string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string
-    {
-        if (! $this->hasProvider($provider)) {
-            return '';
-        }
+    // /**
+    //  * Get the delete template for a specific provider, collection, and endpoint.
+    //  * Falls back to collection-level or provider-level templates if not found.
+    //  * * e.g.: $this->getDeleteTemplate('my_custom_api_v1', 'collections', 'App\Entity\Book', 'delete');
+    //  * 
+    //  * @param string $provider Name of the API provider
+    //  * @param string|null $segment Name of the segment (optional)
+    //  * @param string|null $collection Name of the collection (optional)
+    //  * @param string|null $endpoint Name of the endpoint (optional)
+    //  * @return string Delete template
+    //  */
+    // public function getDeleteTemplate(string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return '';
+    //     }
 
-        // 1. Endpoint-specific templates
-        if ($collection && $endpoint) {
-            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
-            if ($endpointOptions && isset($endpointOptions['templates']['login'])) {
-                return $endpointOptions['templates']['login'];
-            }
-        }
+    //     // 1. Endpoint-specific templates
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+    //         if ($endpointOptions && isset($endpointOptions['templates']['delete'])) {
+    //             return $endpointOptions['templates']['delete'];
+    //         }
+    //     }
 
-        // 2. Collection-level templates
-        if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            if ($collectionOptions && isset($collectionOptions['templates']['login'])) {
-                return $collectionOptions['templates']['login'];
-            }
-        }
+    //     // 2. Collection-level templates
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['templates']['delete'])) {
+    //             return $collectionOptions['templates']['delete'];
+    //         }
+    //     }
 
-        // 3. Global default templates
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['templates']['login'] ?? '';
-    }
+    //     // 3. Global default templates
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['templates']['delete'] ?? '';
+    // }
+
+    // /**
+    //  * Get the account template for a specific provider, collection, and endpoint.
+    //  * Falls back to collection-level or provider-level templates if not found.
+    //  * e.g.: $this->getAccountTemplate('my_custom_api_v1', 'collections', 'App\Entity\Book', 'index');
+    //  * 
+    //  * @param string $provider Name of the API provider
+    //  * @param string|null $segment Name of the segment (optional)
+    //  * @param string|null $collection Name of the collection (optional)
+    //  * @param string|null $endpoint Name of the endpoint (optional)
+    //  * @return string Account template
+    //  */
+    // public function getAccountTemplate(string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return '';
+    //     }
+
+    //     // 1. Endpoint-specific templates
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+    //         if ($endpointOptions && isset($endpointOptions['templates']['account'])) {
+    //             return $endpointOptions['templates']['account'];
+    //         }
+    //     }
+
+    //     // 2. Collection-level templates
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['templates']['account'])) {
+    //             return $collectionOptions['templates']['account'];
+    //         }
+    //     }
+
+    //     // 3. Global default templates
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['templates']['account'] ?? '';
+    // }
+
+    // /**
+    //  * Get the not found template for a specific provider, collection, and endpoint.
+    //  * Falls back to collection-level or provider-level templates if not found.
+    //  * e.g.: $this->getErrorTemplate('my_custom_api_v1', 'collections', 'App\Entity\Book', 'show');
+    //  * 
+    //  * @param string $provider Name of the API provider
+    //  * @param string|null $segment Name of the segment (optional)
+    //  * @param string|null $collection Name of the collection (optional)
+    //  * @param string|null $endpoint Name of the endpoint (optional)
+    //  * @return string Not found template
+    //  */
+    // public function getErrorTemplate(string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return '';
+    //     }
+
+    //     // 1. Endpoint-specific templates
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+    //         if ($endpointOptions && isset($endpointOptions['templates']['error'])) {
+    //             return $endpointOptions['templates']['error'];
+    //         }
+    //     }
+
+    //     // 2. Collection-level templates
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['templates']['error'])) {
+    //             return $collectionOptions['templates']['error'];
+    //         }
+    //     }
+
+    //     // 3. Global default templates
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['templates']['error'] ?? '';
+    // }
+
+    // /**
+    //  * Get the not found template for a specific API provider, collection, and endpoint.
+    //  * Falls back to collection-level or provider-level templates if not defined at lower levels.
+    //  * e.g.: $this->getNotFoundTemplate('my_custom_api_v1', 'collections', 'App\Entity\Book', 'show');
+    //  * 
+    //  * @param string $provider Name of the API provider
+    //  * @param string|null $segment Name of the segment (optional)
+    //  * @param string|null $collection Name of the collection (optional)
+    //  * @param string|null $endpoint Name of the endpoint (optional)
+    //  * @return string Not found template
+    //  */
+    // public function getNotFoundTemplate(string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return '';
+    //     }
+
+    //     // 1. Endpoint-specific templates
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+    //         if ($endpointOptions && isset($endpointOptions['templates']['not_found'])) {
+    //             return $endpointOptions['templates']['not_found'];
+    //         }
+    //     }
+
+    //     // 2. Collection-level templates
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['templates']['not_found'])) {
+    //             return $collectionOptions['templates']['not_found'];
+    //         }
+    //     }
+
+    //     // 3. Global default templates
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['templates']['not_found'] ?? '';
+    // }
+
+    // /**
+    //  * Get the not found template for a specific API provider, collection, and endpoint.
+    //  * Falls back to collection-level or provider-level templates if not defined at lower levels.
+    //  * e.g.: $this->getNotFoundTemplate('my_custom_api_v1', 'collections', 'App\Entity\Book', 'show');
+    //  * 
+    //  * @param string $provider Name of the API provider
+    //  * @param string|null $segment Name of the segment (optional)
+    //  * @param string|null $collection Name of the collection (optional)
+    //  * @param string|null $endpoint Name of the endpoint (optional)
+    //  * @return string Not found template
+    //  */
+    // public function getLoginTemplate(string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): string
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return '';
+    //     }
+
+    //     // 1. Endpoint-specific templates
+    //     if ($collection && $endpoint) {
+    //         $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+    //         if ($endpointOptions && isset($endpointOptions['templates']['login'])) {
+    //             return $endpointOptions['templates']['login'];
+    //         }
+    //     }
+
+    //     // 2. Collection-level templates
+    //     if ($collection) {
+    //         $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+    //         if ($collectionOptions && isset($collectionOptions['templates']['login'])) {
+    //             return $collectionOptions['templates']['login'];
+    //         }
+    //     }
+
+    //     // 3. Global default templates
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['templates']['login'] ?? '';
+    // }
 
 
     // ──────────────────────────────
@@ -1978,11 +2066,11 @@ class ConfigurationService
      */
     public function getResponse(?string $provider): array
     {
-        if (! $this->hasProvider($provider)) {
+        if (! $this->providerService->exists($provider)) {
             return [];
         }
 
-        $providerOptions = $this->getProvider($provider);
+        $providerOptions = $this->providerService->get($provider);
         return $providerOptions['response'] ?? [];
     }
 
@@ -1996,97 +2084,97 @@ class ConfigurationService
      * @param string $provider Name of the API provider
      * @return string Response format (e.g., 'json', 'xml')
      */
-    public function getResponseType(?string $provider): string
-    {
-        if (! $this->hasProvider($provider)) {
-            return 'json';
-        }
+    // public function getResponseType(?string $provider): string
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return 'json';
+    //     }
 
-        $responseOptions = $this->getResponse($provider);
-        return $responseOptions['format']['type'] ?? 'json';
-    }
+    //     $responseOptions = $this->getResponse($provider);
+    //     return $responseOptions['format']['type'] ?? 'json';
+    // }
 
-    public function getResponseMimeType(?string $provider): ?string
-    {
-        if (! $this->hasProvider($provider)) {
-            return null;
-        }
+    // public function getResponseMimeType(?string $provider): ?string
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return null;
+    //     }
 
-        $responseOptions = $this->getResponse($provider);
-        return $responseOptions['format']['mime_type'] ?? null;
-    }
+    //     $responseOptions = $this->getResponse($provider);
+    //     return $responseOptions['format']['mime_type'] ?? null;
+    // }
 
 
     // RESPONSES -> CONTENT NEGOTIATION
 
-    /**
-     * Check if format overrides are allowed for a specific provider.
-     * 
-     * @param string $provider Name of the API provider
-     * @return bool True if format overrides are allowed, false otherwise
-     */
-    public function isResponseContentNegotiationEnabled(?string $provider): bool
-    {
-        if (! $this->hasProvider($provider)) {
-            return false;
-        }
+    // /**
+    //  * Check if format overrides are allowed for a specific provider.
+    //  * 
+    //  * @param string $provider Name of the API provider
+    //  * @return bool True if format overrides are allowed, false otherwise
+    //  */
+    // public function isResponseContentNegotiationEnabled(?string $provider): bool
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return false;
+    //     }
 
-        $responseOptions = $this->getResponse($provider);
-        return $responseOptions['content_negotiation']['enabled'] ?? false;
-    }
+    //     $responseOptions = $this->getResponse($provider);
+    //     return $responseOptions['content_negotiation']['enabled'] ?? false;
+    // }
 
-    /**
-     * Get the response format parameter name for a specific provider.
-     * Defaults to '_format' if not specified.
-     * 
-     * @param string $provider Name of the API provider
-     * @return string Response format parameter name
-     */
-    public function getResponseContentNegotiationParameter(?string $provider): string
-    {
-        if (! $this->hasProvider($provider)) {
-            return '_format';
-        }
+    // /**
+    //  * Get the response format parameter name for a specific provider.
+    //  * Defaults to 'format' if not specified.
+    //  * 
+    //  * @param string $provider Name of the API provider
+    //  * @return string Response format parameter name
+    //  */
+    // public function getResponseContentNegotiationParameter(?string $provider): string
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return 'format';
+    //     }
 
-        $responseOptions = $this->getResponse($provider);
-        return $responseOptions['content_negotiation']['parameter'] ?? '_format';
-    }
+    //     $responseOptions = $this->getResponse($provider);
+    //     return $responseOptions['content_negotiation']['parameter'] ?? 'format';
+    // }
 
 
     // RESPONSES -> SECURITY CHECKSUM
 
-    /**
-     * Check if response checksum is enabled for a specific provider.
-     * 
-     * @param string $provider Name of the API provider
-     * @return bool True if response checksum is enabled, false otherwise
-     */
-    public function isSecurityChecksumEnabled(?string $provider): bool
-    {
-        if (! $this->hasProvider($provider)) {
-            return false;
-        }
+    // /**
+    //  * Check if response checksum is enabled for a specific provider.
+    //  * 
+    //  * @param string $provider Name of the API provider
+    //  * @return bool True if response checksum is enabled, false otherwise
+    //  */
+    // public function isSecurityChecksumEnabled(?string $provider): bool
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return false;
+    //     }
 
-        $options = $this->getResponse($provider);
-        return $options['security']['checksum']['enabled'] ?? false;
-    }
+    //     $options = $this->getResponse($provider);
+    //     return $options['security']['checksum']['enabled'] ?? false;
+    // }
 
-    /**
-     * Get the response checksum algorithm for a specific provider.
-     * Defaults to 'md5' if not specified.
-     * 
-     * @param string $provider Name of the API provider
-     * @return string Checksum algorithm (e.g., 'md5', 'sha256')
-     */
-    public function getSecurityChecksumAlgorithm(?string $provider): string
-    {
-        if (! $this->hasProvider($provider)) {
-            return Algorithm::MD5->value;
-        }
+    // /**
+    //  * Get the response checksum algorithm for a specific provider.
+    //  * Defaults to 'md5' if not specified.
+    //  * 
+    //  * @param string $provider Name of the API provider
+    //  * @return string Checksum algorithm (e.g., 'md5', 'sha256')
+    //  */
+    // public function getSecurityChecksumAlgorithm(?string $provider): string
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return Algorithm::MD5->value;
+    //     }
 
-        $options = $this->getResponse($provider);
-        return $options['security']['checksum']['algorithm'] ?? Algorithm::MD5->value;
-    }
+    //     $options = $this->getResponse($provider);
+    //     return $options['security']['checksum']['algorithm'] ?? Algorithm::MD5->value;
+    // }
 
 
     // RESPONSE -> CACHE CONTROL
@@ -2097,79 +2185,79 @@ class ConfigurationService
      * @param string $provider Name of the API provider
      * @return bool True if response caching is enabled, false otherwise
      */
-    public function isCacheControlEnabled(?string $provider): bool
-    {
-        if (! $this->hasProvider($provider)) {
-            return false;
-        }
+    // public function isCacheControlEnabled(?string $provider): bool
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return false;
+    //     }
 
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['response']['cache_control']['enabled'] ?? false;
-    }
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['response']['cache_control']['enabled'] ?? false;
+    // }
 
-    /**
-     * Check if response caching is public for a specific provider.
-     * 
-     * @param string $provider Name of the API provider
-     * @return bool True if response caching is public, false otherwise
-     */
-    public function isCacheControlPublic(?string $provider): bool
-    {
-        if (! $this->hasProvider($provider)) {
-            return false;
-        }
+    // /**
+    //  * Check if response caching is public for a specific provider.
+    //  * 
+    //  * @param string $provider Name of the API provider
+    //  * @return bool True if response caching is public, false otherwise
+    //  */
+    // public function isCacheControlPublic(?string $provider): bool
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return false;
+    //     }
 
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['response']['cache_control']['public'] ?? false;
-    }
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['response']['cache_control']['public'] ?? false;
+    // }
 
-    /**
-     * Check if response caching has no-store directive for a specific provider.
-     * 
-     * @param string $provider Name of the API provider
-     * @return bool True if response caching has no-store directive, false otherwise
-     */
-    public function isCacheControlNoStore(?string $provider): bool
-    {
-        if (! $this->hasProvider($provider)) {
-            return false;
-        }
+    // /**
+    //  * Check if response caching has no-store directive for a specific provider.
+    //  * 
+    //  * @param string $provider Name of the API provider
+    //  * @return bool True if response caching has no-store directive, false otherwise
+    //  */
+    // public function isCacheControlNoStore(?string $provider): bool
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return false;
+    //     }
 
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['response']['cache_control']['no_store'] ?? false;
-    }
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['response']['cache_control']['no_store'] ?? false;
+    // }
 
-    /**
-     * Check if response caching has must-revalidate directive for a specific provider.
-     * 
-     * @param string $provider Name of the API provider
-     * @return bool True if response caching has must-revalidate directive, false otherwise
-     */
-    public function isCacheControlMustRevalidate(?string $provider): bool
-    {
-        if (! $this->hasProvider($provider)) {
-            return false;
-        }
+    // /**
+    //  * Check if response caching has must-revalidate directive for a specific provider.
+    //  * 
+    //  * @param string $provider Name of the API provider
+    //  * @return bool True if response caching has must-revalidate directive, false otherwise
+    //  */
+    // public function isCacheControlMustRevalidate(?string $provider): bool
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return false;
+    //     }
 
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['response']['cache_control']['must_revalidate'] ?? false;
-    }
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['response']['cache_control']['must_revalidate'] ?? false;
+    // }
 
-    /**
-     * Get the max-age value for response caching for a specific provider.
-     * 
-     * @param string $provider Name of the API provider
-     * @return int Max-age value in seconds
-     */
-    public function getCacheControlMaxAge(?string $provider): int
-    {
-        if (! $this->hasProvider($provider)) {
-            return 0;
-        }
+    // /**
+    //  * Get the max-age value for response caching for a specific provider.
+    //  * 
+    //  * @param string $provider Name of the API provider
+    //  * @return int Max-age value in seconds
+    //  */
+    // public function getCacheControlMaxAge(?string $provider): int
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return 0;
+    //     }
 
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['response']['cache_control']['max_age'] ?? 0;
-    }
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['response']['cache_control']['max_age'] ?? 0;
+    // }
 
 
     // RESPONSE -> HEADERS
@@ -2182,11 +2270,11 @@ class ConfigurationService
      */
     public function getHeaders(?string $provider): array
     {
-        if (! $this->hasProvider($provider)) {
+        if (! $this->providerService->exists($provider)) {
             return [];
         }
 
-        $providerOptions = $this->getProvider($provider);
+        $providerOptions = $this->providerService->get($provider);
         return $providerOptions['response']['headers'] ?? [];
     }
 
@@ -2198,11 +2286,11 @@ class ConfigurationService
      */
     public function isHeadersStripXPrefix(?string $provider): bool
     {
-        if (! $this->hasProvider($provider)) {
+        if (! $this->providerService->exists($provider)) {
             return false;
         }
 
-        $providerOptions = $this->getProvider($provider);
+        $providerOptions = $this->providerService->get($provider);
         return $providerOptions['response']['behavior']['strip_x_prefix'] ?? false;
     }
 
@@ -2214,11 +2302,11 @@ class ConfigurationService
      */
     public function isHeadersKeepLegacy(?string $provider): bool
     {
-        if (! $this->hasProvider($provider)) {
+        if (! $this->providerService->exists($provider)) {
             return false;
         }
 
-        $providerOptions = $this->getProvider($provider);
+        $providerOptions = $this->providerService->get($provider);
         return $providerOptions['response']['behavior']['keep_legacy'] ?? false;
     }
 
@@ -2230,11 +2318,11 @@ class ConfigurationService
      */
     public function getHeadersExposedDirectives(?string $provider): array
     {
-        if (! $this->hasProvider($provider)) {
+        if (! $this->providerService->exists($provider)) {
             return [];
         }
 
-        $providerOptions = $this->getProvider($provider);
+        $providerOptions = $this->providerService->get($provider);
         return $providerOptions['response']['headers'] ?? [];
     }
 
@@ -2247,95 +2335,95 @@ class ConfigurationService
      * @param string $provider Name of the API provider
      * @return bool True if CORS is enabled, false otherwise
      */
-    public function isCorsEnabled(?string $provider): bool
-    {
-        if (! $this->hasProvider($provider)) {
-            return false;
-        }
+    // public function isCorsEnabled(?string $provider): bool
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return false;
+    //     }
 
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['response']['cors']['enabled'] ?? false;
-    }
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['response']['cors']['enabled'] ?? false;
+    // }
 
-    /**
-     * Get the CORS allowed origins for a specific provider.
-     * 
-     * @param string $provider Name of the API provider
-     * @return array Array of allowed origins
-     */
-    public function getCorsAllowedOrigins(?string $provider): array
-    {
-        if (! $this->hasProvider($provider)) {
-            return [];
-        }
+    // /**
+    //  * Get the CORS allowed origins for a specific provider.
+    //  * 
+    //  * @param string $provider Name of the API provider
+    //  * @return array Array of allowed origins
+    //  */
+    // public function getCorsAllowedOrigins(?string $provider): array
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return [];
+    //     }
 
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['response']['cors']['origins'] ?? [];
-    }
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['response']['cors']['origins'] ?? [];
+    // }
 
-    /**
-     * Get the CORS allowed headers for a specific provider.
-     * 
-     * @param string $provider Name of the API provider
-     * @return array Array of allowed headers
-     */
-    public function getCorsAllowedMethods(?string $provider): array
-    {
-        if (! $this->hasProvider($provider)) {
-            return [];
-        }
+    // /**
+    //  * Get the CORS allowed headers for a specific provider.
+    //  * 
+    //  * @param string $provider Name of the API provider
+    //  * @return array Array of allowed headers
+    //  */
+    // public function getCorsAllowedMethods(?string $provider): array
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return [];
+    //     }
 
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['response']['cors']['methods'] ?? [];
-    }
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['response']['cors']['methods'] ?? [];
+    // }
 
-    /**
-     * Get the CORS allowed headers for a specific provider.
-     * 
-     * @param string $provider Name of the API provider
-     * @return array Array of allowed headers
-     */
-    public function getCorsHeaders(?string $provider): array
-    {
-        if (! $this->hasProvider($provider)) {
-            return [];
-        }
+    // /**
+    //  * Get the CORS allowed headers for a specific provider.
+    //  * 
+    //  * @param string $provider Name of the API provider
+    //  * @return array Array of allowed headers
+    //  */
+    // public function getCorsHeaders(?string $provider): array
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return [];
+    //     }
 
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['response']['cors']['headers'] ?? [];
-    }
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['response']['cors']['headers'] ?? [];
+    // }
 
-    /**
-     * Get the CORS allowed headers for a specific provider.
-     * 
-     * @param string $provider Name of the API provider
-     * @return array Array of allowed headers
-     */
-    public function getCorsExposedHeaders(?string $provider): array
-    {
-        if (! $this->hasProvider($provider)) {
-            return [];
-        }
+    // /**
+    //  * Get the CORS allowed headers for a specific provider.
+    //  * 
+    //  * @param string $provider Name of the API provider
+    //  * @return array Array of allowed headers
+    //  */
+    // public function getCorsExposedHeaders(?string $provider): array
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return [];
+    //     }
 
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['response']['cors']['expose'] ?? [];
-    }
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['response']['cors']['expose'] ?? [];
+    // }
 
-    /**
-     * Check if CORS credentials are allowed for a specific provider.
-     * 
-     * @param string $provider Name of the API provider
-     * @return bool True if CORS credentials are allowed, false otherwise
-     */
-    public function getCorsCredentials(?string $provider): bool
-    {
-        if (! $this->hasProvider($provider)) {
-            return false;
-        }
+    // /**
+    //  * Check if CORS credentials are allowed for a specific provider.
+    //  * 
+    //  * @param string $provider Name of the API provider
+    //  * @return bool True if CORS credentials are allowed, false otherwise
+    //  */
+    // public function getCorsCredentials(?string $provider): bool
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return false;
+    //     }
 
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['response']['cors']['credentials'] ?? false;
-    }
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['response']['cors']['credentials'] ?? false;
+    // }
 
     /**
      * Get the CORS max-age for a specific provider.
@@ -2343,15 +2431,15 @@ class ConfigurationService
      * @param string $provider Name of the API provider
      * @return int Max-age value in seconds
      */
-    public function getCorsMaxAge(?string $provider): int
-    {
-        if (! $this->hasProvider($provider)) {
-            return 0;
-        }
+    // public function getCorsMaxAge(?string $provider): int
+    // {
+    //     if (! $this->providerService->exists($provider)) {
+    //         return 0;
+    //     }
 
-        $providerOptions = $this->getProvider($provider);
-        return $providerOptions['response']['cors']['max_age'] ?? 0;
-    }
+    //     $providerOptions = $this->providerService->get($provider);
+    //     return $providerOptions['response']['cors']['max_age'] ?? 0;
+    // }
 
 
     // RESPONSE -> COMPRESSION
@@ -2364,11 +2452,11 @@ class ConfigurationService
      */
     public function isCompressionEnabled(?string $provider): bool
     {
-        if (! $this->hasProvider($provider)) {
+        if (! $this->providerService->exists($provider)) {
             return false;
         }
 
-        $providerOptions = $this->getProvider($provider);
+        $providerOptions = $this->providerService->get($provider);
         return $providerOptions['response']['compression']['enabled'] ?? false;
     }
     
@@ -2381,11 +2469,11 @@ class ConfigurationService
      */
     public function getCompressionFormat(?string $provider): string
     {
-        if (! $this->hasProvider($provider)) {
+        if (! $this->providerService->exists($provider)) {
             return 'gzip';
         }
 
-        $providerOptions = $this->getProvider($provider);
+        $providerOptions = $this->providerService->get($provider);
         return $providerOptions['response']['compression']['format'] ?? 'gzip';
     }
 
@@ -2398,11 +2486,11 @@ class ConfigurationService
      */
     public function getCompressionLevel(?string $provider): int
     {
-        if (! $this->hasProvider($provider)) {
+        if (! $this->providerService->exists($provider)) {
             return 6;
         }
 
-        $providerOptions = $this->getProvider($provider);
+        $providerOptions = $this->providerService->get($provider);
         return $providerOptions['response']['compression']['level'] ?? 6;
     }
 
@@ -2423,16 +2511,16 @@ class ConfigurationService
      */
     public function getSerializerGroups(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): array
     {
-        if (! $this->hasProvider($provider)) {
+        if (! $this->providerService->exists($provider)) {
             return [];
         }
 
-        if (! $this->hasCollection($provider, $segment, $collection)) {
+        if (! $this->collectionService->exists($provider, $segment, $collection)) {
             return [];
         }
 
-        $collectionOptions = $this->getCollection($provider, $segment, $collection);
-        $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
+        $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+        $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
 
         return array_unique(array_merge(
             $collectionOptions['serialization']['groups'] ?? [],
@@ -2453,18 +2541,18 @@ class ConfigurationService
      */
     public function getSerializerIgnore(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): array
     {
-        if (! $this->hasProvider($provider)) {
+        if (! $this->providerService->exists($provider)) {
             return [];
         }
 
-        $providerOptions = $this->getProvider($provider);
+        $providerOptions = $this->providerService->get($provider);
 
-        if (! $this->hasCollection($provider, $segment, $collection)) {
+        if (! $this->collectionService->exists($provider, $segment, $collection)) {
             return $providerOptions['serialization']['ignore'] ?? [];
         }
 
-        $collectionOptions = $this->getCollection($provider, $segment, $collection);
-        $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
+        $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+        $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
 
         return array_unique(array_merge(
             $providerOptions['serialization']['ignore'] ?? [],
@@ -2481,11 +2569,11 @@ class ConfigurationService
      */
     public function getSerializerDatetimeFormat(?string $provider): string
     {
-        if (! $this->hasProvider($provider)) {
+        if (! $this->providerService->exists($provider)) {
             return 'Y-m-d H:i:s';
         }
 
-        $providerOptions = $this->getProvider($provider);
+        $providerOptions = $this->providerService->get($provider);
         return $providerOptions['serialization']['datetime']['format'] ?? 'Y-m-d H:i:s';
     }
 
@@ -2497,11 +2585,11 @@ class ConfigurationService
      */
     public function getSerializerTimezone(?string $provider): string
     {
-        if (! $this->hasProvider($provider)) {
+        if (! $this->providerService->exists($provider)) {
             return 'UTC';
         }
 
-        $providerOptions = $this->getProvider($provider);
+        $providerOptions = $this->providerService->get($provider);
         return $providerOptions['serialization']['datetime']['timezone'] ?? 'UTC';
     }
 
@@ -2513,11 +2601,11 @@ class ConfigurationService
      */
     public function getSerializerSkipNull(?string $provider): bool
     {
-        if (! $this->hasProvider($provider)) {
+        if (! $this->providerService->exists($provider)) {
             return false;
         }
 
-        $providerOptions = $this->getProvider($provider);
+        $providerOptions = $this->providerService->get($provider);
         return $providerOptions['serialization']['skip_null'] ?? false;
     }
 
@@ -2533,16 +2621,16 @@ class ConfigurationService
      */
     public function getSerializerTransformer(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): ?string
     {
-        if (! $this->hasProvider($provider)) {
+        if (! $this->providerService->exists($provider)) {
             return null;
         }
 
-        if (! $this->hasCollection($provider, $segment, $collection)) {
+        if (! $this->collectionService->exists($provider, $segment, $collection)) {
             return null;
         }
 
-        $collectionOptions = $this->getCollection($provider, $segment, $collection);
-        $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
+        $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+        $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
 
         return $endpointOptions['serialization']['transformer'] 
             ?? $collectionOptions['serialization']['transformer'] 
@@ -2574,14 +2662,14 @@ class ConfigurationService
             'voter' => null,
         ];
 
-        if (! $this->hasProvider($provider)) {
+        if (! $this->providerService->exists($provider)) {
             return $defaults;
         }
 
         // 1. Endpoint-specific access control
         if ($collection && $endpoint) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
-            $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
+            $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+            $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
             return array_merge(
                 $defaults, 
                 $collectionOptions['access_control'] ?? [], 
@@ -2591,7 +2679,7 @@ class ConfigurationService
 
         // 2. Collection-level access control
         if ($collection) {
-            $collectionOptions = $this->getCollection($provider, $segment, $collection);
+            $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
             return array_merge(
                 $defaults, 
                 $collectionOptions['access_control'] ?? []
@@ -2599,7 +2687,7 @@ class ConfigurationService
         }
 
         // 3. Global default access control
-        $providerOptions = $this->getProvider($provider);
+        $providerOptions = $this->providerService->get($provider);
         return array_merge(
             $defaults, 
             $providerOptions['access_control'] ?? []
@@ -2661,11 +2749,11 @@ class ConfigurationService
      */
     public function getAuthentication(?string $provider): array
     {
-        if (! $this->hasProvider($provider)) {
+        if (! $this->providerService->exists($provider)) {
             return [];
         }
 
-        return $this->getProvider($provider)[ContextService::SEGMENT_AUTHENTICATION] ?? [];
+        return $this->providerService->get($provider)[ContextService::SEGMENT_AUTHENTICATION] ?? [];
     }
 
 
@@ -2673,7 +2761,7 @@ class ConfigurationService
 
     public function getAuthenticationName(?string $provider, ?string $collection): string 
     {
-        if (! $this->hasProvider($provider)) {
+        if (! $this->providerService->exists($provider)) {
             return '';
         }
 
@@ -2682,7 +2770,7 @@ class ConfigurationService
 
     public function getAuthenticationRoutePrefix(?string $provider, ?string $collection): string 
     {
-        if (! $this->hasProvider($provider)) {
+        if (! $this->providerService->exists($provider)) {
             return '';
         }
 
@@ -2691,7 +2779,7 @@ class ConfigurationService
 
     // public function getAuthenticationRouteHosts(?string $provider, ?string $collection): array 
     // {
-    //     if (! $this->hasProvider($provider)) {
+    //     if (! $this->providerService->exists($provider)) {
     //         return [];
     //     }
 
@@ -2700,7 +2788,7 @@ class ConfigurationService
 
     // public function getAuthenticationRouteSchemes(?string $provider, ?string $collection): array 
     // {
-    //     if (! $this->hasProvider($provider)) {
+    //     if (! $this->providerService->exists($provider)) {
     //         return [];
     //     }
 
@@ -2712,7 +2800,7 @@ class ConfigurationService
 
     public function isAuthenticationEndpointEnabled(?string $provider, ?string $collection, ?string $endpoint): bool 
     {
-        if (! $this->hasProvider($provider)) {
+        if (! $this->providerService->exists($provider)) {
             return false;
         }
 
@@ -2721,7 +2809,7 @@ class ConfigurationService
 
     public function getAuthenticationEndpointPath(?string $provider, ?string $collection, ?string $endpoint): string 
     {
-        if (! $this->hasProvider($provider)) {
+        if (! $this->providerService->exists($provider)) {
             return '';
         }
 
@@ -2730,7 +2818,7 @@ class ConfigurationService
 
     public function getAuthenticationEndpointHosts(?string $provider, ?string $collection, ?string $endpoint): array 
     {
-        if (! $this->hasProvider($provider)) {
+        if (! $this->providerService->exists($provider)) {
             return [];
         }
 
@@ -2739,7 +2827,7 @@ class ConfigurationService
 
     public function getAuthenticationEndpointSchemes(?string $provider, ?string $collection, ?string $endpoint): array 
     {
-        if (! $this->hasProvider($provider)) {
+        if (! $this->providerService->exists($provider)) {
             return [];
         }
 
@@ -2748,7 +2836,7 @@ class ConfigurationService
 
     public function getAuthenticationEndpointController(?string $provider, ?string $collection, ?string $endpoint): ?string 
     {
-        if (! $this->hasProvider($provider)) {
+        if (! $this->providerService->exists($provider)) {
             return null;
         }
 
@@ -2757,7 +2845,7 @@ class ConfigurationService
 
     public function getAuthenticationEndpointProperties(?string $provider, ?string $collection, ?string $endpoint): array 
     {
-        if (! $this->hasProvider($provider)) {
+        if (! $this->providerService->exists($provider)) {
             return [];
         }
 
@@ -3141,19 +3229,19 @@ class ConfigurationService
      */
     public function getRepository(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): array
     {
-        if (! $this->hasProvider($provider)) {
+        if (! $this->providerService->exists($provider)) {
             return [];
         }
 
-        if (! $this->hasCollection($provider, $segment, $collection)) {
+        if (! $this->collectionService->exists($provider, $segment, $collection)) {
             return [];
         }
 
-        if (! $this->hasEndpoint($provider, $segment, $collection, $endpoint)) {
+        if (! $this->endpointService->exists($provider, $segment, $collection, $endpoint)) {
             return [];
         }
 
-        $endpointOptions = $this->getEndpoint($provider, $segment, $collection, $endpoint);
+        $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
         return $endpointOptions['repository'] ?? [];
     }
 
@@ -3169,7 +3257,7 @@ class ConfigurationService
      */
     public function getRepositoryClass(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): ?string
     {
-        return $this->getEndpoint($provider, $segment, $collection, $endpoint)['repository']['class'] ?? null;
+        return $this->endpointService->get($provider, $segment, $collection, $endpoint)['repository']['class'] ?? null;
     }
 
     /**
@@ -3184,7 +3272,7 @@ class ConfigurationService
      */
     public function getRepositoryMethod(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): ?string
     {
-        return $this->getEndpoint($provider, $segment, $collection, $endpoint)['repository']['method'] ?? null;
+        return $this->endpointService->get($provider, $segment, $collection, $endpoint)['repository']['method'] ?? null;
     }
 
     /**
@@ -3199,7 +3287,7 @@ class ConfigurationService
      */
     public function getCriteria(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): array
     {
-        return $this->getEndpoint($provider, $segment, $collection, $endpoint)['repository']['criteria'] ?? [];
+        return $this->endpointService->get($provider, $segment, $collection, $endpoint)['repository']['criteria'] ?? [];
     }
 
     /**
@@ -3214,7 +3302,7 @@ class ConfigurationService
      */
     public function getOrderBy(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): array
     {
-        return $this->getEndpoint($provider, $segment, $collection, $endpoint)['repository']['order_by'] ?? [];
+        return $this->endpointService->get($provider, $segment, $collection, $endpoint)['repository']['order_by'] ?? [];
     }
 
     /**
@@ -3229,15 +3317,15 @@ class ConfigurationService
      */
     public function getLimit(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): ?int
     {
-        $endpoint = $this->getEndpoint($provider, $segment, $collection, $endpoint);
+        $endpoint = $this->endpointService->get($provider, $segment, $collection, $endpoint);
         $limit = $endpoint['repository']['limit'] ?? null;
 
         if (!empty($limit) && is_int($limit) && $limit > 0) {
             return $limit;
         }
 
-        if ($this->isPaginationEnabled($provider)) {
-            return $this->getPaginationLimit($provider, $collection);
+        if ($this->paginationService->isEnabled($provider)) {
+            return $this->paginationService->getLimit($provider, $collection);
         }
 
         return null;
@@ -3255,7 +3343,7 @@ class ConfigurationService
      */
     public function getFetchMode(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): string
     {
-        return $this->getEndpoint($provider, $segment, $collection, $endpoint)['repository']['fetch_mode'] ?? '';
+        return $this->endpointService->get($provider, $segment, $collection, $endpoint)['repository']['fetch_mode'] ?? '';
     }
 
     
@@ -3275,19 +3363,19 @@ class ConfigurationService
      */
     public function getAllMetadata(?string $provider, ?string $segment, ?string $collection, ?string $endpoint): array
     {
-        if (! $this->hasProvider($provider)) {
+        if (! $this->providerService->exists($provider)) {
             return [];
         }
 
-        if (! $this->hasCollection($provider, $segment, $collection)) {
+        if (! $this->collectionService->exists($provider, $segment, $collection)) {
             return [];
         }
 
-        if (! $this->hasEndpoint($provider, $segment, $collection, $endpoint)) {
+        if (! $this->endpointService->exists($provider, $segment, $collection, $endpoint)) {
             return [];
         }
 
-        return $this->getEndpoint($provider, $segment, $collection, $endpoint)['metadata'] ?? [];
+        return $this->endpointService->get($provider, $segment, $collection, $endpoint)['metadata'] ?? [];
     }
 
     /**
@@ -3313,11 +3401,11 @@ class ConfigurationService
 
     public function isDebugEnabled(?string $provider): bool
     {
-        if (! $this->hasProvider($provider)) {
+        if (! $this->providerService->exists($provider)) {
             return false;
         }
 
-        $providerOptions = $this->getProvider($provider);
+        $providerOptions = $this->providerService->get($provider);
         return $providerOptions['debug']['enabled'] ?? false;
     }
 

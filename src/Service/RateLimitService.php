@@ -1,6 +1,11 @@
 <?php
 namespace OSW3\Api\Service;
 
+use OSW3\Api\Service\ContextService;
+use OSW3\Api\Service\EndpointService;
+use OSW3\Api\Service\ProviderService;
+use OSW3\Api\Service\CollectionService;
+
 final class RateLimitService
 {
     private const TIME_UNITS = [
@@ -17,24 +22,70 @@ final class RateLimitService
 
     public function __construct(
         private readonly ContextService $contextService,
-        private readonly ConfigurationService $configurationService,
+        private readonly ProviderService $providerService,
+        private readonly CollectionService $collectionService,
+        private readonly EndpointService $endpointService,
     ) {}
 
-    // Rate Limit Configuration
+    /**
+     * Get rate limit options for the given provider/segment/collection/endpoint
+     * 
+     * @param string|null $provider
+     * @param string|null $segment
+     * @param string|null $collection
+     * @param string|null $endpoint
+     * @return array
+     */
+    private function options(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): array
+    {
+        if (! $this->providerService->exists($provider)) {
+            return [];
+        }
+
+        // 1. Endpoint-specific rate limit
+        if ($collection && $endpoint) {
+            $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+            if ($endpointOptions && isset($endpointOptions['rate_limit'])) {
+                return $endpointOptions['rate_limit'];
+            }
+        }
+
+        // 2. Collection-level rate limit
+        if ($collection) {
+            $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+            if ($collectionOptions && isset($collectionOptions['rate_limit'])) {
+                return $collectionOptions['rate_limit'];
+            }
+        }
+
+        // 3. Global default rate limit
+        $providerOptions = $this->providerService->get($provider);
+        return $providerOptions['rate_limit'] ?? [];
+    }
+
+
+    // -- CONFIG OPTIONS GETTERS
     
     /**
      * Check if rate limiting is enabled
      * 
      * @return bool
      */
-    public function isEnabled(): bool
+    public function isEnabled(?string $provider = null, ?string $segment = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): bool
     {
-        return $this->configurationService->isRateLimitEnabled(
-            provider  : $this->contextService->getProvider(),
-            segment   : $this->contextService->getSegment(),
-            collection: $this->contextService->getCollection(),
-            endpoint  : $this->contextService->getEndpoint(),
-        );
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
+        }
+
+        return $this->options(
+            provider  : $provider,
+            segment   : $segment,
+            collection: $collection,
+            endpoint  : $endpoint,
+        )['enabled'] ?? false;
     }
 
     /**
@@ -42,14 +93,21 @@ final class RateLimitService
      * 
      * @return string
      */
-    public function getDefaultLimit(): string
+    public function getDefaultLimit(?string $provider = null, ?string $segment = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): string
     {
-        return $this->configurationService->getRateLimitValue(
-            provider  : $this->contextService->getProvider(),
-            segment   : $this->contextService->getSegment(),
-            collection: $this->contextService->getCollection(),
-            endpoint  : $this->contextService->getEndpoint(),
-        );
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
+        }
+
+        return $this->options(
+            provider  : $provider,
+            segment   : $segment,
+            collection: $collection,
+            endpoint  : $endpoint,
+        )['limit'] ?? '100/hour';
     }
     
     /**
@@ -57,14 +115,21 @@ final class RateLimitService
      * 
      * @return array<string, string>
      */
-    public function getLimitByRole(): array
+    public function getLimitByRole(?string $provider = null, ?string $segment = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): array
     {
-        return $this->configurationService->getRateLimitByRole(
-            provider  : $this->contextService->getProvider(),
-            segment   : $this->contextService->getSegment(),
-            collection: $this->contextService->getCollection(),
-            endpoint  : $this->contextService->getEndpoint(),
-        );
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
+        }
+
+        return $this->options(
+            provider  : $provider,
+            segment   : $segment,
+            collection: $collection,
+            endpoint  : $endpoint,
+        )['by_role'] ?? [];
     }
 
     /**
@@ -72,14 +137,21 @@ final class RateLimitService
      * 
      * @return array<string, string>
      */
-    public function getLimitByUser(): array
+    public function getLimitByUser(?string $provider = null, ?string $segment = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): array
     {
-        return $this->configurationService->getRateLimitByUser(
-            provider  : $this->contextService->getProvider(),
-            segment   : $this->contextService->getSegment(),
-            collection: $this->contextService->getCollection(),
-            endpoint  : $this->contextService->getEndpoint(),
-        );
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
+        }
+
+        return $this->options(
+            provider  : $provider,
+            segment   : $segment,
+            collection: $collection,
+            endpoint  : $endpoint,
+        )['by_user'] ?? [];
     }
 
     /**
@@ -87,14 +159,21 @@ final class RateLimitService
      * 
      * @return array<string, string>
      */
-    public function getLimitByIp(): array
+    public function getLimitByIp(?string $provider = null, ?string $segment = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): array
     {
-        return $this->configurationService->getRateLimitByIp(
-            provider  : $this->contextService->getProvider(),
-            segment   : $this->contextService->getSegment(),
-            collection: $this->contextService->getCollection(),
-            endpoint  : $this->contextService->getEndpoint(),
-        );
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
+        }
+
+        return $this->options(
+            provider  : $provider,
+            segment   : $segment,
+            collection: $collection,
+            endpoint  : $endpoint,
+        )['by_ip'] ?? [];
     }
 
     /**
@@ -102,18 +181,25 @@ final class RateLimitService
      * 
      * @return array<string, string>
      */
-    public function getLimitByApplication(): array
+    public function getLimitByApplication(?string $provider = null, ?string $segment = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): array
     {
-        return $this->configurationService->getRateLimitByApplication(
-            provider  : $this->contextService->getProvider(),
-            segment   : $this->contextService->getSegment(),
-            collection: $this->contextService->getCollection(),
-            endpoint  : $this->contextService->getEndpoint(),
-        );
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
+        }
+
+        return $this->options(
+            provider  : $provider,
+            segment   : $segment,
+            collection: $collection,
+            endpoint  : $endpoint,
+        )['by_application'] ?? [];
     }
 
 
-    // Computed Rate Limit Values
+    // -- COMPUTED GETTERS
 
     /**
      * Get the rate limit configuration

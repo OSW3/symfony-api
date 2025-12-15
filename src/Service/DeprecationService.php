@@ -3,192 +3,279 @@ namespace OSW3\Api\Service;
 
 use OSW3\Api\Enum\Deprecation\State;
 use OSW3\Api\Service\ContextService;
-use OSW3\Api\Service\ConfigurationService;
+use OSW3\Api\Service\EndpointService;
+use OSW3\Api\Service\ProviderService;
+use OSW3\Api\Service\CollectionService;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 final class DeprecationService
 {
-    private ?bool $isEnabledCache = null;
-    private ?\DateTimeImmutable $startDateCache = null;
-    private ?\DateTimeImmutable $sunsetDateCache = null;
-    private ?string $linkCache = null;
-    private ?string $successorCache = null;
-    private ?string $messageCache = null;
-
     public function __construct(
         private readonly ContextService $contextService,
-        private readonly ConfigurationService $configurationService,
+        private readonly ProviderService $providerService,
+        private readonly CollectionService $collectionService,
+        private readonly EndpointService $endpointService,
+        private readonly UrlGeneratorInterface $urlGenerator,
     ) {}
 
-    
-    // Deprecation data from ConfigurationService
-
     /**
-     * Deprecation is enabled
+     * Get the deprecation options for a provider, segment, collection or endpoint
      * 
-     * @return bool
+     * @param string|null $provider
+     * @param string|null $segment
+     * @param string|null $collection
+     * @param string|null $endpoint
+     * @return array
      */
-    public function isEnabled(): bool
+    private function options(?string $provider, ?string $segment, ?string $collection = null, ?string $endpoint = null): array 
     {
-        if ($this->isEnabledCache !== null) {
-            return $this->isEnabledCache;
+        if (! $this->providerService->exists($provider)) {
+            return [];
         }
 
-        $this->isEnabledCache = $this->configurationService->isDeprecationEnabled(
-            provider  : $this->contextService->getProvider(),
-            segment   : $this->contextService->getSegment(),
-            collection: $this->contextService->getCollection(),
-            endpoint  : $this->contextService->getEndpoint(),
-        );
+        // 1. Provider-level deprecation
+        $providerOptions = $this->providerService->get($provider);
+        if (isset($providerOptions['deprecation'])) {
+            return $providerOptions['deprecation'];
+        }
 
-        return $this->isEnabledCache;
+        // 2. Collection-level deprecation
+        if ($collection) {
+            $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+            if (isset($collectionOptions['deprecation'])) {
+                return $collectionOptions['deprecation'];
+            }
+        }
+
+        // 3. Endpoint-level deprecation
+        if ($collection && $endpoint) {
+            $endpointOptions = $this->endpointService->get($provider, $segment, $collection, $endpoint);
+            if (isset($endpointOptions['deprecation'])) {
+                return $endpointOptions['deprecation'];
+            }
+        }
+
+        // 4. Default
+        return [];
+    }
+
+
+    // -- CONFIG OPTIONS GETTERS
+
+    /**
+     * Check if deprecation is enabled for a provider, segment, collection or endpoint
+     * 
+     * @param string|null $provider
+     * @param string|null $segment
+     * @param string|null $collection
+     * @param string|null $endpoint
+     * @return bool
+     */
+    public function isEnabled(?string $provider = null, ?string $segment = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): bool
+    {
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
+        }
+        
+        return $this->options(
+            provider  : $provider,
+            segment   : $segment,
+            collection: $collection,
+            endpoint  : $endpoint,
+        )['enabled'] ?? false;
     }
 
     /**
-     * Get the deprecation start date
+     * Get the deprecation start date for a provider, segment, collection or endpoint
      * 
+     * @param string|null $provider
+     * @param string|null $segment
+     * @param string|null $collection
+     * @param string|null $endpoint
      * @return \DateTimeImmutable|null
      */
-    public function getStartAt(): ?\DateTimeImmutable
+    public function getStartAt(?string $provider = null, ?string $segment = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): ?\DateTimeImmutable
     {
-        if ($this->startDateCache !== null) {
-            return $this->startDateCache;
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
         }
+        
+        $startAt = $this->options(
+            provider  : $provider,
+            segment   : $segment,
+            collection: $collection,
+            endpoint  : $endpoint,
+        )['start_at'] ?? null;
 
-        $date = $this->configurationService->getDeprecationStartAt(
-            provider  : $this->contextService->getProvider(),
-            segment   : $this->contextService->getSegment(),
-            collection: $this->contextService->getCollection(),
-            endpoint  : $this->contextService->getEndpoint(),
-        );
-
-        $this->startDateCache = $date ? new \DateTimeImmutable($date) : null;
-
-        return $this->startDateCache;
+        return $startAt ? new \DateTimeImmutable($startAt) : null;
     }
 
     /**
-     * Get the deprecation sunset date
+     * Get the deprecation removal date for a provider, segment, collection or endpoint
      * 
+     * @param string|null $provider
+     * @param string|null $segment
+     * @param string|null $collection
+     * @param string|null $endpoint
      * @return \DateTimeImmutable|null
      */
-    public function getSunsetAt(): ?\DateTimeImmutable
+    public function getSunsetAt(?string $provider = null, ?string $segment = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): ?\DateTimeImmutable
     {
-        if ($this->sunsetDateCache !== null) {
-            return $this->sunsetDateCache;
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
         }
+        
+        $sunsetAt = $this->options(
+            provider  : $provider,
+            segment   : $segment,
+            collection: $collection,
+            endpoint  : $endpoint,
+        )['sunset_at'] ?? null;
 
-        $date = $this->configurationService->getDeprecationSunsetAt(
-            provider  : $this->contextService->getProvider(),
-            segment   : $this->contextService->getSegment(),
-            collection: $this->contextService->getCollection(),
-            endpoint  : $this->contextService->getEndpoint(),
-        );
-
-        $this->sunsetDateCache = $date ? new \DateTimeImmutable($date) : null;
-
-        return $this->sunsetDateCache;
+        return $sunsetAt ? new \DateTimeImmutable($sunsetAt) : null;
     }
 
     /**
-     * Get the deprecation link
+     * Get the deprecation link for a provider, segment, collection or endpoint
      * 
+     * @param string|null $provider
+     * @param string|null $segment
+     * @param string|null $collection
+     * @param string|null $endpoint
      * @return string|null
      */
-    public function getLink(): ?string
+    public function getLink(?string $provider = null, ?string $segment = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): ?string
     {
-        if ($this->linkCache !== null) 
-        {
-            return $this->linkCache;
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
         }
-        
-        $this->linkCache = $this->configurationService->getDeprecationLink(
-            provider  : $this->contextService->getProvider(),
-            segment   : $this->contextService->getSegment(),
-            collection: $this->contextService->getCollection(),
-            endpoint  : $this->contextService->getEndpoint(),
-        );
-        
-        return $this->linkCache;
+
+        $link = $this->options(
+            provider  : $provider,
+            segment   : $segment,
+            collection: $collection,
+            endpoint  : $endpoint,
+        )['link'] ?? null;
+
+        return $link ? $this->resolveLink($link) : null;
     }
 
     /**
-     * Get the deprecation successor link
+     * Get the deprecation successor link for a provider, segment, collection or endpoint
      * 
+     * @param string|null $provider
+     * @param string|null $segment
+     * @param string|null $collection
+     * @param string|null $endpoint
      * @return string|null
      */
-    public function getSuccessor(): ?string
+    public function getSuccessor(?string $provider = null, ?string $segment = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): ?string
     {
-        if ($this->successorCache !== null) {
-            return $this->successorCache;
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
         }
 
-        $this->successorCache = $this->configurationService->getDeprecationSuccessor(
-            provider  : $this->contextService->getProvider(),
-            segment   : $this->contextService->getSegment(),
-            collection: $this->contextService->getCollection(),
-            endpoint  : $this->contextService->getEndpoint(),
-        );
-        
-        return $this->successorCache;
+        $link = $this->options(
+            provider  : $provider,
+            segment   : $segment,
+            collection: $collection,
+            endpoint  : $endpoint,
+        )['successor'] ?? null;
+
+        return $link ? $this->resolveLink($link) : null;
     }
 
     /**
-     * Get the deprecation message
+     * Get the deprecation message for a provider, segment, collection or endpoint
      * 
+     * @param string|null $provider
+     * @param string|null $segment
+     * @param string|null $collection
+     * @param string|null $endpoint
      * @return string|null
      */
-    public function getMessage(): ?string
+    public function getMessage(?string $provider = null, ?string $segment = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): ?string
     {
-        if ($this->messageCache !== null) {
-            return $this->messageCache;
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
         }
 
-        $this->messageCache = $this->configurationService->getDeprecationMessage(
-            provider  : $this->contextService->getProvider(),
-            segment   : $this->contextService->getSegment(),
-            collection: $this->contextService->getCollection(),
-            endpoint  : $this->contextService->getEndpoint(),
-        );
-        
-        return $this->messageCache;
+        return $this->options(
+            provider  : $provider,
+            segment   : $segment,
+            collection: $collection,
+            endpoint  : $endpoint,
+        )['message'] ?? null;
     }
 
 
-    // Computed Deprecation State
+    // -- COMPUTED GETTERS
 
     /**
-     * API is active
+     * Check if a provider, segment, collection or endpoint is active
      * 
-     * An API is considered active if:
-     * - Deprecation is enabled
-     * - It is not deprecated
-     * - It is not removed
-     * 
+     * @param string|null $provider
+     * @param string|null $segment
+     * @param string|null $collection
+     * @param string|null $endpoint
      * @return bool
      */
-    public function isActive(): bool
+    public function isActive(?string $provider = null, ?string $segment = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): bool
     {
-        return !$this->isEnabled() && !$this->isRemoved();
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
+        }
+
+        return !$this->isEnabled($provider, $segment, $collection, $endpoint) 
+            && !$this->isRemoved($provider, $segment, $collection, $endpoint)
+        ;
     }
 
     /**
-     * API is deprecated
+     * Check if a provider, segment, collection or endpoint is deprecated
      * 
-     * An API is considered deprecated if:
-     * - Deprecation is enabled
-     * - It is not removed
-     * - The current date is after the start date (if provided)
-     * 
+     * @param string|null $provider
+     * @param string|null $segment
+     * @param string|null $collection
+     * @param string|null $endpoint
      * @return bool
      */
-    public function isDeprecated(): bool
+    public function isDeprecated(?string $provider = null, ?string $segment = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): bool
     {
-        if (!$this->isEnabled() || $this->isRemoved()) {
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
+        }
+
+        if (!$this->isEnabled($provider, $segment, $collection, $endpoint) || $this->isRemoved($provider, $segment, $collection, $endpoint)) {
             return false;
         }
 
         $now = new \DateTimeImmutable();
-        $startDate = $this->getStartAt();
+        $startDate = $this->getStartAt($provider, $segment, $collection, $endpoint);
 
         if ($startDate) {
             if ($startDate > $now) {
@@ -200,22 +287,29 @@ final class DeprecationService
     }
 
     /**
-     * API is removed
+     * Check if a provider, segment, collection or endpoint is removed
      * 
-     * An API is considered removed if:
-     * - Deprecation is enabled
-     * - The current date is after the sunset date (if provided)
-     * 
+     * @param string|null $provider
+     * @param string|null $segment
+     * @param string|null $collection
+     * @param string|null $endpoint
      * @return bool
      */
-    public function isRemoved(): bool
+    public function isRemoved(?string $provider = null, ?string $segment = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): bool
     {
-        if (!$this->isEnabled()) {
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
+        }
+
+        if (!$this->isEnabled($provider, $segment, $collection, $endpoint)) {
             return false;
         }
 
         $now = new \DateTimeImmutable();
-        $sunsetDate = $this->getSunsetAt();
+        $sunsetDate = $this->getSunsetAt($provider, $segment, $collection, $endpoint);
 
         if ($sunsetDate) {
             if ($sunsetDate <= $now) {
@@ -227,20 +321,56 @@ final class DeprecationService
     }
 
     /**
-     * Get the current deprecation state
+     * Get the deprecation state for a provider, segment, collection or endpoint
      * 
-     * @return string One of 'active', 'deprecated', 'removed'
+     * @param string|null $provider
+     * @param string|null $segment
+     * @param string|null $collection
+     * @param string|null $endpoint
+     * @return string
      */
-    public function getState(): string
+    public function getState(?string $provider = null, ?string $segment = null, ?string $collection = null, ?string $endpoint = null, bool $fallbackOnCurrentContext = true): string
     {
-        if ($this->isRemoved()) {
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+            $endpoint   ??= $this->contextService->getEndpoint();
+        }
+
+        if ($this->isRemoved($provider, $segment, $collection, $endpoint)) {
             return State::REMOVED->value;
         }
 
-        if ($this->isDeprecated()) {
+        if ($this->isDeprecated($provider, $segment, $collection, $endpoint)) {
             return State::DEPRECATED->value;
         }
 
         return State::ACTIVE->value;
+    }
+
+    /**
+     * Resolve a deprecation link, generating a URL if it's a route name
+     * 
+     * @param string $input
+     * @return string|null
+     */
+    private function resolveLink(string $input): ?string
+    {
+        if (preg_match('#^https?://#i', $input)) {
+            return $input;
+        }
+
+        try {
+            return $this->urlGenerator->generate(
+                $input,
+                [],
+                UrlGeneratorInterface::ABSOLUTE_URL
+            );
+        } catch (\Throwable $e) {
+            // Route does not exist or requires parameters; return null
+        }
+        
+        return null;
     }
 }

@@ -46,7 +46,7 @@ version:
   - Valeur par défaut : "path"
   - Comportement :
     - path -> /api/v1/ressource
-    - header -> version via en‑tête HTTP (voir `header_format`)
+    - header -> version via en‑tête HTTP (voir `headerformat`)
     - param -> ?version=1
     - subdomain -> v1.api.example.com
   - Exemple :
@@ -54,7 +54,7 @@ version:
     location: path
     ```
 
-- header_format  
+- headerformat  
 
     Format du champ MIME utilisé lorsque `location` = "header". Les placeholders `{vendor}` et `{version}` sont remplacés dynamiquement.
   - Type : string
@@ -66,7 +66,7 @@ version:
     - Exemple de rendu : `application/vnd.myapp.v1+json`
   - Exemple :
     ```yaml
-    header_format: application/vnd.{vendor}.{version}+json
+    headerformat: application/vnd.{vendor}.{version}+json
     ```
     <!-- Vendor-specific (`vnd`) | `application/vnd.myapp.v1+json`   | Format privé, propre à ton API ou ton entreprise. -->
     <!-- Personal (`prs`)        | `application/prs.johndoe.v1+json` | Format personnel, non officiel. -->
@@ -88,5 +88,5 @@ version:
 
 - Si `number` est omis, la bibliothèque générera une valeur (v1, v2, …) selon l'ordre des providers/config.
 - Préférer `location: path` pour une compatibilité maximale et une visibilité claire de la version dans les URLs.
-- Utiliser `header_format` pour des versions moins visibles ou pour gérer plusieurs versions simultanément sans casser les URLs publiques.
+- Utiliser `headerformat` pour des versions moins visibles ou pour gérer plusieurs versions simultanément sans casser les URLs publiques.
 - Déclarer `deprecated: true` quelques versions avant de retirer une API afin d'informer les consommateurs.

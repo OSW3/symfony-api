@@ -1,10 +1,13 @@
 <?php
 
 use OSW3\Api\Enum\MimeType;
+use OSW3\Api\Enum\Version\Mode;
 use OSW3\Api\Enum\MergeStrategy;
 use OSW3\Api\Resolver\ApiResolver;
+use OSW3\Api\Enum\Version\Location;
 use OSW3\Api\Resolver\NameResolver;
 use OSW3\Api\Resolver\RouteResolver;
+use OSW3\Api\Resolver\ResponseResolver;
 use OSW3\Api\Validator\EntityValidator;
 use OSW3\Api\Resolver\IsEnabledResolver;
 use OSW3\Api\Resolver\RateLimitResolver;
@@ -35,9 +38,9 @@ return static function($definition): void
             // -> manual: manually specify versioning details
             ->enumNode('mode')
                 ->info('API versioning mode.')
-                ->values(['auto', 'manual'])
-                ->defaultValue('auto')
-                ->treatNullLike('auto')
+                ->values(Mode::toArray(true))
+                ->defaultValue(Mode::AUTO->value)
+                ->treatNullLike(Mode::AUTO->value)
             ->end()
 
             // Version prefix
@@ -58,9 +61,9 @@ return static function($definition): void
             // -> subdomain: v1.api.example.com
             ->enumNode('location')
                 ->info('How the version is exposed: in URL path, HTTP header, query parameter, or subdomain.')
-                ->values(['path', 'header', 'param', 'subdomain'])
-                ->defaultValue('path')
-                ->treatNullLike('path')
+                ->values(Location::toArray(true))
+                ->defaultValue(Location::PATH->value)
+                ->treatNullLike(Location::PATH->value)
             ->end()
 
         ->end()
@@ -146,7 +149,7 @@ return static function($definition): void
     // ──────────────────────────────
     // Support URL
     // ──────────────────────────────
-    ->arrayNode('support_url')
+    ->arrayNode('url_support')
         ->info('API support URL configuration.')
         ->addDefaultsIfNotSet()->children()
 
@@ -178,7 +181,7 @@ return static function($definition): void
             ->end()
 
         ->end()
-    ->end() // of support_url
+    ->end() // of url_support
 
     // ──────────────────────────────
     // Templates
@@ -514,7 +517,7 @@ return static function($definition): void
                 ->addDefaultsIfNotSet()->children()
 
                     ->booleanNode('enabled')
-                        ->info('Enable JSONP support for API responses.')
+                        ->info('Enable pretty printing for JSON responses.')
                         ->defaultFalse()
                         ->treatNullLike(false)
                     ->end()
@@ -1007,8 +1010,7 @@ return static function($definition): void
                     // Version prefix
                     ->scalarNode('prefix')
                         ->info('Version prefix (e.g. "v")')
-                        ->defaultValue('v')
-                        ->treatNullLike('v')
+                        ->defaultNull()
                     ->end()
 
                     // Version location
@@ -1148,12 +1150,12 @@ return static function($definition): void
             // ──────────────────────────────
             // URL support
             // ──────────────────────────────
-			->arrayNode('url')
+			->arrayNode('url_support')
                 ->info('URL Support (in response) for this API provider.')
                 ->addDefaultsIfNotSet()->children()
 
                     // Support URLs in response
-                    ->booleanNode('support')
+                    ->booleanNode('enabled')
                         ->info('Whether to include URL elements in API responses.')
                         ->defaultTrue()
                         ->treatNullLike(true)
@@ -1470,9 +1472,10 @@ return static function($definition): void
                             // Response format type
                             ->enumNode('type')
                                 ->info('Type of the response format.')
-                                ->values(array_keys(MimeType::toArray(true)))
-                                ->defaultValue('json')
-                                ->treatNullLike('json')
+                                ->values(array_merge(array_keys(MimeType::toArray(true)), [null]))
+                                ->defaultNull()
+                                // ->defaultValue('json')
+                                // ->treatNullLike('json')
                                 ->beforeNormalization()
                                     ->ifString()
                                     ->then(fn($v) => strtolower($v))
@@ -1496,15 +1499,29 @@ return static function($definition): void
                             // Enable format override via URL parameter
                             ->booleanNode('enabled')
                                 ->info('If true, allows clients to override the response format using a URL parameter (e.g. ?format=xml).')
-                                ->defaultFalse()
-                                ->treatNullLike(false)
+                                ->defaultNull()
+                                // ->defaultFalse()
+                                // ->treatNullLike(false)
                             ->end()
 
                             // URL parameter name for format override
                             ->scalarNode('parameter')
                                 ->info('Name of the URL parameter used to override the response format.')
-                                ->defaultValue('_format')
-                                ->treatNullLike('_format')
+                                ->defaultValue('format')
+                                ->treatNullLike('format')
+                            ->end()
+
+                        ->end()
+                    ->end()
+
+                    // Pretty print JSON responses
+                    ->arrayNode('pretty_print')
+                        ->info('Pretty print JSON responses for better readability.')
+                        ->addDefaultsIfNotSet()->children()
+
+                            ->booleanNode('enabled')
+                                ->info('Enable pretty printing for JSON responses.')
+                                ->defaultNull()
                             ->end()
 
                         ->end()
@@ -1514,6 +1531,25 @@ return static function($definition): void
                     ->arrayNode('security')
                         ->info('Security settings for API responses.')
                         ->addDefaultsIfNotSet()->children()
+
+                            // Prevent JSON hijacking
+                            ->arrayNode('hijacking_prevent')
+                                ->info('Prevent JSON hijacking attacks.')
+                                ->addDefaultsIfNotSet()->children()
+
+                                    ->booleanNode('enabled')
+                                        ->info('Enable JSON hijacking prevention.')
+                                        ->defaultNull()
+                                    ->end()
+
+                                    // X-Frame-Options prefix
+                                    ->enumNode('x_frame_options')
+                                        ->info('Prefix added to JSON responses to prevent hijacking.')
+                                        ->values(['DENY', 'SAMEORIGIN', 'ALLOW-FROM'])
+                                        ->defaultNull()
+                                    ->end()
+                                ->end()
+                            ->end()
 
                             // Response checksum/hash settings
                             ->arrayNode('checksum')
@@ -1577,9 +1613,9 @@ return static function($definition): void
                             // Max age in seconds (0 = no cache)
                             ->integerNode('max_age')
                                 ->info('Max age in seconds (0 = no cache).')
-                                ->defaultValue(3600)
-                                ->treatNullLike(3600)
-                                ->min(0)
+                                ->defaultValue(-1)
+                                ->treatNullLike(-1)
+                                ->min(-1)
                                 ->max(31536000)
                             ->end()
 
@@ -3667,12 +3703,12 @@ return static function($definition): void
                         // ──────────────────────────────
                         // URL support
                         // ──────────────────────────────
-                        ->arrayNode('url')
+                        ->arrayNode('url_support')
                             ->info('URL Support (in response) for this collection.')
                             ->addDefaultsIfNotSet()->children()
 
                                 // Enable or disable URL support in API responses
-                                ->booleanNode('support')
+                                ->booleanNode('enabled')
                                     ->info('Whether to include URL elements in API responses.')
                                     ->defaultNull()
                                 ->end()
@@ -4381,6 +4417,10 @@ return static function($definition): void
             // -> Provider level
             ApiResolver::execute($config);
 
+            // TODO: create VersionResolver
+            // See ApiResolver
+            // VersionResolver::execute($config);
+
             // Route 
             // -> Provider level
             // -> Collections level
@@ -4396,7 +4436,7 @@ return static function($definition): void
             // URL Support
             // -> Provider level
             // -> Collections level
-            UrlSupportResolver::execute($config);
+            // UrlSupportResolver::execute($config);
 
             // Rate limit
             // -> Provider level
@@ -4411,6 +4451,7 @@ return static function($definition): void
             TemplatesResolver::execute($config);
 
             // Response
+            ResponseResolver::execute($config);
 
             // Serialization
             // -> Provider level
@@ -4426,6 +4467,6 @@ return static function($definition): void
 
             return $config;
         })
-    ->end() // of Version generator
+    ->end()
     ;
 };

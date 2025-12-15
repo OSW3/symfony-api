@@ -2,14 +2,42 @@
 namespace OSW3\Api\Service;
 
 use OSW3\Api\Service\ContextService;
-use OSW3\Api\Service\ConfigurationService;
 
 final class UrlSupportService 
 {
     public function __construct(
         private readonly ContextService $contextService,
-        private readonly ConfigurationService $configurationService,
+        private readonly ProviderService $providerService,
+        private readonly CollectionService $collectionService,
     ){}
+
+    /**
+     * Get URL support options for the given provider/segment/collection
+     * 
+     * @param string|null $provider
+     * @param string|null $segment
+     * @param string|null $collection
+     * @return array
+     */
+    private function options(?string $provider, ?string $segment, ?string $collection = null): array
+    {
+        if (! $this->providerService->exists($provider)) {
+            return [];
+        }
+
+        if ($collection) {
+            $collectionOptions = $this->collectionService->get($provider, $segment, $collection);
+            if ($collectionOptions && isset($collectionOptions['url_support'])) {
+                return $collectionOptions['url_support'];
+            }
+        }
+
+        $providerOptions = $this->providerService->get($provider);
+        return $providerOptions['url_support'] ?? [];
+    }
+
+
+    // -- CONFIG OPTIONS GETTERS
 
     /**
      * Check if URL support is enabled for the given provider
@@ -17,13 +45,19 @@ final class UrlSupportService
      * @param string $provider
      * @return bool
      */
-    public function isEnabled(): bool 
+    public function isEnabled(?string $provider = null, ?string $segment = null, ?string $collection = null, bool $fallbackOnCurrentContext = true): bool 
     {
-        return $this->configurationService->hasUrlSupport(
-            provider  : $this->contextService->getProvider(),
-            segment   : $this->contextService->getSegment(),
-            collection: $this->contextService->getCollection(),
-        );
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
+        }
+
+        return $this->options(
+            provider   : $provider,
+            segment    : $segment,
+            collection : $collection,
+        )['enabled'] ?? false;
     }
 
     /**
@@ -31,17 +65,19 @@ final class UrlSupportService
      * 
      * @return bool|null
      */
-    public function isAbsolute(): ?bool
+    public function isAbsolute(?string $provider = null, ?string $segment = null, ?string $collection = null, bool $fallbackOnCurrentContext = true): ?bool
     {
-        if (!$this->isEnabled()) {
-            return false;
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
         }
 
-        return $this->configurationService->isUrlAbsolute(
-            provider  : $this->contextService->getProvider(),
-            segment   : $this->contextService->getSegment(),
-            collection: $this->contextService->getCollection(),
-        );
+        return $this->options(
+            provider   : $provider,
+            segment    : $segment,
+            collection : $collection,
+        )['absolute'] ?? true;
     }
 
     /**
@@ -49,16 +85,18 @@ final class UrlSupportService
      * 
      * @return string|null
      */
-    public function getProperty(): ?string
+    public function getProperty(?string $provider = null, ?string $segment = null, ?string $collection = null, bool $fallbackOnCurrentContext = true): ?string
     {
-        if (!$this->isEnabled()) {
-            return null;
+        if ($fallbackOnCurrentContext) {
+            $provider   ??= $this->contextService->getProvider();
+            $segment    ??= $this->contextService->getSegment();
+            $collection ??= $this->contextService->getCollection();
         }
-
-        return $this->configurationService->getUrlProperty(
-            provider  : $this->contextService->getProvider(),
-            segment   : $this->contextService->getSegment(),
-            collection: $this->contextService->getCollection(),
-        );
+        
+        return $this->options(
+            provider   : $provider,
+            segment    : $segment,
+            collection : $collection,
+        )['property'] ?? 'url';
     }
 }

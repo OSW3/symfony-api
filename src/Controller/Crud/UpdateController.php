@@ -26,7 +26,7 @@ final class UpdateController extends AbstractController
         private readonly SerializeService $serializeService,
     ){
         $this->em          = $doctrine->getManager();
-        $this->collection  = $contextService->getContext('collection');
+        $this->collection  = $contextService->getCollection();
         $this->entityClass = $this->collection;
         $this->repository  = $doctrine->getRepository($this->entityClass);
     }

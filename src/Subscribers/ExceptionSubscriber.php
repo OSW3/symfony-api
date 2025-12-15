@@ -2,7 +2,11 @@
 namespace OSW3\Api\Subscribers;
 
 use OSW3\Api\Enum\Template\Type;
+use OSW3\Api\Service\ContextService;
 use OSW3\Api\Service\TemplateService;
+use OSW3\Api\Service\DeprecationService;
+use OSW3\Api\Service\ConfigurationService;
+use OSW3\Api\Service\VersionService;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -15,18 +19,43 @@ final class ExceptionSubscriber implements EventSubscriberInterface
         // private readonly ResponseService $responseService,
         // private readonly ResponseStatusService $statusService,
         private readonly TemplateService $templateService,
-        // private readonly ConfigurationService $configurationService,
+        
+        private readonly ConfigurationService $configurationService,
+        private readonly ContextService $contextService,
+        private readonly DeprecationService $deprecationService,
+        private readonly VersionService $versionService,
     ){}
 
     public static function getSubscribedEvents(): array
     {
         return [
-            KernelEvents::EXCEPTION => ['onKernelException', 0]
+            // KernelEvents::EXCEPTION => ['onKernelException', 0]
         ];
     }
 
     public function onKernelException(ExceptionEvent $event): void
     {
+        $provider   = $this->contextService->getProvider();
+        $segment    = $this->contextService->getSegment();
+        $collection = $this->contextService->getCollection();
+        $endpoint   = $this->contextService->getEndpoint();
+
+        // dd(
+        //     $provider,
+        //     $this->versionService->getMode(),
+        //     $this->versionService->getNumber(),
+        //     $this->versionService->getPrefix(),
+        //     $this->versionService->getLocation(),
+        //     $this->versionService->getHeaderDirective(),
+        //     $this->versionService->getHeaderPattern(),
+        //     $this->versionService->getLabel(),
+        //     $this->versionService->isBeta(),
+        //     $this->versionService->isDeprecated(),
+
+        //     $this->configurationService->getVersion($provider),
+        // );
+
+
         if (!$event->isMainRequest()) {
             return;
         }
